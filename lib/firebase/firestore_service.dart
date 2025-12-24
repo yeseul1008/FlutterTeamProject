@@ -18,7 +18,24 @@ class FirestoreService {
     });
   }
 
+  // users 컬렉션 (자동 문서 ID 사용)
+  Future<String> createUsers({
+  required String email,
+  required String name,
+  required String phone,
+  }) async {
+  final docRef = await _db.collection('users').add({
+  'email': email,
+  'name': name,
+  'phone': phone,
+  'createdAt': FieldValue.serverTimestamp(),
+  });
 
-
-
+  // 자동 생성된 문서 ID를 userId로 반환
+  return docRef.id;
+  }
 }
+
+
+
+

@@ -36,7 +36,6 @@ class UserTestPage extends StatefulWidget {
 class _UserTestPageState extends State<UserTestPage> {
   final _service = FirestoreService();
 
-  final _userIdCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
@@ -45,7 +44,6 @@ class _UserTestPageState extends State<UserTestPage> {
 
   @override
   void dispose() {
-    _userIdCtrl.dispose();
     _emailCtrl.dispose();
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
@@ -53,20 +51,10 @@ class _UserTestPageState extends State<UserTestPage> {
   }
 
   Future<void> _save() async {
-    if (_userIdCtrl.text.isEmpty ||
-        _emailCtrl.text.isEmpty ||
-        _nameCtrl.text.isEmpty ||
-        _phoneCtrl.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('모든 값을 입력해주세요')),
-      );
-      return;
-    }
 
     setState(() => _loading = true);
     try {
-      await _service.createUser(
-        userId: _userIdCtrl.text.trim(),
+      await _service.createUsers(
         email: _emailCtrl.text.trim(),
         name: _nameCtrl.text.trim(),
         phone: _phoneCtrl.text.trim(),
@@ -99,8 +87,6 @@ class _UserTestPageState extends State<UserTestPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            TextField(controller: _userIdCtrl, decoration: _dec('userId (문서 ID)')),
-            const SizedBox(height: 12),
             TextField(controller: _emailCtrl, decoration: _dec('email')),
             const SizedBox(height: 12),
             TextField(controller: _nameCtrl, decoration: _dec('name')),
