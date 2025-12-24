@@ -9,7 +9,7 @@ import '../pages/wardrobe/user_wardrobe_list.dart';
 import '../pages/community/main_feed.dart';
 import '../widgets/common/bottom_nav_bar.dart';
 
-// ❗ main() 절대 두지 않는다
+// ❗ main() 절대 두지 않는다!
 // ❗ MyApp도 여기 두지 않는다
 final GlobalKey<NavigatorState> _shellNavigatorKey =
 GlobalKey<NavigatorState>();
@@ -74,8 +74,8 @@ class RootLayout extends StatelessWidget {
     final GoRouterState state = GoRouterState.of(context); // 네비 바 제외할거페이지는 이곳에 추가
     bool hideBottom = false;
     if(
-      state.uri.path.startsWith('/page2')
-      // || state.uri.path.startsWith('/page1')
+    state.uri.path.startsWith('/page2')
+    // || state.uri.path.startsWith('/page1')
 
     ){
       hideBottom = true;
@@ -84,8 +84,8 @@ class RootLayout extends StatelessWidget {
     bool hideAppBar = false;
 
     if(
-      state.uri.path.startsWith('/page1')
-      // || state.uri.path.startsWith('/page2')
+    state.uri.path.startsWith('/page1')
+    // || state.uri.path.startsWith('/page2')
 
     ){
       hideAppBar = true;
