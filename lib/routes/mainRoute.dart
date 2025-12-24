@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'routePage1.dart';
-import 'routePage2.dart';
-import 'routeRoot.dart';
+import '../routePage1.dart';
+import '../routePage2.dart';
+import '../main.dart';
 
+
+// 주소를 설정하는 페이지
 void main() => runApp(MyApp());
 
 final GoRouter router = GoRouter(
