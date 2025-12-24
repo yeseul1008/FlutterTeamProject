@@ -9,7 +9,7 @@ import '../pages/wardrobe/user_wardrobe_list.dart';
 import '../pages/community/main_feed.dart';
 import '../widgets/common/bottom_nav_bar.dart';
 
-// ❗ main() 절대 두지 않는다
+// ❗ main() 절대 두지 않는다!
 // ❗ MyApp도 여기 두지 않는다
 final GlobalKey<NavigatorState> _shellNavigatorKey =
 GlobalKey<NavigatorState>();
