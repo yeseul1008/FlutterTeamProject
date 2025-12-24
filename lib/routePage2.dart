@@ -9,18 +9,15 @@ class Page2 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title : Text("page2")),
-        body : Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text("page2", style: TextStyle(fontSize: 30),),
-              Text("이름: $name"),
-              Text("나이: $age"),
-            ],
-          ),
-        )
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text("page2", style: TextStyle(fontSize: 30),),
+          Text("이름: zzzzzz"),
+          Text("나이: $age"),
+        ],
+      ),
     );
   }
 }
