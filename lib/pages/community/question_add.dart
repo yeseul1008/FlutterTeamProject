@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../widgets/common/main_btn.dart';
 import 'package:go_router/go_router.dart';
 
 class QuestionAdd extends StatelessWidget {
@@ -7,10 +6,131 @@ class QuestionAdd extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        body : Center(
-          child: Text("여기는 질문추가 입니다"),
-        )
+    final String currentPath =
+        GoRouterState.of(context).uri.path;
+
+    return SafeArea(
+      child: Column(
+        children: [
+          /// ===== 상단 UI =====
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                /// ===== Feed =====
+                Expanded(
+                  child: SizedBox(
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () =>
+                          context.go('/communityMainFeed'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                        currentPath == '/communityMainFeed'
+                            ? const Color(0xFFCAD83B)
+                            : Colors.white,
+                        foregroundColor: Colors.black,
+                        elevation: 0,
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                          BorderRadius.circular(30),
+                          side: const BorderSide(
+                              color: Colors.black),
+                        ),
+                      ),
+                      child: const Text(
+                        'Feed',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                /// ===== QnA (현재 페이지) =====
+                Expanded(
+                  child: SizedBox(
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () =>
+                          context.go('/questionFeed'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                        currentPath == '/questionFeed'
+                            ? const Color(0xFFCAD83B) // 활성화
+                            : Colors.white,
+                        foregroundColor: Colors.black,
+                        elevation: 0,
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                          BorderRadius.circular(30),
+                          side: const BorderSide(
+                              color: Colors.black),
+                        ),
+                      ),
+                      child: const Text(
+                        'QnA',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                /// ===== Follow =====
+                Expanded(
+                  child: SizedBox(
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () =>
+                          context.go('/followList'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                        currentPath == '/followList'
+                            ? const Color(0xFFCAD83B)
+                            : Colors.white,
+                        foregroundColor: Colors.black,
+                        elevation: 0,
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                          BorderRadius.circular(30),
+                          side: const BorderSide(
+                              color: Colors.black),
+                        ),
+                      ),
+                      child: const Text(
+                        'Follow',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          /// ===== QnA 내용 =====
+          const Expanded(
+            child: Center(
+              child: Text('Add 페이지'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
