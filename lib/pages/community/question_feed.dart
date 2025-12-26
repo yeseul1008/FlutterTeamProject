@@ -145,8 +145,8 @@ class QuestionFeed extends StatelessWidget {
                       foregroundColor: Colors.black,
                       elevation: 2,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
+                        horizontal: 22,
+                        vertical: 12,
                       ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
