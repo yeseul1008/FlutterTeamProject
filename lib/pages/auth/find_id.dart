@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../widgets/common/main_btn.dart';
 
 class FindId extends StatefulWidget {
@@ -10,14 +11,54 @@ class FindId extends StatefulWidget {
 }
 
 class _FindIdState extends State<FindId> {
-  final _phoneController = TextEditingController();
-  final _codeController = TextEditingController();
+  final _emailController = TextEditingController();
+  bool _loading = false;
 
   @override
   void dispose() {
-    _phoneController.dispose();
-    _codeController.dispose();
+    _emailController.dispose();
     super.dispose();
+  }
+
+  Future<void> _sendResetEmail() async {
+    final email = _emailController.text.trim();
+
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('이메일을 입력해주세요.')),
+      );
+      return;
+    }
+
+    setState(() => _loading = true);
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('비밀번호 재설정 이메일을 발송했습니다. 메일함을 확인해주세요.')),
+      );
+
+      context.go('/userLogin');
+    } on FirebaseAuthException catch (e) {
+      final msg = switch (e.code) {
+        'invalid-email' => '이메일 형식이 올바르지 않습니다.',
+        'user-not-found' => '해당 이메일로 가입된 계정이 없습니다.',
+        'too-many-requests' => '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+        _ => '이메일 발송에 실패했습니다. (${e.code})',
+      };
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('이메일 발송 중 오류가 발생했습니다.')),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
@@ -38,7 +79,6 @@ class _FindIdState extends State<FindId> {
               children: [
                 const SizedBox(height: 28),
 
-                // 로고
                 Center(
                   child: Container(
                     width: 72,
@@ -71,7 +111,7 @@ class _FindIdState extends State<FindId> {
 
                 Center(
                   child: Text(
-                    'What you where?',
+                    'What you wear?',
                     style: const TextStyle(
                       color: textGrey,
                       fontSize: 16,
@@ -82,77 +122,56 @@ class _FindIdState extends State<FindId> {
 
                 const SizedBox(height: 32),
 
-                // 전화번호
                 const Text(
-                  '전화번호',
+                  '이메일',
                   style: TextStyle(color: textGrey, fontSize: 12),
                 ),
                 const SizedBox(height: 8),
+
                 _InputField(
-                  controller: _phoneController,
-                  hintText: '인증할 계정의 전화번호를 입력하세요',
-                  icon: Icons.call_outlined,
+                  controller: _emailController,
+                  hintText: '가입된 이메일을 입력하세요',
+                  icon: Icons.mail_outline,
                   borderColor: border,
                   hintColor: textGrey,
                   textColor: Colors.white,
-                  keyboardType: TextInputType.phone,
+                  keyboardType: TextInputType.emailAddress,
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
-                // 인증번호 입력 + 확인 버튼
-                const Text(
-                  '인증번호 입력',
-                  style: TextStyle(color: textGrey, fontSize: 12),
-                ),
-                const SizedBox(height: 8),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: _InputField(
-                        controller: _codeController,
-                        hintText: '인증번호 6자리 입력',
-                        icon: Icons.verified_user_outlined,
-                        borderColor: border,
-                        hintColor: textGrey,
-                        textColor: Colors.white,
-                        keyboardType: TextInputType.number,
+                SizedBox(
+                  height: 46,
+                  child: ElevatedButton(
+                    onPressed: _loading ? null : _sendResetEmail,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: purple,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    SizedBox(
-                      height: 44,
-                      width: 80,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // TODO: 인증번호 확인 로직
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: purple,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: const Text(
-                          '확인',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                      ),
+                    child: _loading
+                        ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                        : const Text(
+                      '확인',
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
-                  ],
+                  ),
                 ),
 
                 const SizedBox(height: 18),
 
-                // 하단 안내 문구 (두 개로 분리 + 비밀번호 재설정만 탭)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      '아이디를 기억하시나요? ',
+                      '비밀번호를 잊으셨나요? ',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.75),
                         fontSize: 12,
@@ -189,8 +208,8 @@ class _InputField extends StatelessWidget {
   final Color borderColor;
   final Color hintColor;
   final Color textColor;
-  final bool obscureText;
   final TextInputType? keyboardType;
+  final bool obscureText;
 
   const _InputField({
     required this.controller,
@@ -199,8 +218,8 @@ class _InputField extends StatelessWidget {
     required this.borderColor,
     required this.hintColor,
     required this.textColor,
-    this.obscureText = false,
     this.keyboardType,
+    this.obscureText = false,
   });
 
   @override
@@ -209,8 +228,8 @@ class _InputField extends StatelessWidget {
       height: 44,
       child: TextField(
         controller: controller,
-        obscureText: obscureText,
         keyboardType: keyboardType,
+        obscureText: obscureText,
         style: TextStyle(color: textColor, fontSize: 14),
         cursorColor: borderColor,
         decoration: InputDecoration(

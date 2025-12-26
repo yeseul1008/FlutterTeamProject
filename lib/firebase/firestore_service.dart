@@ -12,10 +12,12 @@ class FirestoreService {
     required String phone,
     required String provider, // "email" | "google"
     required String nickname,
+    required String loginId, // 위의 uid랑 다른거임
     String? profileImageUrl,
   }) {
     return _db.collection('users').doc(userId).set({
       'userId': userId,
+      'loginId' : loginId,
       'email': email,
       'phone': phone,
       'provider': provider,
