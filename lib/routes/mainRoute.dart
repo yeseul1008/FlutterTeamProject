@@ -5,7 +5,6 @@ import '../routePage2.dart';
 
 import '../mainPage.dart';
 import '../pages/admin/admin_page.dart';
-import '../pages/auth/find_acc.dart';
 import '../pages/auth/user_google_login.dart';
 import '../pages/auth/user_join.dart';
 import '../pages/auth/user_login.dart';
@@ -63,10 +62,10 @@ final GoRouter router = GoRouter(
           builder: (context, state) => const RootPage(),
         ),
         // auth 폴더 속 파일 이동
-        GoRoute(
-          path: '/findIdPwd',
-          builder: (context, state) => const FindIdPwd(),
-        ),
+        // GoRoute(
+        //   path: '/findIdPwd',
+        //   builder: (context, state) => const FindIdPwd(),
+        // ),
         GoRoute(
           path: '/googleLogin',
           builder: (context, state) => const GoogleLogin(),
