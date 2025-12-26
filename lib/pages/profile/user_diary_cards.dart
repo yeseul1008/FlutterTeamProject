@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../widgets/common/main_btn.dart';
+import 'package:go_router/go_router.dart';
 
-class userDiaryCards extends StatelessWidget {
-  const userDiaryCards({super.key});
+class UserDiaryCards extends StatelessWidget {
+  const UserDiaryCards({super.key});
 
   @override
   Widget build(BuildContext context) {
