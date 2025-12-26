@@ -1,273 +1,174 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: HomeScreen(),
-    );
-  }
-}
-
-/// Home Screen
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  int selectedIndex = 0;
-  int selectedHeader = 0;
-
-  void onTab(int index) {
-    setState(() {
-      selectedIndex = index;
-    });
-  }
+/// 클래스명 Dart 규칙 OK
+class communityFeed extends StatelessWidget {
+  const communityFeed({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final String currentPath = GoRouterState.of(context).uri.path; // 🔧 [추가]
+
     return Scaffold(
       backgroundColor: Colors.white,
-
-      /// Header + Content
       body: SafeArea(
         child: Column(
           children: [
-            CommunityHeader(
-              selectedIndex: selectedHeader,
-              onTap: (index) {
-                setState(() {
-                  context.go('/follow_list.dart');
-                  context.go('/question_feed.dart');
-                });
-              },
+            /// 상단 탭 버튼
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _tabButton(
+                    text: 'feed',
+                    isActive: currentPath == '/community', // 🔧 [수정]
+                    onTap: () => context.go('/community'), // 🔧 [수정]
+                  ),
+                  _tabButton(
+                    text: 'QnA',
+                    isActive: currentPath == '/question', // 🔧 [수정]
+                    onTap: () => context.go('/question'),
+                  ),
+                  _tabButton(
+                    text: 'follow',
+                    isActive: currentPath == '/follow', // 🔧 [수정]
+                    onTap: () => context.go('/follow'),
+                  ),
+                ],
+              ),
             ),
+
             const Divider(height: 1),
+
+            /// Firestore Feed List
             Expanded(
-              child: Center(
-                child: Text(
-                  selectedHeader == 0
-                      ? "Feed"
-                      : selectedHeader == 1
-                      ? "QnA"
-                      : "Follow",
-                  style: TextStyle(fontSize: 24),
-                ),
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('posts')
+                    .orderBy('createdAt', descending: true)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return const Center(child: Text('피드가 없습니다'));
+                  }
+
+                  final docs = snapshot.data!.docs;
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    itemCount: docs.length,
+                    itemBuilder: (context, index) {
+                      final data =
+                      docs[index].data() as Map<String, dynamic>;
+
+                      return _FeedItem(
+                        nickname: data['nickname'] ?? 'nickname',
+                        userId: data['userId'] ?? '@id',
+                        imageUrl: data['imageUrl'],
+                      );
+                    },
+                  );
+                },
               ),
             ),
           ],
         ),
       ),
+    );
+  }
 
-      /// Floating Button (QnA Add)
-      floatingActionButton: SizedBox(
-        width: 72,
-        height: 72,
-        child: FloatingActionButton(
-          backgroundColor: Color(0xFFA88AEE),
-          shape: CircleBorder(),
-          onPressed: (){},
-          child: Icon(Icons.add, size: 40),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-
-      /// Bottom Navigation
-      bottomNavigationBar: Container(
+  /// 탭 버튼 위젯
+  Widget _tabButton({
+    required String text,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 96,
+        height: 40,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: Colors.black, width: 1)),
-        ),
-        child: BottomAppBar(
-          shape: CircularNotchedRectangle(),
-          child: SizedBox(
-            height: 70,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                navItem(Icons.checkroom, "closet", 0),
-                navItem(Icons.calendar_month, "calendar", 1),
-                SizedBox(width: 40),
-                navItem(Icons.book, "diary", 2),
-                navItem(Icons.groups, "community", 3),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget navItem(IconData icon, String label, int index) {
-    final bool isSelected = selectedIndex == index;
-    const Color selectedColor = Color(0xFFA88AEE);
-    const Color defaultColor = Colors.black;
-
-    return InkWell(
-      onTap: () => onTab(index),
-      child: SizedBox(
-        width: 64,
-        height: 56,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 32,
-              color: isSelected ? selectedColor : defaultColor,
-            ),
-            SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: isSelected ? selectedColor : defaultColor,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Community Header
-class CommunityHeader extends StatelessWidget {
-  final int selectedIndex;
-  final ValueChanged<int> onTap;
-
-  const CommunityHeader({
-    super.key,
-    required this.selectedIndex,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _button("feed", 0),
-          _button("QnA", 1),
-          _button("follow", 2),
-        ],
-      ),
-    );
-  }
-
-  Widget _button(String text, int index) {
-    final bool isSelected = selectedIndex == index;
-
-    return MainButton(
-      width: 96,
-      text: text,
-      onTap: () => onTap(index),
-      backgroundColor:
-      isSelected ? const Color(0xFFCAD83B) : Colors.white,
-    );
-  }
-}
-
-/// MainButton
-class MainButton extends StatelessWidget {
-  final String text;
-  final VoidCallback onTap;
-  final double? width;
-  final Color backgroundColor;
-
-  const MainButton({
-    super.key,
-    required this.text,
-    required this.onTap,
-    this.width,
-    this.backgroundColor = Colors.white,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 46,
-      width: width,
-      child: Material(
-        child: InkWell(
-          onTap: onTap,
+          color: isActive ? const Color(0xFFCAD83B) : Colors.white,
           borderRadius: BorderRadius.circular(999),
-          child: Container(
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: Colors.black),
-            ),
-            child: Text(
-              text,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
+          border: Border.all(color: Colors.black),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
     );
   }
 }
 
-///  QnA Add Modal (추가)
-class QnaAddModal extends StatelessWidget {
-  const QnaAddModal({super.key});
+/// ===============================
+/// 피드 아이템 UI
+/// ===============================
+class _FeedItem extends StatelessWidget {
+  final String nickname;
+  final String userId;
+  final String? imageUrl;
+
+  const _FeedItem({
+    required this.nickname,
+    required this.userId,
+    this.imageUrl,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "QnA 작성",
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          /// 유저 정보
+          Row(
+            children: [
+              const CircleAvatar(radius: 18),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(nickname,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(userId, style: const TextStyle(fontSize: 12)),
+                ],
+              ),
+            ],
           ),
-          SizedBox(height: 16),
 
-          TextField(
-            decoration: InputDecoration(
-              hintText: "질문 제목을 입력하세요",
-              border: OutlineInputBorder(),
-            ),
-          ),
           const SizedBox(height: 12),
 
-          TextField(
-            maxLines: 4,
-            decoration: const InputDecoration(
-              hintText: "질문 내용을 입력하세요",
-              border: OutlineInputBorder(),
+          /// 이미지
+          if (imageUrl != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                imageUrl!,
+                width: double.infinity,
+                height: 240,
+                fit: BoxFit.cover,
+              ),
             ),
-          ),
-          SizedBox(height: 20),
 
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text("등록하기"),
-            ),
+          const SizedBox(height: 12),
+
+          /// 하단 액션
+          const Row(
+            children: [
+              Icon(Icons.favorite_border),
+              SizedBox(width: 16),
+              Icon(Icons.share),
+            ],
           ),
         ],
       ),
