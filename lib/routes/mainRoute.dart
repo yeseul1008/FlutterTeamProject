@@ -134,23 +134,52 @@ final GoRouter router = GoRouter(
         ),
         GoRoute(
           path: '/userLookbook',
-          builder: (context, state) => const UserLookbook(),
+          pageBuilder: (context, state) {
+            return const NoTransitionPage(
+              child: UserLookbook(),
+            );
+          },
         ),
+
         GoRoute(
           path: '/userLookbookAdd',
           builder: (context, state) => const UserLookbookAdd(),
         ),
         GoRoute(
           path: '/userScrap',
-          builder: (context, state) => const UserScrap(),
+          pageBuilder: (context, state) {
+            return const NoTransitionPage(
+              child: UserScrap(),
+            );
+          },
         ),
         GoRoute(
           path: '/userScrapView',
-          builder: (context, state) => const UserScrapView(),
+          pageBuilder: (context, state) {
+            return const NoTransitionPage(
+              child: UserScrapView(),
+            );
+          },
         ),
         GoRoute(
           path: '/userWardrobeAdd',
-          builder: (context, state) => const UserWardrobeAdd(),
+          pageBuilder: (context, state) {
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: const UserWardrobeAdd(),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                final tween = Tween<Offset>(
+                  begin: const Offset(0, 1), // 아래에서 시작
+                  end: Offset.zero,
+                ).chain(CurveTween(curve: Curves.easeOutCubic));
+
+                return SlideTransition(
+                  position: animation.drive(tween),
+                  child: child,
+                );
+              },
+            );
+          },
         ),
         GoRoute(
           path: '/userWardrobeCategory',
@@ -158,7 +187,11 @@ final GoRouter router = GoRouter(
         ),
         GoRoute(
           path: '/userWardrobeList',
-          builder: (context, state) => const UserWardrobeList(),
+          pageBuilder: (context, state) {
+            return const NoTransitionPage(
+              child: UserWardrobeList(),
+            );
+          },
         ),
       ],
     ),
@@ -199,9 +232,10 @@ class RootLayout extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        // title: hideAppBar ? null : const Text('My App'),
-      ),
+      // appBar: AppBar(
+      //   // title: hideAppBar ? null : const Text('My App'),
+      // ),
+      extendBody: true,
       bottomNavigationBar: hideBottom ? null : const BottomNavBar(),
       body: child,
     );
