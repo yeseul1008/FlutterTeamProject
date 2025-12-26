@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../widgets/common/main_btn.dart';
 import 'package:go_router/go_router.dart';
+import '../../widgets/common/main_btn.dart';
 
 class UserLogin extends StatefulWidget {
   const UserLogin({super.key});
@@ -69,10 +69,11 @@ class _UserLoginState extends State<UserLogin> {
 
                 const SizedBox(height: 10),
 
-                const Center(
+                // ✅ const 제거 (textGrey는 build 내부 상수라 const 위젯에 못 씀)
+                Center(
                   child: Text(
                     'What you wear?',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: textGrey,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -82,8 +83,10 @@ class _UserLoginState extends State<UserLogin> {
 
                 const SizedBox(height: 26),
 
-                const Text('아이디',
-                    style: TextStyle(color: textGrey, fontSize: 12)),
+                const Text(
+                  '아이디',
+                  style: TextStyle(color: textGrey, fontSize: 12),
+                ),
                 const SizedBox(height: 8),
 
                 _InputField(
@@ -97,8 +100,10 @@ class _UserLoginState extends State<UserLogin> {
 
                 const SizedBox(height: 16),
 
-                const Text('비밀번호',
-                    style: TextStyle(color: textGrey, fontSize: 12)),
+                const Text(
+                  '비밀번호',
+                  style: TextStyle(color: textGrey, fontSize: 12),
+                ),
                 const SizedBox(height: 8),
 
                 _InputField(
@@ -148,8 +153,10 @@ class _UserLoginState extends State<UserLogin> {
                     ),
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 10),
-                      child: Text('또는',
-                          style: TextStyle(color: textGrey, fontSize: 12)),
+                      child: Text(
+                        '또는',
+                        style: TextStyle(color: textGrey, fontSize: 12),
+                      ),
                     ),
                     Expanded(
                       child: Divider(
@@ -177,17 +184,21 @@ class _UserLoginState extends State<UserLogin> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    child: Row(
+                    child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+                      children: [
                         Text(
                           'G',
                           style: TextStyle(
-                              fontWeight: FontWeight.w800, fontSize: 14),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                          ),
                         ),
                         SizedBox(width: 10),
-                        Text('Google로 시작하기',
-                            style: TextStyle(fontWeight: FontWeight.w700)),
+                        Text(
+                          'Google로 시작하기',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
                       ],
                     ),
                   ),
@@ -196,27 +207,44 @@ class _UserLoginState extends State<UserLogin> {
                 const SizedBox(height: 26),
 
                 Center(
-                  child: Text(
-                    '계정을 잃으셨나요?',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.65),
-                      fontSize: 12,
+                  child: TextButton(
+                    onPressed: () {
+                      context.go('/findId');
+                    },
+                    child: Text(
+                      '계정을 잃으셨나요?',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.65),
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ),
 
                 const SizedBox(height: 8),
 
-                Center(
-                  child: TextButton(
-                    onPressed: () {
-                      context.push('/userJoin');
-                    },
-                    child: const Text(
-                      '계정이 없으신가요? 회원가입 >',
-                      style: TextStyle(fontSize: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '계정이 없으신가요? ',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.75),
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
+                    GestureDetector(
+                      onTap: () => context.go('/userJoin'),
+                      child: const Text(
+                        '회원가입',
+                        style: TextStyle(
+                          color: border,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 24),
@@ -261,9 +289,14 @@ class _InputField extends StatelessWidget {
           isDense: true,
           hintText: hintText,
           hintStyle: TextStyle(
-              color: hintColor.withOpacity(0.7), fontSize: 13),
-          prefixIcon:
-          Icon(icon, color: hintColor.withOpacity(0.9), size: 20),
+            color: hintColor.withOpacity(0.7),
+            fontSize: 13,
+          ),
+          prefixIcon: Icon(
+            icon,
+            color: hintColor.withOpacity(0.9),
+            size: 20,
+          ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(color: borderColor, width: 1.2),
