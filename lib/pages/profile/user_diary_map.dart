@@ -8,39 +8,34 @@ class DiaryMap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body : Center(
-          child: Column(
+        body : Column(
             children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: double.infinity,
-                    height: 180,
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                    ),
-                  ),
-                  Positioned( // 개인 정보 수정 버튼
-                      top : 5,
+              Container(
+                width: double.infinity,
+                height: 180,
+                color: Colors.black,
+                child: Stack(  // Remove SafeArea wrapper
+                  children: [
+                    Positioned(
+                      top: 5,
                       right: 10,
                       child: IconButton(
-                          onPressed: () => context.go('/profileEdit'),
-                          icon: Icon(
-                            Icons.more_horiz,
-                            color: Colors.white,
-                            size: 40,
-                          )
-                      )
-                  ),
-                  Positioned( // 사용자 사진
+                        onPressed: () => context.go('/profileEdit'),
+                        icon: Icon(
+                          Icons.more_horiz,
+                          color: Colors.white,
+                          size: 40,
+                        ),
+                      ),
+                    ),
+                    Positioned(
                       left: 15,
                       top: 40,
                       child: CircleAvatar(
                         radius: 40,
-                      )
-                  ),
-                  Positioned( // 사용자 개인 정보
+                      ),
+                    ),
+                    Positioned(
                       top: 20,
                       left: 130,
                       child: Column(
@@ -48,9 +43,7 @@ class DiaryMap extends StatelessWidget {
                         children: [
                           Text(
                             "Nickname \n@thisIsmyId",
-                            style: TextStyle(
-                                color: Colors.white
-                            ),
+                            style: TextStyle(color: Colors.white),
                           ),
                           SizedBox(height: 15),
                           Row(
@@ -59,50 +52,41 @@ class DiaryMap extends StatelessWidget {
                               Text(
                                 "0 \nitems",
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    color: Colors.white
-                                ),
+                                style: TextStyle(color: Colors.white),
                               ),
                               SizedBox(width: 20),
                               Text(
                                 "0 \nlookbook",
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    color: Colors.white
-                                ),
+                                style: TextStyle(color: Colors.white),
                               ),
                               SizedBox(width: 20),
                               Text(
                                 "0 \nAI lookbook",
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    color: Colors.white
-                                ),
-                              )
+                                style: TextStyle(color: Colors.white),
+                              ),
                             ],
                           ),
-                          SizedBox(
-                            height: 10
-                            ,
-                          ),
+                          SizedBox(height: 10),
                           ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                  minimumSize: Size(150, 35)
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: Size(150, 35),
+                            ),
+                            onPressed: () => context.go('/calendarPage'),
+                            child: Text(
+                              "+ diary",
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
                               ),
-                              onPressed: () => context.go('/calendarPage'),
-                              child:
-                              Text(
-                                "+ diary",
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              )
-                          )
+                            ),
+                          ),
                         ],
-                      )
-                  ),
-                ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
               SizedBox(
                 height: 10,
@@ -183,7 +167,7 @@ class DiaryMap extends StatelessWidget {
               )
             ],
           ),
-        )
+
     );
   }
 }

@@ -1,189 +1,212 @@
 import 'package:flutter/material.dart';
 import '../../widgets/common/main_btn.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class UserDiaryCards extends StatelessWidget {
+
+class UserDiaryCards extends StatefulWidget {
   const UserDiaryCards({super.key});
 
+  String? get document => null;
+
   @override
+  State<UserDiaryCards> createState() => _UserDiaryCardsState();
+}
+
+class _UserDiaryCardsState extends State<UserDiaryCards> {
+
+  final FirebaseFirestore fs = FirebaseFirestore.instance;
+  // user ID hardcoding
+  String userId = 'tHuRzoBNhPhONwrBeUME';
+  Map<String, dynamic> userInfo = {};
+
+  Future <void> _getUserInfo () async {
+    final snapshot = await fs.collection('users').doc(userId).get();
+    if(snapshot.exists){
+      setState(() {
+        userInfo = snapshot.data()!;
+      });
+    } else {
+      print('User not found');
+    }
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _getUserInfo();
+  }
+
+  @override
+
   Widget build(BuildContext context) {
     return Scaffold(
-        body : Center(
-          child: Column(
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: double.infinity,
-                    height: 180,
-                    decoration: BoxDecoration(
-                      color: Colors.black,
+      body: Column(
+        children: [
+          // Custom AppBar
+          Container(
+            width: double.infinity,
+            height: 180,
+            color: Colors.black,
+            child: Stack(  // Remove SafeArea wrapper
+              children: [
+                Positioned(
+                  top: 5,
+                  right: 10,
+                  child: IconButton(
+                    onPressed: () => context.go('/profileEdit'),
+                    icon: Icon(
+                      Icons.more_horiz,
+                      color: Colors.white,
+                      size: 40,
                     ),
                   ),
-                  Positioned( // 개인 정보 수정 버튼
-                      top : 5,
-                      right: 10,
-                      child: IconButton(
-                          onPressed: () => context.go('/profileEdit'),
-                          icon: Icon(
-                            Icons.more_horiz,
-                            color: Colors.white,
-                            size: 40,
-                          )
-                      )
+                ),
+                Positioned(
+                  left: 15,
+                  top: 40,
+                  child: CircleAvatar(
+                    radius: 40,
                   ),
-                  Positioned( // 사용자 사진
-                      left: 15,
-                      top: 40,
-                      child: CircleAvatar(
-                        radius: 40,
-                      )
-                  ),
-                  Positioned( // 사용자 개인 정보
-                    top: 20,
-                    left: 130,
-                      child: Column(
+                ),
+                Positioned(
+                  top: 20,
+                  left: 130,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "${userInfo['userId'] ?? 'Nickname'} \n@${userInfo['nickname'] ?? 'thisIsmyId'}",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      SizedBox(height: 15),
+                      Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            "Nickname \n@thisIsmyId",
-                            style: TextStyle(
-                              color: Colors.white
-                            ),
+                            "0 \nitems",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white),
                           ),
-                          SizedBox(height: 15),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                  "0 \nitems",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                      color: Colors.white
-                                  ),
-                              ),
-                              SizedBox(width: 20),
-                              Text(
-                                  "0 \nlookbook",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                      color: Colors.white
-                                  ),
-                              ),
-                              SizedBox(width: 20),
-                              Text(
-                                  "0 \nAI lookbook",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                      color: Colors.white
-                                  ),
-                              )
-                            ],
+                          SizedBox(width: 20),
+                          Text(
+                            "0 \nlookbook",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white),
                           ),
-                          SizedBox(
-                            height: 10
-                            ,
+                          SizedBox(width: 20),
+                          Text(
+                            "0 \nAI lookbook",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white),
                           ),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: Size(150, 35)
-                            ),
-                              onPressed: () => context.go('/calendarPage'),
-                              child:
-                              Text(
-                                  "+ diary",
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                              )
-                          )
                         ],
-                      )
-                  ),
-                ],
-              ),
-              SizedBox(
-                height: 10,
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 50, // ⭐ 버튼 높이 증가
-                      child: ElevatedButton(
-                        onPressed: () => context.go('/userDiaryCards'),
+                      ),
+                      SizedBox(height: 10),
+                      ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xFFCAD83B),
-                          foregroundColor: Colors.black,
-                          elevation: 0,
-                          padding: EdgeInsets.zero, // 높이 정확히 맞춤
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                            side: const BorderSide(color: Colors.black),
+                          minimumSize: Size(150, 35),
+                        ),
+                        onPressed: () => context.go('/calendarPage'),
+                        child: Text(
+                          "+ diary",
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        child: const Text(
-                          'diary',
-                          style: TextStyle(fontWeight: FontWeight.bold,
-                              fontSize: 20),
-                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: () => context.go('/diaryMap'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          elevation: 0,
-                          padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                            side: const BorderSide(color: Colors.black),
-                          ),
-                        ),
-                        child: const Text(
-                          'map',
-                          style: TextStyle(fontWeight: FontWeight.bold,
-                              fontSize: 18),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(
-                height: 20,
-              ),
-              Expanded(
-                child: GridView.builder(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount:  3,
-                        crossAxisSpacing: 10,
-                        mainAxisSpacing: 10,
-                        childAspectRatio: 0.8,
-                      ),
-                    itemCount: 6,
-                    itemBuilder: (context, index){
-                      return Card(
-                        child: Column(
-                          children: [
-                            Expanded(child: Container())
-                          ],
-                        ),
-                      );
-                    }
                 ),
-              )
-            ],
+              ],
+            ),
           ),
-        )
+          SizedBox(height: 10),
+          // Buttons Row - ⭐ Added Padding to make them visible
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () => context.go('/userDiaryCards'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFFCAD83B),
+                        foregroundColor: Colors.black,
+                        elevation: 0,
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          side: const BorderSide(color: Colors.black),
+                        ),
+                      ),
+                      child: const Text(
+                        'diary',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: SizedBox(
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () => context.go('/diaryMap'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        elevation: 0,
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          side: const BorderSide(color: Colors.black),
+                        ),
+                      ),
+                      child: const Text(
+                        'map',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 20),
+          Expanded(
+            child: GridView.builder(
+              padding: EdgeInsets.all(16), // ⭐ Added padding to grid
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 0.8,
+              ),
+              itemCount: 6,
+              itemBuilder: (context, index) {
+                return Card(
+                  child: Column(
+                    children: [
+                      Expanded(child: Container()),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
