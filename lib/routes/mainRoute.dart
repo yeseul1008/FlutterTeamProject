@@ -9,6 +9,8 @@ import '../pages/admin/admin_page.dart';
 import '../pages/auth/user_google_login.dart';
 import '../pages/auth/user_join.dart';
 import '../pages/auth/user_login.dart';
+import '../pages/auth/find_id.dart';
+import '../pages/auth/find_pwd.dart';
 import '../pages/community/follow_list.dart';
 import '../pages/community/main_feed.dart';
 import '../pages/community/question_add.dart';
@@ -63,22 +65,26 @@ final GoRouter router = GoRouter(
           builder: (context, state) => const RootPage(),
         ),
         // auth 폴더 속 파일 이동
-        // GoRoute(
-        //   path: '/findIdPwd',
-        //   builder: (context, state) => const FindIdPwd(),
-        // ),
+        GoRoute(
+          path: '/findId',
+          builder: (context, state) => const FindId(),
+        ),
+        GoRoute(
+          path: '/findPwd',
+          builder: (context, state) => const FindPwd(),
+        ),
         GoRoute(
           path: '/googleLogin',
           builder: (context, state) => const GoogleLogin(),
         ),
-        // GoRoute(
-        //   path: '/userJoin',
-        //   builder: (context, state) => const UserJoin(),
-        // ),
-        // GoRoute(
-        //   path: '/userLogin',
-        //   builder: (context, state) => const UserLogin(),
-        // ),
+        GoRoute(
+          path: '/userJoin',
+          builder: (context, state) => const UserJoin(),
+        ),
+        GoRoute(
+          path: '/userLogin',
+          builder: (context, state) => const UserLogin(),
+        ),
         // community 폴더 속 파일 이동
         GoRoute(
           path: '/followList',
@@ -143,7 +149,23 @@ final GoRouter router = GoRouter(
 
         GoRoute(
           path: '/userLookbookAdd',
-          builder: (context, state) => const UserLookbookAdd(),
+          pageBuilder: (context, state) {
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: const UserLookbookAdd(),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                final tween = Tween<Offset>(
+                  begin: const Offset(0, 1), // 아래에서 시작
+                  end: Offset.zero,
+                ).chain(CurveTween(curve: Curves.easeOutCubic));
+
+                return SlideTransition(
+                  position: animation.drive(tween),
+                  child: child,
+                );
+              },
+            );
+          },
         ),
         GoRoute(
           path: '/userScrap',
