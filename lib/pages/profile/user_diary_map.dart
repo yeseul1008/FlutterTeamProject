@@ -1,9 +1,56 @@
 import 'package:flutter/material.dart';
 import '../../widgets/common/main_btn.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class DiaryMap extends StatelessWidget {
+class DiaryMap extends StatefulWidget {
   const DiaryMap({super.key});
+
+  String? get document => null;
+
+
+  @override
+  State<DiaryMap> createState() => _DiaryMapState();
+}
+
+class _DiaryMapState extends State<DiaryMap> {
+
+  final FirebaseFirestore fs = FirebaseFirestore.instance;
+  // user ID hardcoding
+  String userId = 'tHuRzoBNhPhONwrBeUME';
+  String userId2 = 'TEST1';
+  Map<String, dynamic> userInfo = {};
+  int lookbookCnt = 0;
+
+  Future <void> _getUserInfo () async {
+
+    // 룩복 개수
+    final lookbookSnapshot = await fs.collection('lookbooks')
+        .where('userId', isEqualTo: userId2)
+        .get();
+
+    //사용자 정보
+    final userSnapshot = await fs.collection('users').doc(userId).get();
+
+    if(userSnapshot.exists){
+      setState(() {
+        userInfo = userSnapshot.data()!;
+        lookbookCnt = lookbookSnapshot.docs.length;
+      });
+
+      print('Lookbooks : $lookbookCnt');
+
+    } else {
+      print('User not found');
+    }
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _getUserInfo();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +89,7 @@ class DiaryMap extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            "Nickname \n@thisIsmyId",
+                            "${userInfo['userId'] ?? 'Nickname'} \n@${userInfo['nickname'] ?? 'thisIsmyId'}",
                             style: TextStyle(color: Colors.white),
                           ),
                           SizedBox(height: 15),
@@ -56,7 +103,7 @@ class DiaryMap extends StatelessWidget {
                               ),
                               SizedBox(width: 20),
                               Text(
-                                "0 \nlookbook",
+                                "$lookbookCnt \nlookbook",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(color: Colors.white),
                               ),
