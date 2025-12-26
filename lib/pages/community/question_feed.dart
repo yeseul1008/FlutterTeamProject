@@ -153,7 +153,7 @@ class QuestionFeed extends StatelessWidget {
                       ),
                     ),
                     child: const Text(
-                      'Add',
+                      'post a look',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 20,
