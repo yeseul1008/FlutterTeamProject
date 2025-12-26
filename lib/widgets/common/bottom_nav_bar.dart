@@ -18,16 +18,16 @@ class _BottomNavBarState extends State<BottomNavBar> {
 
     switch (index) {
       case 0:
-        context.go('/closet');
+        context.go('/userWardrobeList');
         break;
       case 1:
-        context.go('/calendar');
+        context.go('/calendarPage');
         break;
       case 2:
-        context.go('/diary');
+        context.go('/userDiaryCards');
         break;
       case 3:
-        context.go('/community');
+        context.go('/communityMainFeed');
         break;
     }
   }

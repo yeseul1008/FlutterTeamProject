@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import '../../widgets/common/main_btn.dart';
+import 'package:go_router/go_router.dart';
 
-class Admin extends StatefulWidget {
-  const Admin({super.key});
+class AdminPage extends StatelessWidget {
+  const AdminPage({super.key});
 
-  @override
-  State<Admin> createState() => _AdminState();
-}
-
-class _AdminState extends State<Admin> {
   @override
   Widget build(BuildContext context) {
-    return const Placeholder();
+    return Scaffold(
+        body : Center(
+          child: Text("관리자 페이지 입니다."),
+        )
+    );
   }
 }

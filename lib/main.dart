@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'routes/mainRoute.dart'; // ⬅️ router 가져오기
+import 'pages/wardrobe/user_wardrobe_list.dart';
 
 void main() {
   runApp(const MyApp());
