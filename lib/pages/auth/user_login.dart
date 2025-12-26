@@ -210,7 +210,7 @@ class _UserLoginState extends State<UserLogin> {
                 Center(
                   child: TextButton(
                     onPressed: () {
-                      // context.push('/join');
+                      context.push('/userJoin');
                     },
                     child: const Text(
                       '계정이 없으신가요? 회원가입 >',
