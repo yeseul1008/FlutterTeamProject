@@ -83,9 +83,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                 color: const Color(0xFFA88AEE),
                 child: InkWell(
                   customBorder: const CircleBorder(),
-                  onTap: () {
-                    // ❗ 기능은 요구 없으므로 그대로
-                  },
+                  onTap: () => context.push('/userWardrobeAdd'),
                   child: const Icon(
                     Icons.add,
                     size: 40,

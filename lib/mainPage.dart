@@ -27,6 +27,7 @@ class RootPage extends StatelessWidget {
                 context.go('/page2?name=$name&age=$age');
               },
             ),
+
           ],
         ),
       ),
