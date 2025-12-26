@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../routePage1.dart';
 import '../routePage2.dart';
 
@@ -180,8 +181,8 @@ class RootLayout extends StatelessWidget {
     // || state.uri.path.startsWith('/page1') 이 코드를 추가하면 됨
     bool hideBottom = false;
     if(
-      state.uri.path.startsWith('/page2')
-      // || state.uri.path.startsWith('/page1')
+    state.uri.path.startsWith('/page2')
+    // || state.uri.path.startsWith('/page1')
 
     ){
       hideBottom = true;
@@ -190,8 +191,8 @@ class RootLayout extends StatelessWidget {
     bool hideAppBar = false;
 
     if(
-      state.uri.path.startsWith('/page1')
-      // || state.uri.path.startsWith('/page2')
+    state.uri.path.startsWith('/page1')
+    // || state.uri.path.startsWith('/page2')
 
     ){
       hideAppBar = true;
