@@ -15,7 +15,7 @@ class UserLookbook extends StatelessWidget {
         child: SizedBox(
           height: 44, // 버튼 위아래 너비
           child: FloatingActionButton.extended(
-            onPressed: () {},
+            onPressed: () => context.push('/userLookbookAdd'),
 
             backgroundColor: const Color(0xFFCAD83B),
             elevation: 6,

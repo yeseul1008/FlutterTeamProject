@@ -3,7 +3,9 @@ import '../../widgets/common/main_btn.dart';
 import 'package:go_router/go_router.dart';
 
 class UserWardrobeCategory extends StatelessWidget {
-  const UserWardrobeCategory({super.key});
+  const UserWardrobeCategory({
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

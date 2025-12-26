@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import '../../widgets/common/main_btn.dart';
+import 'package:go_router/go_router.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class UserLogin extends StatefulWidget {
+  const UserLogin({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<UserLogin> createState() => _UserLoginState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _UserLoginState extends State<UserLogin> {
   final _idController = TextEditingController();
   final _pwController = TextEditingController();
 
@@ -36,7 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const SizedBox(height: 28),
 
-                // 로고 원형
+                // 로고
                 Center(
                   child: Container(
                     width: 72,
@@ -64,27 +66,24 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 10),
 
-                // 타이틀
                 const Center(
                   child: Text(
-                    'What you where?',
+                    'What you wear?',
                     style: TextStyle(
                       color: textGrey,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      letterSpacing: 0.2,
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 26),
 
-                // 아이디 라벨
-                const Text(
-                  '아이디',
-                  style: TextStyle(color: textGrey, fontSize: 12),
-                ),
+                const Text('아이디',
+                    style: TextStyle(color: textGrey, fontSize: 12)),
                 const SizedBox(height: 8),
 
                 _InputField(
@@ -95,13 +94,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   hintColor: textGrey,
                   textColor: Colors.white,
                 ),
+
                 const SizedBox(height: 16),
 
-                // 비밀번호 라벨
-                const Text(
-                  '비밀번호',
-                  style: TextStyle(color: textGrey, fontSize: 12),
-                ),
+                const Text('비밀번호',
+                    style: TextStyle(color: textGrey, fontSize: 12)),
                 const SizedBox(height: 8),
 
                 _InputField(
@@ -113,6 +110,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   textColor: Colors.white,
                   obscureText: true,
                 ),
+
                 const SizedBox(height: 18),
 
                 // 로그인 버튼
@@ -120,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   height: 46,
                   child: ElevatedButton(
                     onPressed: () {
-                      // TODO: 로그인 로직 연결
+                      // TODO: Firebase 로그인 연결
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: purple,
@@ -139,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 18),
 
-                // 또는 구분선
+                // 구분선
                 Row(
                   children: [
                     Expanded(
@@ -150,10 +148,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 10),
-                      child: Text(
-                        '또는',
-                        style: TextStyle(color: textGrey, fontSize: 12),
-                      ),
+                      child: Text('또는',
+                          style: TextStyle(color: textGrey, fontSize: 12)),
                     ),
                     Expanded(
                       child: Divider(
@@ -166,12 +162,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 14),
 
-                // Google 버튼(디자인만)
+                // Google 로그인
                 SizedBox(
                   height: 46,
                   child: ElevatedButton(
                     onPressed: () {
-                      // TODO: Google 로그인 연결
+                      // TODO: Google 로그인
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
@@ -183,30 +179,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // 구글 아이콘 대체(패키지 없이)
-                        Container(
-                          width: 18,
-                          height: 18,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Center(
-                            child: Text(
-                              'G',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
+                      children: const [
+                        Text(
+                          'G',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w800, fontSize: 14),
                         ),
-                        const SizedBox(width: 10),
-                        const Text(
-                          'Google로 시작하기',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
+                        SizedBox(width: 10),
+                        Text('Google로 시작하기',
+                            style: TextStyle(fontWeight: FontWeight.w700)),
                       ],
                     ),
                   ),
@@ -214,28 +195,25 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 26),
 
-                // 하단 문구
                 Center(
                   child: Text(
-                    '계정을 잃으셨나요 ?',
+                    '계정을 잃으셨나요?',
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.65),
                       fontSize: 12,
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 8),
+
                 Center(
                   child: TextButton(
                     onPressed: () {
-                      // TODO: 회원가입 화면 이동
+                      // context.push('/join');
                     },
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.white.withOpacity(0.8),
-                      padding: EdgeInsets.zero,
-                    ),
                     child: const Text(
-                      '계정이 없으신가요? 회원가입  >',
+                      '계정이 없으신가요? 회원가입 >',
                       style: TextStyle(fontSize: 12),
                     ),
                   ),
@@ -281,12 +259,11 @@ class _InputField extends StatelessWidget {
         cursorColor: borderColor,
         decoration: InputDecoration(
           isDense: true,
-          filled: true,
-          fillColor: Colors.transparent,
           hintText: hintText,
-          hintStyle: TextStyle(color: hintColor.withOpacity(0.7), fontSize: 13),
-          prefixIcon: Icon(icon, color: hintColor.withOpacity(0.9), size: 20),
-          contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          hintStyle: TextStyle(
+              color: hintColor.withOpacity(0.7), fontSize: 13),
+          prefixIcon:
+          Icon(icon, color: hintColor.withOpacity(0.9), size: 20),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(color: borderColor, width: 1.2),
