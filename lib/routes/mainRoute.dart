@@ -44,25 +44,10 @@ final GoRouter router = GoRouter(
         return RootLayout(child: child);
       },
       routes: [
-        // 밑에 GoRoute 2개는 샘플임. 페이지 이동할때 방식만 참고하세요
-        GoRoute(
-          path: '/page1',
-          builder: (context, state) => const Page1(),
-        ),
-        GoRoute(
-          path: '/page2',
-          builder: (context, state) {
-            final name =
-                state.uri.queryParameters['name'] ?? '이름 없음';
-            final age =
-                state.uri.queryParameters['age'] ?? '나이 없음';
-            return Page2(name: name, age: age);
-          },
-        ),
         // 메인(mainPage.dart) 페이지!!!! 앱 첫 실행시 이 페이지가 뜸!! (나중에 옷장이 메인페이지가 되도록 바꿀것임. 지금은 ㄴㄴ)
         GoRoute(
           path: '/',
-          builder: (context, state) => const RootPage(),
+          builder: (context, state) => const StartPage(),
         ),
         // auth 폴더 속 파일 이동
         GoRoute(
