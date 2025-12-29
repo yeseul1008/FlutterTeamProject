@@ -13,31 +13,8 @@ class UserWardrobeList extends StatefulWidget {
 
 class _UserWardrobeListState extends State<UserWardrobeList> {
   final FirebaseFirestore fs = FirebaseFirestore.instance;
-  String? userId;
+  final userId = FirebaseAuth.instance.currentUser?.uid;
   Map<String, dynamic> userInfo = {};
-
-
-
-  @override
-  void initState() {
-    super.initState();
-
-    FirebaseAuth.instance.authStateChanges().listen((user) {
-      if (user == null) {
-        debugPrint('❌ 로그인 안됨');
-        return;
-      }
-
-      setState(() {
-        userId = user.uid;
-      });
-
-      debugPrint('✅ userId 세팅 완료: $userId');
-      _getUserInfo();
-    });
-  }
-
-
 
   // 사용자 정보 가져오기
   Future<void> _getUserInfo() async {
@@ -46,7 +23,7 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
       setState(() {
         userInfo = snapshot.data()!;
       });
-      debugPrint('정보: $userInfo');
+      print(userInfo);
     } else {
       print('User not found');
     }
@@ -59,6 +36,12 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
         .doc(userId)
         .collection('wardrobe')
         .snapshots();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _getUserInfo();
   }
 
   @override
