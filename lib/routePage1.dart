@@ -8,14 +8,16 @@ class StartPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("개발 중 시작 페이지 입니다."),
+        title : const Center(
+          child : Text('✔편의를 위해 시작하는 페이지')
+        )
       ),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              '이동 필요한 부분들 넣으세요',
+              '이동 필요한 버튼 넣으셔도 될듯요',
               style: TextStyle(fontSize: 18),
             ),
             const SizedBox(height: 12),
