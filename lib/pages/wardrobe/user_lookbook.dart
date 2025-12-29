@@ -14,6 +14,7 @@ class UserLookbook extends StatefulWidget {
 class _UserLookbookState extends State<UserLookbook> {
   final FirebaseFirestore fs = FirebaseFirestore.instance;
   final userId = FirebaseAuth.instance.currentUser?.uid;
+
   List<Map<String, dynamic>> lookbooks = []; // 모든 문서 저장
   bool loading = true;
 
@@ -251,14 +252,6 @@ class _UserLookbookState extends State<UserLookbook> {
                             ),
                           )
                               : null,
-                        ),
-                        const Positioned(
-                          top: 4,
-                          right: 4,
-                          child: Icon(
-                            Icons.favorite_border,
-                            size: 18,
-                          ),
                         ),
                       ],
                     ),
