@@ -30,8 +30,24 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  qr_flutter:
+  qr_flutter: any
   flutter_rating_bar: ^4.0.1
+  fluttertoast: any
+  table_calendar: any
+  confetti: any
+  percent_indicator: any
+  sqflite: any
+  path: any
+  go_router: any
+  firebase_core: any
+  cloud_firestore: any
+  firebase_storage: any
+  image_picker: any
+  share_plus: any
+  firebase_auth: any
+  google_sign_in: ^6.2.1
+  flutter_dotenv: any
+  http: ^1.2.0
   fluttertoast:
   table_calendar:
   confetti:
@@ -73,6 +89,7 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   assets:
+    - .env
     - assets/
     - assets/models/u2netp.tflite
 
@@ -110,4 +127,4 @@ flutter:
   #         weight: 700
   #
   # For details regarding fonts from package dependencies,
-  # see https://flutter.dev/to/font-from-package
+  # see https://flutter.dev/to/font-from-package 야멜파일도 체크해봐
