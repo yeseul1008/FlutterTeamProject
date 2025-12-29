@@ -1,8 +1,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+
     <application
         android:label="team_project_flutter"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+
+        <!-- 카카오 SDK App Key -->
+        <meta-data
+            android:name="com.kakao.sdk.AppKey"
+            android:value="d965237ababfd11fc09f8f3314a782cc" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
