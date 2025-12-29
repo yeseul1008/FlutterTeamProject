@@ -1,40 +1,76 @@
 import 'package:flutter/material.dart';
 import '../../widgets/common/main_btn.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class UserWardrobeList extends StatelessWidget {
+class UserWardrobeList extends StatefulWidget {
   const UserWardrobeList({super.key});
+
+  @override
+  State<UserWardrobeList> createState() => _UserWardrobeListState();
+}
+
+class _UserWardrobeListState extends State<UserWardrobeList> {
+  final FirebaseFirestore fs = FirebaseFirestore.instance;
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+  Map<String, dynamic> userInfo = {};
+
+  // 사용자 정보 가져오기
+  Future<void> _getUserInfo() async {
+    final snapshot = await fs.collection('users').doc(userId).get();
+    if (snapshot.exists) {
+      setState(() {
+        userInfo = snapshot.data()!;
+      });
+      print(userInfo);
+    } else {
+      print('User not found');
+    }
+  }
+
+  // wardrobe 컬렉션 스트림
+  Stream<QuerySnapshot<Map<String, dynamic>>> _wardrobeStream() {
+    return fs
+        .collection('users')
+        .doc(userId)
+        .collection('wardrobe')
+        .snapshots();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _getUserInfo();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
 
+      // AI 착용샷 버튼
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 80),
         child: SizedBox(
-          height: 44, // 버튼 위아래 너비
+          height: 44,
           child: FloatingActionButton.extended(
             onPressed: () {},
-
             backgroundColor: const Color(0xFFA88AEE),
             elevation: 6,
-
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(22),
               side: const BorderSide(color: Colors.black),
             ),
-
             icon: const Icon(
               Icons.auto_awesome,
-              size: 18, // 아이콘 크기
+              size: 18,
               color: Colors.white,
             ),
-
             label: const Text(
               'ai착용샷',
               style: TextStyle(
-                fontSize: 14, // 텍스트 크기
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
@@ -43,27 +79,25 @@ class UserWardrobeList extends StatelessWidget {
         ),
       ),
 
-
-
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
           children: [
             const SizedBox(height: 30),
 
-            // 상단 버튼 3개 (ElevatedButton)
+            // 상단 버튼 3개
             Row(
               children: [
                 Expanded(
                   child: SizedBox(
-                    height: 50, // ⭐ 버튼 높이 증가
+                    height: 50,
                     child: ElevatedButton(
                       onPressed: () => context.go('/userWardrobeList'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFCAD83B),
                         foregroundColor: Colors.black,
                         elevation: 0,
-                        padding: EdgeInsets.zero, // 높이 정확히 맞춤
+                        padding: EdgeInsets.zero,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                           side: const BorderSide(color: Colors.black),
@@ -71,8 +105,8 @@ class UserWardrobeList extends StatelessWidget {
                       ),
                       child: const Text(
                         'closet',
-                        style: TextStyle(fontWeight: FontWeight.bold,
-                        fontSize: 20),
+                        style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                       ),
                     ),
                   ),
@@ -95,8 +129,8 @@ class UserWardrobeList extends StatelessWidget {
                       ),
                       child: const Text(
                         'lookbooks',
-                        style: TextStyle(fontWeight: FontWeight.bold,
-                        fontSize: 18),
+                        style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                       ),
                     ),
                   ),
@@ -119,8 +153,8 @@ class UserWardrobeList extends StatelessWidget {
                       ),
                       child: const Text(
                         'scrap',
-                        style: TextStyle(fontWeight: FontWeight.bold,
-                        fontSize: 20),
+                        style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                       ),
                     ),
                   ),
@@ -128,10 +162,9 @@ class UserWardrobeList extends StatelessWidget {
               ],
             ),
 
+            const SizedBox(height: 16),
 
-          const SizedBox(height: 16),
-
-            // 검색 바 영역 (정적)
+            // 검색 바 영역
             Row(
               children: [
                 const Icon(Icons.menu),
@@ -164,36 +197,94 @@ class UserWardrobeList extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            // 옷 그리드 (빈 공간)
+            // 옷 그리드
             Expanded(
-              child: GridView.builder(
-                itemCount: 12,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.7,
-                ),
-                itemBuilder: (context, index) {
-                  return Stack(
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          color: Colors.white,
+              child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: _wardrobeStream(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return const Center(child: Text('옷장이 비어있습니다.'));
+                  }
+
+                  final docs = snapshot.data!.docs;
+
+                  return GridView.builder(
+                    itemCount: docs.length,
+                    gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 0.7,
+                    ),
+                    itemBuilder: (context, index) {
+                      final data = docs[index].data();
+                      final imageUrl = data['imageUrl'] ?? '';
+                      final docId = docs[index].id; // 문서 ID
+
+                      return GestureDetector(
+                        onTap: () => context.push(
+                          '/userWardrobeDetail',
+                          extra: docs[index].id, // String만 전달
                         ),
-                      ),
-                      const Positioned(
-                        top: 4,
-                        right: 4,
-                        child: Icon(
-                          Icons.favorite_border,
-                          size: 18,
+                        child: Stack(
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey),
+                                color: Colors.white,
+                                image: imageUrl.isNotEmpty
+                                    ? DecorationImage(
+                                  image: NetworkImage(imageUrl),
+                                  fit: BoxFit.cover,
+                                )
+                                    : null,
+                              ),
+                            ),
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: IconButton(
+                                icon: Icon(
+                                  data['liked'] == true
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  color: Colors.black,
+                                  size: 18,
+                                ),
+                                onPressed: () async {
+                                  final docRef = fs
+                                      .collection('users')
+                                      .doc(userId)
+                                      .collection('wardrobe')
+                                      .doc(docId);
+
+                                  final currentLiked = data['liked'] == true;
+                                  await docRef.update({'liked': !currentLiked});
+                                },
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                      );
+                    },
                   );
                 },
+              ),
+            ),
+
+            // 화면 하단에 사용자 닉네임 출력
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              alignment: Alignment.center,
+              child: Text(
+                'User: ${userInfo['nickname'] ?? 'Loading...'}',
+                style:
+                const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -201,5 +292,4 @@ class UserWardrobeList extends StatelessWidget {
       ),
     );
   }
-
 }

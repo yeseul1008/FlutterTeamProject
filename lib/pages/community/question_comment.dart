@@ -126,7 +126,7 @@ class QuestionComment extends StatelessWidget {
           /// ===== QnA 내용 =====
           const Expanded(
             child: Center(
-              child: Text('QnA 페이지'),
+              child: Text('댓글 페이지'),
             ),
           ),
         ],
