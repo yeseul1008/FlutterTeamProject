@@ -73,7 +73,7 @@ class _UserLoginState extends State<UserLogin> {
       );
 
       if (!mounted) return;
-      context.go('/');
+      context.go('/userDiaryCards');
     } on FirebaseAuthException catch (e) {
       final msg = switch (e.code) {
         'user-not-found' => '등록된 계정이 없습니다.',
