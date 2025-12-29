@@ -18,14 +18,43 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
   final FirebaseFirestore fs = FirebaseFirestore.instance;
   // user ID hardcoding
   String userId = 'tHuRzoBNhPhONwrBeUME';
+  String userId2 = 'TEST1';
   Map<String, dynamic> userInfo = {};
+  List<Map<String, dynamic>> userLookbook = [];
+  int lookbookCnt = 0;
+
+  // Date Format Function
+
+  String formatKoreanDate(Timestamp? timestamp) {
+    if (timestamp == null) return '날짜 없음';
+
+    DateTime dateTime = timestamp.toDate();
+    return '${dateTime.year}년 ${dateTime.month}월 ${dateTime.day}일';
+  }
 
   Future <void> _getUserInfo () async {
-    final snapshot = await fs.collection('users').doc(userId).get();
-    if(snapshot.exists){
+
+    // 룩복 개수
+    final lookbookSnapshot = await fs.collection('lookbooks')
+        .where('userId', isEqualTo: userId2)
+        .get();
+
+    //사용자 정보
+    final userSnapshot = await fs.collection('users').doc(userId).get();
+
+    if(userSnapshot.exists){
       setState(() {
-        userInfo = snapshot.data()!;
+        userInfo = userSnapshot.data()!;
+        lookbookCnt = lookbookSnapshot.docs.length;
+        userLookbook = lookbookSnapshot.docs.map((doc) {
+          final data = doc.data();
+          data['formattedDate'] = formatKoreanDate(data['createdAt']);
+          return data;
+        }).toList();
       });
+
+      print('Lookbooks number : $lookbookCnt, Lookbooks info : $userLookbook');
+
     } else {
       print('User not found');
     }
@@ -36,6 +65,89 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
     // TODO: implement initState
     super.initState();
     _getUserInfo();
+  }
+
+  // Lookbook Dialog Function
+
+  void _LookbookDialog(BuildContext context, int index) {
+
+    if (userLookbook.isEmpty) {
+      print('No lookbook data loaded yet');
+      return;
+    }
+
+    // Image HARDCODING first
+    String imageUrl = 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600';
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.white,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start, // aligning on the left
+                children: [
+                  // Header
+                  Row(
+                    children: [
+                      Icon(Icons.cloud, size : 20),
+                      SizedBox(width: 5),
+                      Text("Weather : sunny"),
+                    ],
+                  ),
+                  SizedBox(height: 5),
+                  Row(
+                    children: [
+                      Icon(Icons.location_on, size : 20),
+                      SizedBox(width: 5),
+                      Text("Location : 서울"),
+                    ],
+                  ),
+                  SizedBox(height: 5),
+                  Row(
+                    children: [
+                      Icon(Icons.calendar_today, size : 20),
+                      SizedBox(width: 5),
+                      Text("${userLookbook[0]['formattedDate'] ?? 'No date'}",),
+                    ],
+                  ),
+                  SizedBox(height: 20),
+
+                  // Image
+                  Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: 300,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 300,
+                        color: Colors.grey[300],
+                        child: Icon(Icons.image_not_supported, size: 80),
+                      );
+                    },
+                  ),
+
+                  // Text area
+                  Padding(
+                    padding: EdgeInsets.all(16),
+                    child:
+                        Text(
+                          '${userLookbook[0]['alias'] ?? "No description"}',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -49,7 +161,7 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
             width: double.infinity,
             height: 180,
             color: Colors.black,
-            child: Stack(  // Remove SafeArea wrapper
+            child: Stack(
               children: [
                 Positioned(
                   top: 5,
@@ -91,7 +203,7 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
                           ),
                           SizedBox(width: 20),
                           Text(
-                            "0 \nlookbook",
+                            "$lookbookCnt \nlookbook",
                             textAlign: TextAlign.center,
                             style: TextStyle(color: Colors.white),
                           ),
@@ -195,11 +307,16 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
               ),
               itemCount: 6,
               itemBuilder: (context, index) {
-                return Card(
-                  child: Column(
-                    children: [
-                      Expanded(child: Container()),
-                    ],
+                return GestureDetector(
+                  onTap: (){
+                    _LookbookDialog(context, index);
+                  },
+                  child: Card(
+                    child: Column(
+                      children: [
+                        Expanded(child: Container(child: Center(child: Text("Click me !")),)),
+                      ],
+                    ),
                   ),
                 );
               },

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../widgets/common/main_btn.dart';
-import '../../widgets/common/app_logo.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../firebase/firestore_service.dart';
 
 class UserJoin extends StatefulWidget {
   const UserJoin({super.key});
@@ -11,29 +11,102 @@ class UserJoin extends StatefulWidget {
 }
 
 class _UserJoinState extends State<UserJoin> {
-  final _emailController = TextEditingController();
-  final _idController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _pwController = TextEditingController();
-  final _pw2Controller = TextEditingController();
+  final _email = TextEditingController();
+  final _loginId = TextEditingController();
+  final _pw = TextEditingController();
+  final _pw2 = TextEditingController();
+  final _phone = TextEditingController();
+  final _nickname = TextEditingController();
 
-  bool _agree = false;
+  bool _loading = false;
+  final _fs = FirestoreService();
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _idController.dispose();
-    _phoneController.dispose();
-    _pwController.dispose();
-    _pw2Controller.dispose();
+    _email.dispose();
+    _loginId.dispose();
+    _pw.dispose();
+    _pw2.dispose();
+    _phone.dispose();
+    _nickname.dispose();
     super.dispose();
+  }
+
+  Future<void> _signup() async {
+    final email = _email.text.trim();
+    final loginId = _loginId.text.trim();
+    final pw = _pw.text.trim();
+    final pw2 = _pw2.text.trim();
+    final phone = _phone.text.trim();
+    final nickname = _nickname.text.trim();
+
+    if (email.isEmpty ||
+        loginId.isEmpty ||
+        pw.isEmpty ||
+        pw2.isEmpty ||
+        phone.isEmpty ||
+        nickname.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('모든 항목을 입력해주세요.')),
+      );
+      return;
+    }
+
+    if (pw != pw2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('비밀번호가 일치하지 않습니다.')),
+      );
+      return;
+    }
+
+    setState(() => _loading = true);
+
+    try {
+      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: pw,
+      );
+
+      final uid = cred.user!.uid;
+
+      await _fs.createUser(
+        userId: uid,
+        loginId: loginId,
+        email: email,
+        phone: phone,
+        provider: 'email',
+        nickname: nickname,
+        profileImageUrl: null,
+      );
+
+      await _fs.initFollowDoc(uid);
+
+      if (!mounted) return;
+      context.go('/userLogin');
+    } on FirebaseAuthException catch (e) {
+      final msg = switch (e.code) {
+        'email-already-in-use' => '이미 사용 중인 이메일입니다.',
+        'invalid-email' => '이메일 형식이 올바르지 않습니다.',
+        'weak-password' => '비밀번호가 너무 약합니다.',
+        _ => '회원가입에 실패했습니다. (${e.code})',
+      };
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('회원가입 중 오류가 발생했습니다.')),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     const bg = Color(0xFF0B0B0F);
     const purple = Color(0xFFA88AF7);
-    const borderPurple = Color(0xFF7B64D6);
+    const border = Color(0xFF7B64D6);
     const textGrey = Color(0xFFB8B8C2);
 
     return Scaffold(
@@ -47,67 +120,59 @@ class _UserJoinState extends State<UserJoin> {
               children: [
                 const SizedBox(height: 28),
 
-                // 로고 (위젯 분리된 버전)
-                const Center(child: AppLogo()),
-                const SizedBox(height: 10),
-
-                const Center(
-                  child: Text(
-                    'What you where?',
-                    style: TextStyle(
-                      color: textGrey,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.2,
+                Center(
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFFB248C6), Color(0xFF6E62FF)],
+                      ),
+                      border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.35),
+                          blurRadius: 14,
+                          offset: const Offset(0, 6),
+                        )
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.checkroom_outlined,
+                      color: Colors.white,
+                      size: 34,
                     ),
                   ),
                 ),
-                const SizedBox(height: 26),
+
+                const SizedBox(height: 10),
+
+                Center(
+                  child: Text(
+                    'What you wear?',
+                    style: const TextStyle(
+                      color: textGrey,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 22),
 
                 const Text('이메일', style: TextStyle(color: textGrey, fontSize: 12)),
                 const SizedBox(height: 8),
                 _InputField(
-                  controller: _emailController,
+                  controller: _email,
                   hintText: '이메일 입력',
                   icon: Icons.mail_outline,
-                  borderColor: borderPurple,
+                  borderColor: border,
                   hintColor: textGrey,
                   textColor: Colors.white,
-                ),
-                const SizedBox(height: 16),
-
-                const Text('아이디', style: TextStyle(color: textGrey, fontSize: 12)),
-                const SizedBox(height: 8),
-
-                // 아이디 + 중복확인 버튼 (로직 생략)
-                Row(
-                  children: [
-                    Expanded(
-                      child: _InputField(
-                        controller: _idController,
-                        hintText: '아이디 입력',
-                        icon: Icons.person_outline,
-                        borderColor: borderPurple,
-                        hintColor: textGrey,
-                        textColor: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    MainButton(
-                      text: '중복확인',
-                      height: 44,
-                      width: 84,
-                      radius: 12,
-                      fontSize: 12,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-                      backgroundColor: purple,
-                      borderColor: purple,
-                      textColor: Colors.white,
-                      onTap: () {
-                        // TODO: 중복확인 로직 (생략)
-                      },
-                    ),
-                  ],
+                  keyboardType: TextInputType.emailAddress,
                 ),
 
                 const SizedBox(height: 16),
@@ -115,89 +180,109 @@ class _UserJoinState extends State<UserJoin> {
                 const Text('전화번호', style: TextStyle(color: textGrey, fontSize: 12)),
                 const SizedBox(height: 8),
                 _InputField(
-                  controller: _phoneController,
+                  controller: _phone,
                   hintText: '전화번호 입력',
-                  icon: Icons.phone_outlined,
-                  borderColor: borderPurple,
+                  icon: Icons.call_outlined,
+                  borderColor: border,
+                  hintColor: textGrey,
+                  textColor: Colors.white,
+                  keyboardType: TextInputType.phone,
+                ),
+
+                const SizedBox(height: 16),
+
+                const Text('닉네임', style: TextStyle(color: textGrey, fontSize: 12)),
+                const SizedBox(height: 8),
+                _InputField(
+                  controller: _nickname,
+                  hintText: '닉네임 입력',
+                  icon: Icons.person_outline,
+                  borderColor: border,
                   hintColor: textGrey,
                   textColor: Colors.white,
                 ),
+
+                const SizedBox(height: 16),
+
+                const Text('아이디', style: TextStyle(color: textGrey, fontSize: 12)),
+                const SizedBox(height: 8),
+                _InputField(
+                  controller: _loginId,
+                  hintText: '아이디 입력',
+                  icon: Icons.account_circle_outlined,
+                  borderColor: border,
+                  hintColor: textGrey,
+                  textColor: Colors.white,
+                ),
+
                 const SizedBox(height: 16),
 
                 const Text('비밀번호', style: TextStyle(color: textGrey, fontSize: 12)),
                 const SizedBox(height: 8),
                 _InputField(
-                  controller: _pwController,
+                  controller: _pw,
                   hintText: '비밀번호 입력',
                   icon: Icons.lock_outline,
-                  borderColor: borderPurple,
+                  borderColor: border,
                   hintColor: textGrey,
                   textColor: Colors.white,
                   obscureText: true,
                 ),
+
                 const SizedBox(height: 16),
 
-                const Text('비밀번호 재입력', style: TextStyle(color: textGrey, fontSize: 12)),
+                const Text('비밀번호 재입력',
+                    style: TextStyle(color: textGrey, fontSize: 12)),
                 const SizedBox(height: 8),
                 _InputField(
-                  controller: _pw2Controller,
+                  controller: _pw2,
                   hintText: '비밀번호 재입력',
                   icon: Icons.lock_outline,
-                  borderColor: borderPurple,
+                  borderColor: border,
                   hintColor: textGrey,
                   textColor: Colors.white,
                   obscureText: true,
                 ),
 
-                const SizedBox(height: 18),
+                const SizedBox(height: 24),
 
-                // 동의 체크
-                Row(
-                  children: [
-                    Checkbox(
-                      value: _agree,
-                      onChanged: (v) => setState(() => _agree = v ?? false),
-                      activeColor: purple,
-                      checkColor: Colors.white,
-                      side: BorderSide(color: Colors.white.withOpacity(0.6)),
-                    ),
-                    Expanded(
-                      child: Text(
-                        '이용약관 및 개인정보 수집에 동의합니다.',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.75),
-                          fontSize: 12,
-                        ),
+                SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: _loading ? null : _signup,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: purple,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                  ],
+                    child: _loading
+                        ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                        : const Text(
+                      '회원가입 완료',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
                 ),
 
-                const SizedBox(height: 18),
+                const SizedBox(height: 16),
 
-                // 회원가입 버튼 (로직 비워둠)
-                MainButton(
-                  text: '회원가입',
-                  height: 46,
-                  radius: 10,
-                  backgroundColor: purple,
-                  borderColor: purple,
-                  textColor: Colors.white,
-                  onTap: () {
-                    // TODO: 회원가입 로직 (생략)
-                  },
-                ),
-
-                const SizedBox(height: 14),
-
-                // 이미 계정? 로그인 (요청대로 /UserLogin 이동)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       '이미 계정이 있으신가요? ',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.75),
+                        color: Colors.white.withOpacity(0.65),
                         fontSize: 12,
                       ),
                     ),
@@ -206,7 +291,7 @@ class _UserJoinState extends State<UserJoin> {
                       child: const Text(
                         '로그인',
                         style: TextStyle(
-                          color: borderPurple,
+                          color: border,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
@@ -225,21 +310,6 @@ class _UserJoinState extends State<UserJoin> {
   }
 }
 
-class _FieldIcon extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-
-  const _FieldIcon({
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Icon(icon, color: color.withOpacity(0.9), size: 20);
-  }
-}
-
 class _InputField extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
@@ -248,6 +318,7 @@ class _InputField extends StatelessWidget {
   final Color hintColor;
   final Color textColor;
   final bool obscureText;
+  final TextInputType? keyboardType;
 
   const _InputField({
     required this.controller,
@@ -257,6 +328,7 @@ class _InputField extends StatelessWidget {
     required this.hintColor,
     required this.textColor,
     this.obscureText = false,
+    this.keyboardType,
   });
 
   @override
@@ -266,16 +338,21 @@ class _InputField extends StatelessWidget {
       child: TextField(
         controller: controller,
         obscureText: obscureText,
+        keyboardType: keyboardType,
         style: TextStyle(color: textColor, fontSize: 14),
         cursorColor: borderColor,
         decoration: InputDecoration(
           isDense: true,
-          filled: true,
-          fillColor: Colors.transparent,
           hintText: hintText,
-          hintStyle: TextStyle(color: hintColor.withOpacity(0.7), fontSize: 13),
-          prefixIcon: _FieldIcon(icon: icon, color: hintColor),
-          contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          hintStyle: TextStyle(
+            color: hintColor.withOpacity(0.7),
+            fontSize: 13,
+          ),
+          prefixIcon: Icon(
+            icon,
+            color: hintColor.withOpacity(0.9),
+            size: 20,
+          ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(color: borderColor, width: 1.2),
