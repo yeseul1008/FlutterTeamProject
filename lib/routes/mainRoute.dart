@@ -121,7 +121,7 @@ final GoRouter router = GoRouter(
           builder: (context, state) => const PublicWardrobe(),
         ),
         GoRoute(
-          path: '/userDiaryAdd ',
+          path: '/userDiaryAdd',
           builder: (context, state) => const UserDiaryAdd (),
         ),
         // wardrobe 폴더 속 파일 이동

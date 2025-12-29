@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -15,35 +16,82 @@ class _CalendarPageState extends State<CalendarPage> {
   DateTime? _selectedDay;
   final FirebaseFirestore fs = FirebaseFirestore.instance;
 
-  // Sample data - TODO: Replace with Firebase
-  Map<DateTime, String> _outfitImages = {
-    DateTime(2025, 12, 25): 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400',
-    DateTime(2025, 12, 26): 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400',
-    DateTime(2025, 12, 24): 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=400',
-    DateTime(2025, 12, 23): 'https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=400',
-    DateTime(2025, 12, 27): 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=400',
-  };
+  // Store lookbooks by date
+  Map<DateTime, Map<String, dynamic>> _lookbooksByDate = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLookbooks();
+  }
+
+  Future<void> _loadLookbooks() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    if (uid == null) {
+      print('User not logged in');
+      return;
+    }
+
+    try {
+      // Get all calendar entries for the logged-in user
+      final calendarSnapshot = await fs
+          .collection('users')
+          .doc(uid)
+          .collection('calendar')
+          .get();
+
+      print('Found ${calendarSnapshot.docs.length} calendar entries');
+
+      Map<DateTime, Map<String, dynamic>> lookbooksMap = {};
+
+      for (var doc in calendarSnapshot.docs) {
+        final data = doc.data();
+        final dateTimestamp = data['date'] as Timestamp?;
+
+        if (dateTimestamp != null) {
+          final date = dateTimestamp.toDate();
+          final normalizedDate = DateTime(date.year, date.month, date.day);
+
+          lookbooksMap[normalizedDate] = {
+            'imageUrl': data['imageUrl'],
+            'lookbookId': data['lookbookId'],
+            'date': dateTimestamp,
+            'createdAt': data['createdAt'],
+          };
+
+          print('Added lookbook for date: $normalizedDate, imageUrl: ${data['imageUrl']}');
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _lookbooksByDate = lookbooksMap;
+      });
+
+      print('Loaded ${_lookbooksByDate.length} lookbooks');
+    } catch (e) {
+      print('Error loading lookbooks: $e');
+    }
+  }
 
   String? _getOutfitImage(DateTime day) {
     final normalizedDay = DateTime(day.year, day.month, day.day);
-    return _outfitImages[normalizedDay];
+    return _lookbooksByDate[normalizedDay]?['imageUrl'];
   }
 
-  // Function to check if there is a lookbook registered on a specific date
-
-  Future<bool> _hasCalendarEntry(DateTime date) async {
+  Future<Map<String, dynamic>?> _getCalendarEntry(DateTime date) async {
     try {
-      // You need to specify which user's calendar to check
-      String userId = 'tHuRzoBNhPhONwrBeUME'; // Use the actual user ID
+      final userId = FirebaseAuth.instance.currentUser?.uid;
 
-      // Create start and end of the day
+      if (userId == null) {
+        print('User not logged in');
+        return null;
+      }
+
       final startOfDay = DateTime(date.year, date.month, date.day, 0, 0, 0);
       final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
 
-      print('Checking calendar for user: $userId');
-      print('Date range: $startOfDay to $endOfDay');
-
-      // Access the subcollection: users/{userId}/calendar
       final querySnapshot = await fs
           .collection('users')
           .doc(userId)
@@ -53,12 +101,13 @@ class _CalendarPageState extends State<CalendarPage> {
           .limit(1)
           .get();
 
-      print('Query found ${querySnapshot.docs.length} documents');
-
-      return querySnapshot.docs.isNotEmpty;
+      if (querySnapshot.docs.isNotEmpty) {
+        return querySnapshot.docs.first.data();
+      }
+      return null;
     } catch (e) {
-      print('Error checking calendar entry: $e');
-      return false;
+      print('Error getting calendar entry: $e');
+      return null;
     }
   }
 
@@ -67,17 +116,6 @@ class _CalendarPageState extends State<CalendarPage> {
     return Scaffold(
       body: Column(
         children: [
-          // Container(
-          //   width: double.infinity,
-          //   height: 180,
-          //   decoration: BoxDecoration(
-          //     color: Colors.black,
-          //   ),
-          //   child: Text(
-          //       "my calendar",
-          //       style: TextStyle(color: Colors.white),
-          //   ),
-          // ),
           SizedBox(height: 20),
           TableCalendar(
             firstDay: DateTime.utc(2023, 1, 1),
@@ -91,25 +129,28 @@ class _CalendarPageState extends State<CalendarPage> {
                 _selectedDay = selectedDay;
                 _focusedDay = focusedDay;
               });
-
-              // Show full image in dialog when clicked
-              // final imageUrl = _getOutfitImage(selectedDay);
-              // if (imageUrl != null) {
-              //   _showOutfitDialog(selectedDay, imageUrl);
-              // }
             },
+            headerStyle: HeaderStyle(
+              titleTextStyle: TextStyle(
+                fontSize: 24,  // Change size
+                fontWeight: FontWeight.bold,  // Make it bold
+                color: Colors.black,  // Change color
+                // fontFamily: 'YourFont',  // Uncomment to use custom font
+              ),
+              formatButtonVisible: false,  // Hide format button
+              titleCentered: true,  // Center the title
+            ),
             calendarStyle: CalendarStyle(
               selectedDecoration: BoxDecoration(
                 color: Color(0xFFCAD83B).withOpacity(0.5),
-                shape: BoxShape.circle,
+                shape: BoxShape.rectangle,
               ),
               todayDecoration: BoxDecoration(
                 color: Colors.grey[400],
-                shape: BoxShape.circle,
+                shape: BoxShape.rectangle,
               ),
             ),
             calendarBuilders: CalendarBuilders(
-              // Custom builder to show images on dates
               defaultBuilder: (context, day, focusedDay) {
                 final imageUrl = _getOutfitImage(day);
 
@@ -126,7 +167,6 @@ class _CalendarPageState extends State<CalendarPage> {
                   ),
                   child: Column(
                     children: [
-                      // Date number
                       Text(
                         '${day.day}',
                         style: TextStyle(
@@ -134,7 +174,6 @@ class _CalendarPageState extends State<CalendarPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      // Outfit thumbnail
                       Expanded(
                         child: imageUrl != null
                             ? ClipRRect(
@@ -164,135 +203,58 @@ class _CalendarPageState extends State<CalendarPage> {
             width: 180,
             height: 50,
             child: ElevatedButton(
-                onPressed: () async {
-                  if (_selectedDay == null) {
-                    // No date selected
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('날짜를 먼저 선택해주세요')),
-                    );
-                    return;
-                  }
+              onPressed: () async {
+                if (_selectedDay == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('날짜를 먼저 선택해주세요')),
+                  );
+                  return;
+                }
 
-                  // Check if calendar entry exists for selected date
-                  bool hasEntry = await _hasCalendarEntry(_selectedDay!);
+                Map<String, dynamic>? calendarEntry = await _getCalendarEntry(_selectedDay!);
 
-                  if (!hasEntry) {
-                    // Show alert - no lookbook registered yet
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: Text('알림'),
-                        content: Text('캘린더에서 먼저 룩북을 등록해주세요'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: Text('확인'),
-                          ),
-                        ],
-                      ),
-                    );
-                  } else {
-                    // Has entry - go to diary writing page
-                    context.go('/userLookbookAdd'); // TODO: Update with your actual diary writing route
-                  }
-                },
+                if (calendarEntry == null) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text('알림'),
+                      content: Text('캘린더에서 먼저 룩북을 등록해주세요'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text('확인'),
+                        ),
+                      ],
+                    ),
+                  );
+                } else {
+                  context.go('/userDiaryAdd', extra: {
+                    'lookbookId': calendarEntry['lookbookId'],
+                    'date': calendarEntry['date'],
+                    'selectedDay': _selectedDay,
+                  });
+                }
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color(0xFFCAD83B),
                 foregroundColor: Colors.black,
                 elevation: 0,
-                padding: EdgeInsets.zero, // 높이 정확히 맞춤
+                padding: EdgeInsets.zero,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                   side: const BorderSide(color: Colors.black),
                 ),
               ),
               child: const Text(
-                '일기 추가',
-                style: TextStyle(fontWeight: FontWeight.bold,
-                    fontSize: 20),
+                'Write an entry',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                ),
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showOutfitDialog(DateTime date, String imageUrl) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        child: Stack(
-          children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Date at the top
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(16),
-                  child: Text(
-                    '${date.month}월 ${date.day}일',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                // Image
-                Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 300,
-                      color: Colors.grey[300],
-                      child: Icon(Icons.image_not_supported, size: 80),
-                    );
-                  },
-                ),
-                // Buttons
-                Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          // TODO: Edit outfit
-                          Navigator.pop(context);
-                        },
-                        icon: Icon(Icons.edit),
-                        label: Text('수정'),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          // TODO: Delete outfit
-                          Navigator.pop(context);
-                        },
-                        icon: Icon(Icons.delete),
-                        label: Text('삭제'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            // 닫기 버튼
-            Positioned(
-              top: 8,
-              right: 8,
-              child: IconButton(
-                icon: Icon(Icons.close),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
