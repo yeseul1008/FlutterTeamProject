@@ -171,16 +171,16 @@ class _FindIdState extends State<FindId> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      '비밀번호를 잊으셨나요? ',
+                      '기억이 나셨나요? ',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.75),
                         fontSize: 12,
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => context.go('/findPwd'),
+                      onTap: () => context.go('/'),
                       child: const Text(
-                        '비밀번호 재설정 >',
+                        '로그인으로 돌아가기 >',
                         style: TextStyle(
                           color: border,
                           fontSize: 12,
