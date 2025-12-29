@@ -22,6 +22,7 @@ import '../pages/profile/user_diary_map.dart';
 import '../pages/profile/user_profile_edit.dart';
 import '../pages/profile/user_public_lookbook.dart';
 import '../pages/profile/user_public_wardrobe.dart';
+import '../pages/profile/user_diary_add.dart';
 import '../pages/wardrobe/outfit_maker.dart';
 import '../pages/wardrobe/user_lookbook.dart';
 import '../pages/wardrobe/user_lookbook_add.dart';
@@ -118,7 +119,10 @@ final GoRouter router = GoRouter(
           path: '/publicWardrobe',
           builder: (context, state) => const PublicWardrobe(),
         ),
-
+        GoRoute(
+          path: '/userDiaryAdd ',
+          builder: (context, state) => const UserDiaryAdd (),
+        ),
         // wardrobe 폴더 속 파일 이동
         GoRoute(
           path: '/aiOutfitMaker',
