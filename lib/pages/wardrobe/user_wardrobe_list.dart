@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../widgets/common/main_btn.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class UserWardrobeList extends StatefulWidget {
   const UserWardrobeList({super.key});
@@ -12,7 +13,7 @@ class UserWardrobeList extends StatefulWidget {
 
 class _UserWardrobeListState extends State<UserWardrobeList> {
   final FirebaseFirestore fs = FirebaseFirestore.instance;
-  String userId = 'tHuRzoBNhPhONwrBeUME';
+  final userId = FirebaseAuth.instance.currentUser?.uid;
   Map<String, dynamic> userInfo = {};
 
   // 사용자 정보 가져오기
