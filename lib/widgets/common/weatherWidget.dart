@@ -2,14 +2,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-/// 5일 예보(3시간 단위) 기반 WeatherWidget (안전+디버그 포함)
-/// - date: 캘린더에서 선택한 날짜
+/// 5일 예보(3시간 단위) 기반 WeatherWidget
+/// - date: 선택한 날짜
 /// - lat/lon: 좌표
-/// - apiKey: 외부에서 주입 권장. 없으면 fallback 문구 표시
+/// - apiKey: 외부에서 주입
 ///
-/// ✅ 안전 처리
-/// - 네트워크/파싱 오류가 나도 화면 전체가 죽지 않게 FutureBuilder에서 처리
-/// - debugPrint는 body가 비어도 substring 에러 안 나게 처리
+/// ✅ 변경점(정렬):
+/// - 모든 Row를 mainAxisAlignment.start 로 통일해서
+///   어디서 쓰든 "왼쪽 정렬" 유지
 class WeatherWidget extends StatefulWidget {
   final DateTime date;
   final double lat;
@@ -66,8 +66,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     final list = rawList.cast<Map<String, dynamic>>();
 
     // 선택 날짜(yyyy-mm-dd)로 매칭되는 항목만 필터
-    final targetYmd =
-    DateTime(targetDate.year, targetDate.month, targetDate.day);
+    final targetYmd = DateTime(targetDate.year, targetDate.month, targetDate.day);
 
     final candidates = <_ForecastItem>[];
     for (final item in list) {
@@ -84,15 +83,13 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     }
 
     if (candidates.isEmpty) {
-      // 5일 범위 밖이거나(과거/6일 이후) 해당 날짜 데이터 없음
       throw _NoForecastForDate();
     }
 
-    // 같은 날짜 내에서 "정오(12:00)"에 가장 가까운 값 선택
+    // 같은 날짜 내에서 정오(12:00)에 가장 가까운 값 선택
     final noon = DateTime(targetYmd.year, targetYmd.month, targetYmd.day, 12);
     candidates.sort((a, b) =>
-    (a.dt.difference(noon).inMinutes).abs() -
-        (b.dt.difference(noon).inMinutes).abs());
+    (a.dt.difference(noon).inMinutes).abs() - (b.dt.difference(noon).inMinutes).abs());
 
     final pick = candidates.first;
 
@@ -106,24 +103,13 @@ class _WeatherWidgetState extends State<WeatherWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // fallback은 "테스트용". 실서비스에서는 apiKey 주입하세요.
-    const String _fallbackApiKey = 'PUT_YOUR_OPENWEATHER_API_KEY_HERE';
-
-    final String apiKey =
-    (widget.apiKey != null && widget.apiKey!.trim().isNotEmpty)
+    final String apiKey = (widget.apiKey != null && widget.apiKey!.trim().isNotEmpty)
         ? widget.apiKey!.trim()
-        : _fallbackApiKey;
+        : '';
 
-    // ✅ apiKey 들어오는지 확인(앞 4글자만)
-    if (apiKey.length >= 4) {
-      debugPrint('OW apiKey(head4): ${apiKey.substring(0, 4)}');
-    } else {
-      debugPrint('OW apiKey empty/short');
-    }
-
-    if (apiKey == _fallbackApiKey) {
+    if (apiKey.isEmpty) {
       return const Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.start, // ✅ 왼쪽 정렬
         children: [
           Icon(Icons.key_off, size: 18),
           SizedBox(width: 8),
@@ -145,7 +131,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.start, // ✅ 왼쪽 정렬
             children: [
               SizedBox(
                 width: 14,
@@ -163,7 +149,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
 
           if (snap.error is _NoForecastForDate) {
             return const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.start, // ✅ 왼쪽 정렬
               children: [
                 Icon(Icons.info_outline, size: 18),
                 SizedBox(width: 8),
@@ -176,7 +162,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
           }
 
           return const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.start, // ✅ 왼쪽 정렬
             children: [
               Icon(Icons.cloud_off, size: 18),
               SizedBox(width: 8),
@@ -189,7 +175,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
         final iconUrl = 'https://openweathermap.org/img/wn/${data.icon}@2x.png';
 
         return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start, // ✅ 왼쪽 정렬
           children: [
             Image.network(
               iconUrl,
@@ -203,8 +189,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
               child: Text(
                 '${data.temp.toStringAsFixed(0)}°  ${data.description}',
                 overflow: TextOverflow.ellipsis,
-                style:
-                const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
               ),
             ),
           ],

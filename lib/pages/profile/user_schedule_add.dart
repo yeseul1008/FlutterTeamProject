@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../widgets/common/weatherWidget.dart';
+import '../../service/kakao/kakao_models.dart'; //
+
 class UserScheduleAdd extends StatefulWidget {
   const UserScheduleAdd({super.key});
 
@@ -9,12 +12,44 @@ class UserScheduleAdd extends StatefulWidget {
 }
 
 class _UserScheduleAddState extends State<UserScheduleAdd> {
+  static const String _openWeatherApiKey = '5ebe456d15b6fd5e52fbf09d1ab110ae';
+
   final TextEditingController _scheduleController = TextEditingController();
+
+  // ✅ 목적지(좌표) 상태값: 기본 서울
+  String _placeName = '서울';
+  double _lat = 37.5665;
+  double _lon = 126.9780;
 
   @override
   void dispose() {
     _scheduleController.dispose();
     super.dispose();
+  }
+
+  void _onAddSchedule() {
+    final text = _scheduleController.text.trim();
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('일정을 입력해주세요.')),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('일정이 입력되었습니다.')),
+    );
+  }
+
+  // 목적지 검색 페이지 이동 -> 선택값 받아오기
+  Future<void> _onPickPlace() async {
+    final KakaoPlace? picked = await context.push<KakaoPlace>('/placeSearch');
+    if (picked == null) return;
+
+    setState(() {
+      _placeName = picked.name;
+      _lat = picked.lat;
+      _lon = picked.lon;
+    });
   }
 
   @override
@@ -29,7 +64,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
           children: [
             const SizedBox(height: 10),
 
-            // 상단 헤더(뒤로가기 + 타이틀)
+            // 상단 헤더
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Row(
@@ -57,29 +92,31 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 48), // 왼쪽 아이콘 균형 맞춤
+                  const SizedBox(width: 48),
                 ],
               ),
             ),
 
             const SizedBox(height: 16),
 
-            // ✅ 날짜 + 날씨 (일단 UI 고정)
+            // 날짜 + 목적지 추가 (날짜 그대로)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18),
               child: Row(
                 children: [
-                  const Text(
-                    '2017. 7.19 wed',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                  const Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '2017. 7.19 wed',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                      ),
+                    ),
                   ),
-                  const Spacer(),
                   SizedBox(
                     height: 34,
                     child: OutlinedButton(
-                      onPressed: () {
-                        // TODO: 목적지 추가(지도 API) - 지금은 패스
-                      },
+                      onPressed: _onPickPlace,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.black,
                         side: const BorderSide(color: Colors.black),
@@ -88,9 +125,10 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 10),
                       ),
-                      child: const Text(
-                        '+ 목적지 추가',
-                        style: TextStyle(fontWeight: FontWeight.w800),
+                      child: Text(
+                        '+ 목적지 추가 ($_placeName)',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ),
                   ),
@@ -100,35 +138,27 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
 
             const SizedBox(height: 10),
 
+            // ✅ 날씨(왼쪽) + 일정추가 버튼(오른쪽)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18),
               child: Row(
                 children: [
-                  const Icon(Icons.cloud, size: 20),
-                  const SizedBox(width: 8),
-                  const Text(
-                    '최저 18도/ 최고 25도',
-                    style: TextStyle(fontSize: 12),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: WeatherWidget(
+                        date: DateTime.now(), // TODO: 나중에 선택 날짜로 교체
+                        lat: _lat,
+                        lon: _lon,
+                        apiKey: _openWeatherApiKey,
+                      ),
+                    ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   SizedBox(
                     height: 34,
                     child: OutlinedButton(
-                      onPressed: () {
-                        // ✅ 일정 추가(텍스트 입력값 사용)
-                        final text = _scheduleController.text.trim();
-                        if (text.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('일정을 입력해주세요.')),
-                          );
-                          return;
-                        }
-
-                        // TODO: 저장 로직(Firebase) 연결 예정
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('일정이 입력되었습니다.')),
-                        );
-                      },
+                      onPressed: _onAddSchedule,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.black,
                         side: const BorderSide(color: Colors.black),
@@ -165,7 +195,8 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(18),
-                      borderSide: const BorderSide(color: Colors.black, width: 1.2),
+                      borderSide:
+                      const BorderSide(color: Colors.black, width: 1.2),
                     ),
                   ),
                 ),
@@ -174,13 +205,13 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
 
             const SizedBox(height: 22),
 
-            // ✅ 내 옷장 불러오기 버튼
+            // 내 옷장 불러오기
             SizedBox(
               width: 220,
               height: 52,
               child: ElevatedButton(
                 onPressed: () {
-                  // TODO: 내 옷장 불러오기
+                  // TODO
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: lime,
@@ -200,13 +231,13 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
 
             const SizedBox(height: 16),
 
-            // ✅ 내 룩북 불러오기 버튼
+            // 내 룩북 불러오기
             SizedBox(
               width: 220,
               height: 52,
               child: ElevatedButton(
                 onPressed: () {
-                  // TODO: 내 룩북 불러오기
+                  // TODO
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: lime,
