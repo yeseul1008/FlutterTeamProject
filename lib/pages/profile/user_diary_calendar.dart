@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
@@ -12,6 +13,7 @@ class CalendarPage extends StatefulWidget {
 class _CalendarPageState extends State<CalendarPage> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
+  final FirebaseFirestore fs = FirebaseFirestore.instance;
 
   // Sample data - TODO: Replace with Firebase
   Map<DateTime, String> _outfitImages = {
@@ -27,22 +29,55 @@ class _CalendarPageState extends State<CalendarPage> {
     return _outfitImages[normalizedDay];
   }
 
+  // Function to check if there is a lookbook registered on a specific date
+
+  Future<bool> _hasCalendarEntry(DateTime date) async {
+    try {
+      // You need to specify which user's calendar to check
+      String userId = 'tHuRzoBNhPhONwrBeUME'; // Use the actual user ID
+
+      // Create start and end of the day
+      final startOfDay = DateTime(date.year, date.month, date.day, 0, 0, 0);
+      final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
+
+      print('Checking calendar for user: $userId');
+      print('Date range: $startOfDay to $endOfDay');
+
+      // Access the subcollection: users/{userId}/calendar
+      final querySnapshot = await fs
+          .collection('users')
+          .doc(userId)
+          .collection('calendar')
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+          .limit(1)
+          .get();
+
+      print('Query found ${querySnapshot.docs.length} documents');
+
+      return querySnapshot.docs.isNotEmpty;
+    } catch (e) {
+      print('Error checking calendar entry: $e');
+      return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
         children: [
-          Container(
-            width: double.infinity,
-            height: 180,
-            decoration: BoxDecoration(
-              color: Colors.black,
-            ),
-            child: Text(
-                "my calendar",
-                style: TextStyle(color: Colors.white),
-            ),
-          ),
+          // Container(
+          //   width: double.infinity,
+          //   height: 180,
+          //   decoration: BoxDecoration(
+          //     color: Colors.black,
+          //   ),
+          //   child: Text(
+          //       "my calendar",
+          //       style: TextStyle(color: Colors.white),
+          //   ),
+          // ),
           SizedBox(height: 20),
           TableCalendar(
             firstDay: DateTime.utc(2023, 1, 1),
@@ -58,10 +93,10 @@ class _CalendarPageState extends State<CalendarPage> {
               });
 
               // Show full image in dialog when clicked
-              final imageUrl = _getOutfitImage(selectedDay);
-              if (imageUrl != null) {
-                _showOutfitDialog(selectedDay, imageUrl);
-              }
+              // final imageUrl = _getOutfitImage(selectedDay);
+              // if (imageUrl != null) {
+              //   _showOutfitDialog(selectedDay, imageUrl);
+              // }
             },
             calendarStyle: CalendarStyle(
               selectedDecoration: BoxDecoration(
@@ -129,7 +164,38 @@ class _CalendarPageState extends State<CalendarPage> {
             width: 180,
             height: 50,
             child: ElevatedButton(
-              onPressed: () => context.go('/userLookbookAdd'),
+                onPressed: () async {
+                  if (_selectedDay == null) {
+                    // No date selected
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('날짜를 먼저 선택해주세요')),
+                    );
+                    return;
+                  }
+
+                  // Check if calendar entry exists for selected date
+                  bool hasEntry = await _hasCalendarEntry(_selectedDay!);
+
+                  if (!hasEntry) {
+                    // Show alert - no lookbook registered yet
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text('알림'),
+                        content: Text('캘린더에서 먼저 룩북을 등록해주세요'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text('확인'),
+                          ),
+                        ],
+                      ),
+                    );
+                  } else {
+                    // Has entry - go to diary writing page
+                    context.go('/userLookbookAdd'); // TODO: Update with your actual diary writing route
+                  }
+                },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color(0xFFCAD83B),
                 foregroundColor: Colors.black,
@@ -156,53 +222,73 @@ class _CalendarPageState extends State<CalendarPage> {
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Stack(
           children: [
-            AppBar(
-              title: Text('${date.month}/${date.day} 코디'),
-              backgroundColor: Color(0xFFCAD83B),
-              leading: IconButton(
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Date at the top
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                    '${date.month}월 ${date.day}일',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                // Image
+                Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 300,
+                      color: Colors.grey[300],
+                      child: Icon(Icons.image_not_supported, size: 80),
+                    );
+                  },
+                ),
+                // Buttons
+                Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          // TODO: Edit outfit
+                          Navigator.pop(context);
+                        },
+                        icon: Icon(Icons.edit),
+                        label: Text('수정'),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          // TODO: Delete outfit
+                          Navigator.pop(context);
+                        },
+                        icon: Icon(Icons.delete),
+                        label: Text('삭제'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            // 닫기 버튼
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
                 icon: Icon(Icons.close),
                 onPressed: () => Navigator.pop(context),
-              ),
-            ),
-            Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  height: 300,
-                  color: Colors.grey[300],
-                  child: Icon(Icons.image_not_supported, size: 80),
-                );
-              },
-            ),
-            Padding(
-              padding: EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      // TODO: Edit outfit
-                      Navigator.pop(context);
-                    },
-                    icon: Icon(Icons.edit),
-                    label: Text('수정'),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      // TODO: Delete outfit
-                      Navigator.pop(context);
-                    },
-                    icon: Icon(Icons.delete),
-                    label: Text('삭제'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                    ),
-                  ),
-                ],
               ),
             ),
           ],
