@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 class UserLookbook extends StatefulWidget {
   const UserLookbook({super.key});
@@ -11,7 +13,8 @@ class UserLookbook extends StatefulWidget {
 
 class _UserLookbookState extends State<UserLookbook> {
   final FirebaseFirestore fs = FirebaseFirestore.instance;
-  String userId = 'TEST1';
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+
   List<Map<String, dynamic>> lookbooks = []; // 모든 문서 저장
   bool loading = true;
 
@@ -249,14 +252,6 @@ class _UserLookbookState extends State<UserLookbook> {
                             ),
                           )
                               : null,
-                        ),
-                        const Positioned(
-                          top: 4,
-                          right: 4,
-                          child: Icon(
-                            Icons.favorite_border,
-                            size: 18,
-                          ),
                         ),
                       ],
                     ),

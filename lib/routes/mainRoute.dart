@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:team_project_flutter/pages/profile/user_schedule_edit.dart';
+import 'package:team_project_flutter/pages/wardrobe/user_wardrobe_edit.dart';
 
 import '../routePage1.dart';
 import '../routePage2.dart';
@@ -141,7 +141,7 @@ final GoRouter router = GoRouter(
         ),
         GoRoute(
           path: '/userDiaryAdd',
-          builder: (context, state) => const UserDiaryAdd(),
+          builder: (context, state) => const UserDiaryAdd (),
         ),
         // wardrobe 폴더 속 파일 이동
         GoRoute(
@@ -196,10 +196,34 @@ final GoRouter router = GoRouter(
         GoRoute(
           path: '/userWardrobeDetail',
           pageBuilder: (context, state) {
-            final id = state.extra as String?; // 전달받은 ID
+            final id = state.extra as String; // ❗ null 허용 제거
+
             return CustomTransitionPage(
               key: state.pageKey,
-              child: UserWardrobeDetail(docId: id), // 여기 id로 맞춤
+              child: UserWardrobeDetail(docId: id),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                final tween = Tween<Offset>(
+                  begin: const Offset(0, 1),
+                  end: Offset.zero,
+                ).chain(CurveTween(curve: Curves.easeOutCubic));
+
+                return SlideTransition(
+                  position: animation.drive(tween),
+                  child: child,
+                );
+              },
+            );
+          },
+        ),
+
+        GoRoute(
+          path: '/userWardrobeEdit',
+          pageBuilder: (context, state) {
+            final id = state.extra as String; // ❗ null 허용 제거
+
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: UserWardrobeEdit(docId: id),
               transitionsBuilder: (context, animation, secondaryAnimation, child) {
                 final tween = Tween<Offset>(
                   begin: const Offset(0, 1),
@@ -234,10 +258,6 @@ final GoRouter router = GoRouter(
               },
             );
           },
-        ),
-        GoRoute(
-          path: '/userWardrobeCategory',
-          builder: (context, state) => const UserWardrobeCategory(),
         ),
         GoRoute(
           path: '/userWardrobeList',

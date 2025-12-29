@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:go_router/go_router.dart';
@@ -50,74 +51,80 @@ class _CalendarPageState extends State<CalendarPage> {
     isPastSelected ? '일기 등록' : (hasSchedule ? '일정 수정' : '일정 추가');
 
     return Scaffold(
-      backgroundColor: Colors.white,
-
-      floatingActionButton: null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-
-      // 하단 네비
-      bottomNavigationBar: SizedBox(
-        height: bottomBarH + safeBottom,
-        child: BottomAppBar(
-          color: Colors.white,
-          elevation: 0,
-          shape: const CircularNotchedRectangle(),
-          notchMargin: 10,
-          child: Padding(
-            padding: EdgeInsets.only(bottom: safeBottom),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _NavItem(
-                    label: 'closet',
-                    icon: Icons.checkroom_outlined,
-                    onTap: () {}),
-                _NavItem(
-                    label: 'calendar',
-                    icon: Icons.calendar_month_outlined,
-                    onTap: () {}),
-                const SizedBox(width: 70),
-                _NavItem(
-                    label: 'diary',
-                    icon: Icons.menu_book_outlined,
-                    onTap: () {}),
-                _NavItem(
-                    label: 'community',
-                    icon: Icons.groups_outlined,
-                    onTap: () {}),
-              ],
+      body: Column(
+        children: [
+          SizedBox(height: 20),
+          TableCalendar(
+            firstDay: DateTime.utc(2023, 1, 1),
+            lastDay: DateTime.utc(2030, 12, 31),
+            focusedDay: _focusedDay,
+            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+            daysOfWeekHeight: 30,
+            rowHeight: 90,
+            onDaySelected: (selectedDay, focusedDay) {
+              setState(() {
+                _selectedDay = selectedDay;
+                _focusedDay = focusedDay;
+              });
+            },
+            headerStyle: HeaderStyle(
+              titleTextStyle: TextStyle(
+                fontSize: 24,  // Change size
+                fontWeight: FontWeight.bold,  // Make it bold
+                color: Colors.black,  // Change color
+                // fontFamily: 'YourFont',  // Uncomment to use custom font
+              ),
+              formatButtonVisible: false,  // Hide format button
+              titleCentered: true,  // Center the title
             ),
-          ),
-        ),
-      ),
+            calendarStyle: CalendarStyle(
+              selectedDecoration: BoxDecoration(
+                color: Color(0xFFCAD83B).withOpacity(0.5),
+                shape: BoxShape.rectangle,
+              ),
+              todayDecoration: BoxDecoration(
+                color: Colors.grey[400],
+                shape: BoxShape.rectangle,
+              ),
+            ),
+            calendarBuilders: CalendarBuilders(
+              defaultBuilder: (context, day, focusedDay) {
+                final imageUrl = _getOutfitImage(day);
 
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 6),
-
-            // 상단 월 헤더
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _focusedDay =
-                            DateTime(_focusedDay.year, _focusedDay.month - 1, 1);
-                      });
-                    },
-                    icon: const Icon(Icons.chevron_left),
+                return Container(
+                  margin: EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: isSameDay(day, _selectedDay)
+                          ? Color(0xFFCAD83B)
+                          : Colors.transparent,
+                      width: 2,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  Expanded(
-                    child: Center(
-                      child: RichText(
-                        text: TextSpan(
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
+                  child: Column(
+                    children: [
+                      Text(
+                        '${day.day}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Expanded(
+                        child: imageUrl != null
+                            ? ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey[300],
+                                child: Icon(Icons.image, size: 16),
+                              );
+                            },
                           ),
                           children: [
                             TextSpan(text: _monthName(_focusedDay.month)),
@@ -145,287 +152,64 @@ class _CalendarPageState extends State<CalendarPage> {
                 ],
               ),
             ),
+          ),
+          SizedBox(height: 20),
+          SizedBox(
+            width: 180,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: () async {
+                if (_selectedDay == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('날짜를 먼저 선택해주세요')),
+                  );
+                  return;
+                }
 
-            const SizedBox(height: 6),
+                Map<String, dynamic>? calendarEntry = await _getCalendarEntry(_selectedDay!);
 
-            // 요일
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 18),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _Dow('Sun'),
-                  _Dow('Mon'),
-                  _Dow('Tue'),
-                  _Dow('Wed'),
-                  _Dow('Thu'),
-                  _Dow('Fri'),
-                  _Dow('Sat'),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            // 캘린더
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: TableCalendar(
-                headerVisible: false,
-                daysOfWeekVisible: false,
-                firstDay: DateTime.utc(2010, 1, 1),
-                lastDay: DateTime.utc(2035, 12, 31),
-                focusedDay: _focusedDay,
-                selectedDayPredicate: (day) => isSameDay(day, _selectedDay),
-                rowHeight: 52,
-                onDaySelected: (selectedDay, focusedDay) {
-                  setState(() {
-                    _selectedDay = selectedDay;
-                    _focusedDay = focusedDay;
+                if (calendarEntry == null) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text('알림'),
+                      content: Text('캘린더에서 먼저 룩북을 등록해주세요'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text('확인'),
+                        ),
+                      ],
+                    ),
+                  );
+                } else {
+                  context.go('/userDiaryAdd', extra: {
+                    'lookbookId': calendarEntry['lookbookId'],
+                    'date': calendarEntry['date'],
+                    'selectedDay': _selectedDay,
                   });
-                },
-                calendarBuilders: CalendarBuilders(
-                  defaultBuilder: (context, day, _) =>
-                      _buildDayCell(day, isSelected: false),
-                  selectedBuilder: (context, day, _) =>
-                      _buildDayCell(day, isSelected: true),
-                  todayBuilder: (context, day, _) => _buildDayCell(
-                    day,
-                    isSelected: isSameDay(day, _selectedDay),
-                    forceToday: true,
-                  ),
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFFCAD83B),
+                foregroundColor: Colors.black,
+                elevation: 0,
+                padding: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  side: const BorderSide(color: Colors.black),
                 ),
               ),
-            ),
-
-            const SizedBox(height: 10),
-
-            // 스크롤 영역
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
-                child: Column(
-                  children: [
-                    Text(
-                      '${_selectedDay.year} ${_monthName(_selectedDay.month)} ${_selectedDay.day}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-
-                    // WeatherWidget (5일 예보 기반 버전)
-                    // apiKey는 weatherWidget.dart에서 fallback 사용 중이면 여기선 생략 가능
-                    // 권장: apiKey를 주입하세요.
-                    WeatherWidget(
-                      date: _selectedDay,
-                      lat: 37.5665,
-                      lon: 126.9780,
-                      apiKey: '5ebe456d15b6fd5e52fbf09d1ab110ae',
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // 프리뷰
-                    Container(
-                      width: double.infinity,
-                      height: 320,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.black12),
-                        color: Colors.white,
-                      ),
-                      child: (selectedThumb == null)
-                          ? const Center(
-                        child: Text(
-                          '등록된 코디가 없습니다',
-                          style: TextStyle(color: Colors.black38),
-                        ),
-                      )
-                          : Image.network(
-                        selectedThumb,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Center(
-                          child: Icon(Icons.image_not_supported),
-                        ),
-                      ),
-                    ),
-                  ],
+              child: const Text(
+                'Write an entry',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
                 ),
-              ),
-            ),
-
-            // ✅ 버튼: 스크롤 밖(한 화면에서 바로 보이게)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
-              child: SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (btnText == '일정 추가') {
-                      context.go('/AddSchedule');
-                    } else if (btnText == '일정 수정') {
-                      context.go('/EditSchedule');
-                    } else {
-                      // '일기 등록' 라우트는 아직 안 주셔서 여기서는 이동 안 합니다.
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    elevation: 0,
-                    backgroundColor: const Color(0xFFCAD83B),
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      side: const BorderSide(color: Colors.black),
-                    ),
-                  ),
-                  child: Text(
-                    btnText,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 15,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDayCell(
-      DateTime day, {
-        required bool isSelected,
-        bool forceToday = false,
-      }) {
-    final thumb = _getThumb(day);
-    final past = _isPast(day);
-
-    final Color pastBg = const Color(0xFFF3F4F6);
-    final Color todayRing = const Color(0xFFCBD5E1);
-    final Color selectedRing = const Color(0xFFA88AF7);
-
-    final textColor = past ? const Color(0xFF6B7280) : Colors.black87;
-    final imgOpacity = past ? 0.55 : 1.0;
-
-    return Container(
-      margin: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: past ? pastBg : Colors.transparent,
-        border: Border.all(
-          color: isSelected
-              ? selectedRing
-              : (forceToday ? todayRing : Colors.transparent),
-          width: isSelected ? 2 : (forceToday ? 1.5 : 0),
-        ),
-      ),
-      child: Stack(
-        children: [
-          if (thumb != null)
-            Positioned.fill(
-              child: Opacity(
-                opacity: imgOpacity,
-                child: Image.network(
-                  thumb,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) =>
-                      Container(color: Colors.grey[200]),
-                ),
-              ),
-            ),
-          Positioned(
-            top: 4,
-            left: 4,
-            child: Text(
-              '${day.day}',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-                color: textColor,
-                shadows: thumb != null
-                    ? const [
-                  Shadow(
-                    blurRadius: 8,
-                    color: Colors.white,
-                    offset: Offset(0, 0),
-                  )
-                ]
-                    : null,
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  String _monthName(int m) {
-    const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    return months[m - 1];
-  }
-}
-
-class _Dow extends StatelessWidget {
-  final String text;
-  const _Dow(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 40,
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 11, color: Colors.black54),
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _NavItem({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: SizedBox(
-        width: 70,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 24, color: Colors.black87),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
-            ),
-          ],
-        ),
       ),
     );
   }
