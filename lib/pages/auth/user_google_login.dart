@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart' as gsign;
 
 import '../../firebase/firestore_service.dart';
@@ -27,26 +28,74 @@ class GoogleLogin extends StatelessWidget {
     final UserCredential userCred =
     await FirebaseAuth.instance.signInWithCredential(credential);
 
-    final user = userCred.user!;
+    final user = userCred.user;
+    if (user == null) {
+      throw FirebaseAuthException(code: 'user-null', message: 'user is null');
+    }
+
     final fs = FirestoreService();
+    final uid = user.uid;
 
-    final email = user.email ?? '';
-    final safeLoginId = email.isNotEmpty ? email : user.uid;
+    // ✅ 문서 기반 로그인: users/{uid} 확인
+    final userDoc = await fs.getUser(uid);
 
-    // users 문서 없으면 생성 (신규/중간실패 꼬임 방지)
-    final userDoc = await fs.getUser(user.uid);
+    final authEmail = (user.email ?? '').trim();
+    final authPhone = (user.phoneNumber ?? '').trim();
+    final authNickname = (user.displayName ?? '구글유저').trim();
+    final authPhotoUrl = user.photoURL;
+
     if (!userDoc.exists) {
+      // 신규/꼬임 방지: 없으면 생성
+      final safeLoginId = authEmail.isNotEmpty ? authEmail : uid;
+
       await fs.createUser(
-        userId: user.uid,
+        userId: uid,
         loginId: safeLoginId,
-        email: email,
-        phone: user.phoneNumber ?? '',
+        email: authEmail,
+        phone: authPhone,
         provider: 'google',
-        nickname: user.displayName ?? '구글유저',
-        profileImageUrl: user.photoURL,
+        nickname: authNickname,
+        profileImageUrl: authPhotoUrl,
       );
 
-      await fs.initFollowDoc(user.uid);
+      await fs.initFollowDoc(uid);
+    } else {
+      // 있으면: Auth 정보가 바뀐 경우 동기화(콘솔/구글 프로필 변경 대응)
+      final data = userDoc.data() ?? {};
+
+      final docEmail = (data['email'] ?? '').toString().trim();
+      final docNickname = (data['nickname'] ?? '').toString().trim();
+      final docPhone = (data['phone'] ?? '').toString().trim();
+      final docProfile = (data['profileImageUrl'] ?? '').toString().trim();
+      final docProvider = (data['provider'] ?? '').toString().trim();
+
+      final patch = <String, dynamic>{
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      if (docProvider.isEmpty || docProvider != 'google') {
+        patch['provider'] = 'google';
+      }
+      if (authEmail.isNotEmpty && authEmail != docEmail) {
+        patch['email'] = authEmail;
+      }
+      if (authNickname.isNotEmpty && authNickname != docNickname) {
+        patch['nickname'] = authNickname;
+      }
+      if (authPhone.isNotEmpty && authPhone != docPhone) {
+        patch['phone'] = authPhone;
+      }
+      if ((authPhotoUrl ?? '').isNotEmpty && authPhotoUrl != docProfile) {
+        patch['profileImageUrl'] = authPhotoUrl;
+      }
+
+      // patch가 updatedAt만 있으면 업데이트 스킵
+      if (patch.length > 1) {
+        await FirebaseFirestore.instance.collection('users').doc(uid).update(patch);
+      }
+
+      // follows 문서 안전 초기화(merge)
+      await fs.initFollowDoc(uid);
     }
 
     return userCred;
@@ -68,8 +117,12 @@ class GoogleLogin extends StatelessWidget {
                 final result = await _signInWithGoogle();
                 if (result == null) return;
 
-                context.go('/'); // 홈 라우트로 변경 가능
+                if (context.mounted) {
+                  // 기존 로그인과 동일한 진입 경로로 통일
+                  context.go('/userDiaryCards');
+                }
               } catch (e) {
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('구글 로그인 실패: $e')),
                 );

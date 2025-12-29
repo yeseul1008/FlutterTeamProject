@@ -12,12 +12,13 @@ class FirestoreService {
     required String phone,
     required String provider, // "email" | "google"
     required String nickname,
-    required String loginId, // 위의 uid랑 다른거임
+    required String loginId, // uid와 다른 로그인용 아이디
     String? profileImageUrl,
-  }) {
-    return _db.collection('users').doc(userId).set({
+  }) async {
+    // 1️⃣ users/{uid} 문서 생성
+    await _db.collection('users').doc(userId).set({
       'userId': userId,
-      'loginId' : loginId,
+      'loginId': loginId,
       'email': email,
       'phone': phone,
       'provider': provider,
@@ -26,7 +27,30 @@ class FirestoreService {
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+
+    // 2️⃣ 기본 카테고리 자동 생성 (서브컬렉션 users/{uid}/categories)
+    final defaultCategories = [
+      'outer',
+      'top',
+      'bottom',
+      'dress',
+      'shoes',
+      'accessories',
+    ];
+
+    for (final name in defaultCategories) {
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('categories')
+          .add({
+        'name': name,
+        'isDefault': true,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    }
   }
+
 
   Future<void> updateUserProfile({
     required String userId,
