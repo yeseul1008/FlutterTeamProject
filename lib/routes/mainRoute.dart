@@ -241,10 +241,6 @@ final GoRouter router = GoRouter(
           },
         ),
         GoRoute(
-          path: '/userWardrobeCategory',
-          builder: (context, state) => const UserWardrobeCategory(),
-        ),
-        GoRoute(
           path: '/userWardrobeList',
           pageBuilder: (context, state) {
             return const NoTransitionPage(
