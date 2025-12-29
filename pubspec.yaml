@@ -30,22 +30,24 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  qr_flutter:
+  qr_flutter: any
   flutter_rating_bar: ^4.0.1
-  fluttertoast:
-  table_calendar:
-  confetti:
-  percent_indicator:
-  sqflite:
-  path:
-  go_router:
-  firebase_core:
-  cloud_firestore:
-  firebase_storage:
-  image_picker:
-  share_plus:
-  firebase_auth:
+  fluttertoast: any
+  table_calendar: any
+  confetti: any
+  percent_indicator: any
+  sqflite: any
+  path: any
+  go_router: any
+  firebase_core: any
+  cloud_firestore: any
+  firebase_storage: any
+  image_picker: any
+  share_plus: any
+  firebase_auth: any
   google_sign_in: ^6.2.1
+  flutter_dotenv: any
+  http: ^1.2.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -68,6 +70,7 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   assets:
+    - .env
     - assets/
 
   # The following line ensures that the Material Icons font is
@@ -104,4 +107,4 @@ flutter:
   #         weight: 700
   #
   # For details regarding fonts from package dependencies,
-  # see https://flutter.dev/to/font-from-package
+  # see https://flutter.dev/to/font-from-package 야멜파일도 체크해봐

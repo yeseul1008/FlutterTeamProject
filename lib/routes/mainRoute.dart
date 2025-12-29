@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:team_project_flutter/pages/profile/user_schedule_edit.dart';
 
 import '../routePage1.dart';
 import '../routePage2.dart';
@@ -32,8 +33,8 @@ import '../pages/wardrobe/user_wardrobe_add.dart';
 import '../pages/wardrobe/user_wardrobe_category.dart';
 import '../pages/wardrobe/user_wardrobe_list.dart';
 import '../pages/wardrobe/user_wardrobe_detail.dart';
-
 import '../widgets/common/bottom_nav_bar.dart';
+import '../pages/profile/user_schedule_add.dart';
 
 final GlobalKey<NavigatorState> _shellNavigatorKey =
 GlobalKey<NavigatorState>();
@@ -95,10 +96,21 @@ final GoRouter router = GoRouter(
         ),
 
         // profile 폴더 속 파일이름
+
+        //일정 추가
+        GoRoute(
+          path: '/AddSchedule',
+          builder: (context, state) => const UserScheduleAdd(),
+        ),
+        //일정 수정
+        GoRoute(
+          path: '/EditSchedule',
+          builder: (context, state) => const UserScheduleEdit(),
+        ),
         GoRoute(
           path: '/calendarPage',
           builder: (context, state) => const CalendarPage(),
-        ),
+),
         GoRoute(
           path: '/userDiaryCards',
           builder: (context, state) => const UserDiaryCards(),
@@ -121,7 +133,7 @@ final GoRouter router = GoRouter(
         ),
         GoRoute(
           path: '/userDiaryAdd ',
-          builder: (context, state) => const UserDiaryAdd (),
+          builder: (context, state) => const UserDiaryAdd(),
         ),
         // wardrobe 폴더 속 파일 이동
         GoRoute(
