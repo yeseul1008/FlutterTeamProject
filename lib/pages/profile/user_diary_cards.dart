@@ -185,59 +185,79 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
       context: context,
       builder: (context) => Dialog(
         backgroundColor: Colors.white,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Stack(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start, // aligning on the left
                     children: [
-                      Icon(Icons.cloud, size: 20),
-                      SizedBox(width: 5),
-                      Text("Weather : sunny"),
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  const Row(
-                    children: [
-                      Icon(Icons.location_on, size: 20),
-                      SizedBox(width: 5),
-                      Text("Location : 서울"),
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  Row(
-                    children: [
-                      const Icon(Icons.calendar_today, size: 20),
-                      const SizedBox(width: 5),
-                      Text(userLookbook[index]['formattedDate'] ?? 'No date'),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: 300,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
+                      // Header
+                      Row(
+                        children: [
+                          Icon(Icons.cloud, size : 20),
+                          SizedBox(width: 5),
+                          Text("20C"),
+                        ],
+                      ),
+                      SizedBox(height: 5),
+                      Row(
+                        children: [
+                          Icon(Icons.location_on, size : 20),
+                          SizedBox(width: 5),
+                          Text("서울"),
+                        ],
+                      ),
+                      SizedBox(height: 5),
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_today, size : 20),
+                          SizedBox(width: 5),
+                          Text("${userLookbook[0]['formattedDate'] ?? 'No date'}",),
+                        ],
+                      ),
+                      SizedBox(height: 20),
+
+                      // Image
+                      Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
                         height: 300,
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.image_not_supported, size: 80),
-                      );
-                    },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: 300,
+                            color: Colors.grey[300],
+                            child: Icon(Icons.image_not_supported, size: 80),
+                          );
+                        },
+                      ),
+
+                      // Text area
+                      Padding(
+                        padding: EdgeInsets.all(16),
+                        child:
+                        Center(
+                          child: Text(
+                            '${userLookbook[0]['alias'] ?? "No description"}',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      userLookbook[index]['alias'] ?? "No description",
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                  ),
-                ],
+                ),
+              ],
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                icon: Icon(Icons.edit),
+                onPressed: (){},
               ),
             ),
           ],
