@@ -48,7 +48,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
         children: [
           /// ===== 상단 UI =====
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Row(
               children: [
                 _topButton(
@@ -56,13 +56,13 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
                   active: currentPath == '/communityMainFeed',
                   onTap: () => context.go('/communityMainFeed'),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 _topButton(
                   text: 'QnA',
                   active: currentPath == '/questionFeed',
                   onTap: () => context.go('/questionFeed'),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 _topButton(
                   text: 'Follow',
                   active: currentPath == '/followList',
@@ -78,11 +78,11 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
               children: [
                 /// ===== Feed 게시글 표시 =====
                 qnaPost.isEmpty
-                    ? const Center(
+                    ? Center(
                   child: CircularProgressIndicator(),
                 )
                     : ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 100),
                   children: [
                     _qnaItem(
                       nickname: nickname, // 하드코딩 닉네임
@@ -102,10 +102,10 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
                       context.go('/questionAdd');
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFCAD83B),
+                      backgroundColor: Color(0xFFCAD83B),
                       foregroundColor: Colors.black,
                       elevation: 2,
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                         horizontal: 22,
                         vertical: 12,
                       ),
@@ -113,7 +113,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
                         borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'post a look',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
@@ -142,18 +142,18 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
         child: ElevatedButton(
           onPressed: onTap,
           style: ElevatedButton.styleFrom(
-            backgroundColor: active ? const Color(0xFFCAD83B) : Colors.white,
+            backgroundColor: active ? Color(0xFFCAD83B) : Colors.white,
             foregroundColor: Colors.black,
             elevation: 0,
             padding: EdgeInsets.zero,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(30),
-              side: const BorderSide(color: Colors.black),
+              side: BorderSide(color: Colors.black),
             ),
           ),
           child: Text(
             text,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 18,
             ),
@@ -171,7 +171,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
     required int commentCount,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
+      margin: EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -179,7 +179,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
-            offset: const Offset(0, 2),
+            offset: Offset(0, 2),
           ),
         ],
       ),
@@ -188,7 +188,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
         children: [
           /// 상단 정보 + 더보기
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Row(
               children: [
                 /// 프로필 이미지
@@ -199,9 +199,9 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.grey.shade300),
                   ),
-                  child: const Icon(Icons.person, color: Colors.grey),
+                  child: Icon(Icons.person, color: Colors.grey),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
 
                 /// 닉네임 & ID
                 Expanded(
@@ -210,7 +210,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
                     children: [
                       Text(
                         nickname,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
                         ),
