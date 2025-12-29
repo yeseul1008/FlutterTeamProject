@@ -30,6 +30,7 @@ import '../pages/wardrobe/user_scrap_view.dart';
 import '../pages/wardrobe/user_wardrobe_add.dart';
 import '../pages/wardrobe/user_wardrobe_category.dart';
 import '../pages/wardrobe/user_wardrobe_list.dart';
+import '../pages/wardrobe/user_wardrobe_detail.dart';
 
 import '../widgets/common/bottom_nav_bar.dart';
 
@@ -126,12 +127,12 @@ final GoRouter router = GoRouter(
         GoRoute(
           path: '/userLookbook',
           pageBuilder: (context, state) {
-            return const NoTransitionPage(
-              child: UserLookbook(),
+            return NoTransitionPage(
+              key: state.pageKey, // optional: 페이지 키를 state에서 가져옴
+              child: UserLookbook(), // const 제거
             );
           },
         ),
-
         GoRoute(
           path: '/userLookbookAdd',
           pageBuilder: (context, state) {
@@ -168,6 +169,28 @@ final GoRouter router = GoRouter(
             );
           },
         ),
+        GoRoute(
+          path: '/userWardrobeDetail',
+          pageBuilder: (context, state) {
+            final id = state.extra as String?; // 전달받은 ID
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: UserWardrobeDetail(docId: id), // 여기 id로 맞춤
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                final tween = Tween<Offset>(
+                  begin: const Offset(0, 1),
+                  end: Offset.zero,
+                ).chain(CurveTween(curve: Curves.easeOutCubic));
+
+                return SlideTransition(
+                  position: animation.drive(tween),
+                  child: child,
+                );
+              },
+            );
+          },
+        ),
+
         GoRoute(
           path: '/userWardrobeAdd',
           pageBuilder: (context, state) {
