@@ -14,7 +14,7 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
   final FirebaseFirestore fs = FirebaseFirestore.instance;
 
   Map<String, dynamic> userInfo = {};
-  List<Map<String, dynamic>> userLookbook = [];
+  List<Map<String, dynamic>> userDiaries = [];
   int lookbookCnt = 0;
 
   String formatKoreanDate(Timestamp? timestamp) {
@@ -32,6 +32,15 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
       return;
     }
 
+    // Get diaries from subcollection
+    final diariesSnapshot = await fs
+        .collection('users')
+        .doc(uid)
+        .collection('diaries')
+        .orderBy('createdAt', descending: true)
+        .get();
+
+    // Get lookbook count
     final lookbookSnapshot = await fs
         .collection('lookbooks')
         .where('userId', isEqualTo: uid)
@@ -43,13 +52,15 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
     setState(() {
       userInfo = userSnapshot.data() ?? {'userId': uid};
       lookbookCnt = lookbookSnapshot.docs.length;
-      userLookbook = lookbookSnapshot.docs.map((doc) {
+      userDiaries = diariesSnapshot.docs.map((doc) {
         final data = doc.data();
-        data['lookbookId'] = doc.id;
-        data['formattedDate'] = formatKoreanDate(data['createdAt']);
+        data['diaryId'] = doc.id;
+        data['formattedDate'] = formatKoreanDate(data['date']);
         return data;
       }).toList();
     });
+
+    print('Diaries count: ${userDiaries.length}');
   }
 
   @override
@@ -175,11 +186,11 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
     );
   }
 
-  void _lookbookDialog(BuildContext context, int index) {
-    if (userLookbook.isEmpty || index >= userLookbook.length) return;
+  void _diaryDialog(BuildContext context, int index) {
+    if (userDiaries.isEmpty || index >= userDiaries.length) return;
 
-    const imageUrl =
-        'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600';
+    final diary = userDiaries[index];
+    const imageUrl = 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600';
 
     showDialog(
       context: context,
@@ -187,77 +198,87 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
         backgroundColor: Colors.white,
         child: Stack(
           children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start, // aligning on the left
-                    children: [
-                      // Header
-                      Row(
-                        children: [
-                          Icon(Icons.cloud, size : 20),
-                          SizedBox(width: 5),
-                          Text("20C"),
-                        ],
-                      ),
-                      SizedBox(height: 5),
-                      Row(
-                        children: [
-                          Icon(Icons.location_on, size : 20),
-                          SizedBox(width: 5),
-                          Text("서울"),
-                        ],
-                      ),
-                      SizedBox(height: 5),
-                      Row(
-                        children: [
-                          Icon(Icons.calendar_today, size : 20),
-                          SizedBox(width: 5),
-                          Text("${userLookbook[0]['formattedDate'] ?? 'No date'}",),
-                        ],
-                      ),
-                      SizedBox(height: 20),
+            SingleChildScrollView(  // ADD THIS to make dialog scrollable
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Weather
+                        Row(
+                          children: [
+                            Icon(Icons.cloud, size: 20),
+                            SizedBox(width: 5),
+                            Text("${diary['weather'] ?? 'N/A'}"),
+                          ],
+                        ),
+                        SizedBox(height: 5),
+                        // Location - UPDATED TO HANDLE LONG TEXT
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,  // Align to top
+                          children: [
+                            Icon(Icons.location_on, size: 20),
+                            SizedBox(width: 5),
+                            Expanded(  // ADD THIS to allow text wrapping
+                              child: Text(
+                                "${diary['locationText'] ?? '위치 없음'}",
+                                maxLines: 2,  // Limit to 2 lines
+                                overflow: TextOverflow.ellipsis,  // Show ... if too long
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 5),
+                        // Date
+                        Row(
+                          children: [
+                            Icon(Icons.calendar_today, size: 20),
+                            SizedBox(width: 5),
+                            Text("${diary['formattedDate'] ?? 'No date'}"),
+                          ],
+                        ),
+                        SizedBox(height: 20),
 
-                      // Image
-                      Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: 300,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            height: 300,
-                            color: Colors.grey[300],
-                            child: Icon(Icons.image_not_supported, size: 80),
-                          );
-                        },
-                      ),
+                        // Image
+                        Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: 300,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: 300,
+                              color: Colors.grey[300],
+                              child: Icon(Icons.image_not_supported, size: 80),
+                            );
+                          },
+                        ),
 
-                      // Text area
-                      Padding(
-                        padding: EdgeInsets.all(16),
-                        child:
-                        Center(
-                          child: Text(
-                            '${userLookbook[0]['alias'] ?? "No description"}',
-                            style: TextStyle(fontSize: 14),
+                        // Comment
+                        Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(
+                            child: Text(
+                              '${diary['comment'] ?? "No comment"}',
+                              style: TextStyle(fontSize: 14),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             Positioned(
               top: 8,
               right: 8,
               child: IconButton(
                 icon: Icon(Icons.edit),
-                onPressed: (){},
+                onPressed: () {},
               ),
             ),
           ],
@@ -335,7 +356,6 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
                     ],
                   ),
                 ),
-
                 Positioned(
                   top: topPad + 2,
                   right: 8,
@@ -343,12 +363,7 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
                     width: 56,
                     height: 56,
                     child: IconButton(
-                      onPressed: () {
-                        // 디버그용
-                        // ignore: avoid_print
-                        print('MORE PRESSED');
-                        _openMoreMenu();
-                      },
+                      onPressed: _openMoreMenu,
                       icon: const Icon(
                         Icons.more_horiz,
                         color: Colors.white,
@@ -425,7 +440,11 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
           const SizedBox(height: 20),
 
           Expanded(
-            child: GridView.builder(
+            child: userDiaries.isEmpty
+                ? Center(
+              child: Text('아직 다이어리가 없습니다'),
+            )
+                : GridView.builder(
               padding: const EdgeInsets.all(16),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
@@ -433,16 +452,22 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
                 mainAxisSpacing: 10,
                 childAspectRatio: 0.8,
               ),
-              itemCount: 9,
-              // itemCount: userLookbook.length, 나중에 구현 다되면 하드코딩에서 이걸로 바꿀거임
+              itemCount: userDiaries.length,
               itemBuilder: (context, index) {
+                final diary = userDiaries[index];
+
                 return GestureDetector(
-                  onTap: () => _lookbookDialog(context, index),
-                  child: const Card(
+                  onTap: () => _diaryDialog(context, index),
+                  child: Card(
                     child: Column(
                       children: [
                         Expanded(
-                          child: Center(child: Text("Click me !")),
+                          child: Center(
+                            child: Text(
+                              diary['lookbookId'] ?? 'No lookbook',
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
                         ),
                       ],
                     ),

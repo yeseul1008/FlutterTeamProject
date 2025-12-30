@@ -1,220 +1,627 @@
 import 'package:flutter/material.dart';
-import '../../widgets/common/main_btn.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geocoding/geocoding.dart';
 
 class DiaryMap extends StatefulWidget {
   const DiaryMap({super.key});
-
-  String? get document => null;
-
 
   @override
   State<DiaryMap> createState() => _DiaryMapState();
 }
 
 class _DiaryMapState extends State<DiaryMap> {
-
   final FirebaseFirestore fs = FirebaseFirestore.instance;
-  // user ID hardcoding
-  String userId = 'tHuRzoBNhPhONwrBeUME';
-  String userId2 = 'TEST1';
   Map<String, dynamic> userInfo = {};
   int lookbookCnt = 0;
 
-  Future <void> _getUserInfo () async {
+  // Google Maps variables
+  GoogleMapController? _mapController;
+  Set<Marker> _markers = {};
+  Map<String, Map<String, dynamic>> _diaryData = {};
+  static const LatLng _defaultLocation = LatLng(37.4563, 126.7052); // Incheon
 
-    // 룩복 개수
-    final lookbookSnapshot = await fs.collection('lookbooks')
-        .where('userId', isEqualTo: userId2)
+  // Search controller
+  final TextEditingController _searchController = TextEditingController();
+
+  String formatKoreanDate(Timestamp? timestamp) {
+    if (timestamp == null) return '날짜 없음';
+    final dt = timestamp.toDate();
+    return '${dt.year}년 ${dt.month}월 ${dt.day}일';
+  }
+
+  Future<void> _getUserInfo() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    if (uid == null) {
+      if (!mounted) return;
+      context.go('/userLogin');
+      return;
+    }
+
+    final lookbookSnapshot = await fs
+        .collection('lookbooks')
+        .where('userId', isEqualTo: uid)
         .get();
 
-    //사용자 정보
-    final userSnapshot = await fs.collection('users').doc(userId).get();
+    final userSnapshot = await fs.collection('users').doc(uid).get();
 
-    if(userSnapshot.exists){
+    if (!mounted) return;
+    setState(() {
+      userInfo = userSnapshot.data() ?? {'userId': uid};
+      lookbookCnt = lookbookSnapshot.docs.length;
+    });
+  }
+
+  Future<void> _loadDiaryLocations() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    try {
+      final diariesSnapshot = await fs
+          .collection('users')
+          .doc(uid)
+          .collection('diaries')
+          .get();
+
+      Set<Marker> markers = {};
+      Map<String, Map<String, dynamic>> diaryDataMap = {};
+
+      for (var doc in diariesSnapshot.docs) {
+        final data = doc.data();
+        final location = data['location'] as GeoPoint?;
+        final locationText = data['locationText'] as String?;
+        final date = data['date'] as Timestamp?;
+        final lookbookId = data['lookbookId'] as String?;
+        final comment = data['comment'] as String?;
+
+        if (location != null) {
+          final markerId = doc.id;
+
+          diaryDataMap[markerId] = {
+            'locationText': locationText,
+            'date': date,
+            'lookbookId': lookbookId,
+            'comment': comment,
+            'location': location,
+          };
+
+          markers.add(
+            Marker(
+              markerId: MarkerId(markerId),
+              position: LatLng(location.latitude, location.longitude),
+              infoWindow: InfoWindow(
+                title: locationText ?? 'Unknown location',
+                snippet: date != null ? formatKoreanDate(date) : '',
+              ),
+              onTap: () => _showDiaryDialog(markerId),
+            ),
+          );
+        }
+      }
+
+      if (!mounted) return;
       setState(() {
-        userInfo = userSnapshot.data()!;
-        lookbookCnt = lookbookSnapshot.docs.length;
+        _markers = markers;
+        _diaryData = diaryDataMap;
       });
 
-      print('Lookbooks : $lookbookCnt');
-
-    } else {
-      print('User not found');
+      print('Loaded ${_markers.length} diary locations');
+    } catch (e) {
+      print('Error loading diary locations: $e');
     }
   }
 
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    _getUserInfo();
+  // Search location
+  Future<void> _searchLocation(String query) async {
+    if (query.trim().isEmpty) {
+      _showSnack('검색어를 입력해주세요');
+      return;
+    }
+
+    try {
+      print('Searching for: $query');
+      List<Location> locations = await locationFromAddress(query);
+
+      print('Found ${locations.length} locations');
+
+      if (locations.isNotEmpty) {
+        final location = locations.first;
+        final newPosition = LatLng(location.latitude, location.longitude);
+
+        print('Moving to: ${location.latitude}, ${location.longitude}');
+
+        _mapController?.animateCamera(
+          CameraUpdate.newLatLngZoom(newPosition, 14),
+        );
+
+        _showSnack('위치를 찾았습니다!');
+      } else {
+        _showSnack('위치를 찾을 수 없습니다');
+      }
+    } catch (e) {
+      print('=== SEARCH ERROR ===');
+      print('Error type: ${e.runtimeType}');
+      print('Error message: $e');
+      print('==================');
+      _showSnack('위치 검색 실패: $e');
+    }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        body : Column(
-            children: [
-              Container(
-                width: double.infinity,
-                height: 180,
-                color: Colors.black,
-                child: Stack(  // Remove SafeArea wrapper
-                  children: [
-                    Positioned(
-                      top: 5,
-                      right: 10,
-                      child: IconButton(
-                        onPressed: () => context.go('/profileEdit'),
-                        icon: Icon(
-                          Icons.more_horiz,
-                          color: Colors.white,
-                          size: 40,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      left: 15,
-                      top: 40,
-                      child: CircleAvatar(
-                        radius: 40,
-                      ),
-                    ),
-                    Positioned(
-                      top: 20,
-                      left: 130,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+  Future<void> _showDiaryDialog(String diaryId) async {
+    final diary = _diaryData[diaryId];
+    if (diary == null) return;
+
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    String? imageUrl;
+    try {
+      final date = diary['date'] as Timestamp?;
+      if (date != null) {
+        final dt = date.toDate();
+        final startOfDay = DateTime(dt.year, dt.month, dt.day, 0, 0, 0);
+        final endOfDay = DateTime(dt.year, dt.month, dt.day, 23, 59, 59);
+
+        final calendarQuery = await fs
+            .collection('users')
+            .doc(uid)
+            .collection('calendar')
+            .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+            .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+            .limit(1)
+            .get();
+
+        if (calendarQuery.docs.isNotEmpty) {
+          imageUrl = calendarQuery.docs.first.data()['imageUrl'];
+        }
+      }
+    } catch (e) {
+      print('Error loading image: $e');
+    }
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.white,
+        child: Container(
+          constraints: BoxConstraints(maxHeight: 600),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+
+                Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            "${userInfo['userId'] ?? 'Nickname'} \n@${userInfo['nickname'] ?? 'thisIsmyId'}",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          SizedBox(height: 15),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                "0 \nitems",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.white),
-                              ),
-                              SizedBox(width: 20),
-                              Text(
-                                "$lookbookCnt \nlookbook",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.white),
-                              ),
-                              SizedBox(width: 20),
-                              Text(
-                                "0 \nAI lookbook",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 10),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: Size(150, 35),
-                            ),
-                            onPressed: () => context.go('/calendarPage'),
+                          Icon(Icons.location_on, size: 20),
+                          SizedBox(width: 5),
+                          Expanded(
                             child: Text(
-                              "+ diary",
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              "${diary['locationText'] ?? '위치 없음'}",
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(
-                height: 10,
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 50, // ⭐ 버튼 높이 증가
-                      child: ElevatedButton(
-                        onPressed: () => context.go('/userDiaryCards'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          elevation: 0,
-                          padding: EdgeInsets.zero, // 높이 정확히 맞춤
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                            side: const BorderSide(color: Colors.black),
+                      SizedBox(height: 5),
+
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_today, size: 20),
+                          SizedBox(width: 5),
+                          Text(formatKoreanDate(diary['date'])),
+                        ],
+                      ),
+                      SizedBox(height: 20),
+
+                      if (imageUrl != null)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: 300,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                height: 300,
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                height: 300,
+                                color: Colors.grey[300],
+                                child: Icon(Icons.image_not_supported, size: 80),
+                              );
+                            },
+                          ),
+                        )
+                      else
+                        Container(
+                          height: 300,
+                          color: Colors.grey[300],
+                          child: Center(
+                            child: Icon(Icons.image, size: 80, color: Colors.grey[600]),
                           ),
                         ),
-                        child: const Text(
-                          'diary',
-                          style: TextStyle(fontWeight: FontWeight.bold,
-                              fontSize: 20),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: () => context.go('/diaryMap'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xFFCAD83B),
-                          foregroundColor: Colors.black,
-                          elevation: 0,
-                          padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                            side: const BorderSide(color: Colors.black),
+
+                      SizedBox(height: 16),
+
+                      if (diary['comment'] != null && diary['comment'].toString().isNotEmpty)
+                        Container(
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            diary['comment'],
+                            style: TextStyle(fontSize: 14),
                           ),
                         ),
-                        child: const Text(
-                          'map',
-                          style: TextStyle(fontWeight: FontWeight.bold,
-                              fontSize: 18),
-                        ),
-                      ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-              SizedBox(
-                height: 20,
-              ),
-              TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search',
-                  suffixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  )
                 ),
-              ),
-              SizedBox(
-                height: 20,
-              ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _getUserInfo();
+    _loadDiaryLocations();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _showSnack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg)),
+    );
+  }
+
+  Future<void> _logout() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (!mounted) return;
+      context.go('/userLogin');
+    } catch (e) {
+      _showSnack('로그아웃 실패: $e');
+    }
+  }
+
+  Future<void> _deleteAccount() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final uid = user?.uid;
+
+    if (user == null || uid == null) {
+      _showSnack('로그인 상태가 아닙니다.');
+      return;
+    }
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('탈퇴'),
+        content: const Text('정말 탈퇴하시겠습니까?\n(계정/데이터가 삭제될 수 있습니다)'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('탈퇴하기'),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
+
+    try {
+      await fs.collection('users').doc(uid).delete();
+      await user.delete();
+
+      if (!mounted) return;
+      context.go('/userLogin');
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        _showSnack('보안을 위해 다시 로그인 후 탈퇴를 진행해주세요.');
+      } else {
+        _showSnack('탈퇴 실패: ${e.code}');
+      }
+    } catch (e) {
+      _showSnack('탈퇴 실패: $e');
+    }
+  }
+
+  void _openMoreMenu() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
               Container(
-                width: 300,
-                height: 300,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.black)
+                  color: Colors.grey[400],
+                  borderRadius: BorderRadius.circular(999),
                 ),
-                child: Center(child: Text('The map is going here')),
-              )
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.star_border),
+                title: const Text('구독하기'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showSnack('구독하기는 준비 중입니다.');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.logout),
+                title: const Text('로그아웃'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _logout();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.person_off_outlined),
+                title: const Text('탈퇴'),
+                textColor: Colors.red,
+                iconColor: Colors.red,
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _deleteAccount();
+                },
+              ),
+              const SizedBox(height: 12),
             ],
           ),
+        );
+      },
+    );
+  }
 
+  @override
+  Widget build(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top;
+
+    return Scaffold(
+      body: Column(
+        children: [
+          // Custom AppBar
+          Container(
+            width: double.infinity,
+            height: 180,
+            color: Colors.black,
+            child: Stack(
+              children: [
+                const Positioned(
+                  left: 15,
+                  top: 40,
+                  child: CircleAvatar(radius: 40),
+                ),
+                Positioned(
+                  top: 20,
+                  left: 130,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "${userInfo['userId'] ?? 'UID'} \n@${userInfo['nickname'] ?? 'nickname'}",
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      const SizedBox(height: 15),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            "0 \nitems",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          const SizedBox(width: 20),
+                          Text(
+                            "$lookbookCnt \nlookbook",
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          const SizedBox(width: 20),
+                          const Text(
+                            "0 \nAI lookbook",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(150, 35),
+                        ),
+                        onPressed: () => context.go('/calendarPage'),
+                        child: const Text(
+                          "+ diary",
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  top: topPad + 2,
+                  right: 8,
+                  child: SizedBox(
+                    width: 56,
+                    height: 56,
+                    child: IconButton(
+                      onPressed: _openMoreMenu,
+                      icon: const Icon(
+                        Icons.more_horiz,
+                        color: Colors.white,
+                        size: 40,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          // Buttons Row
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () => context.go('/userDiaryCards'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        elevation: 0,
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          side: const BorderSide(color: Colors.black),
+                        ),
+                      ),
+                      child: const Text(
+                        'diary',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: SizedBox(
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () => context.go('/diaryMap'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFCAD83B),
+                        foregroundColor: Colors.black,
+                        elevation: 0,
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          side: const BorderSide(color: Colors.black),
+                        ),
+                      ),
+                      child: const Text(
+                        'map',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Search Field - UPDATED
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search location (예: 서울역)',
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.search),
+                  onPressed: () => _searchLocation(_searchController.text),
+                ),
+              ),
+              onSubmitted: (value) => _searchLocation(value),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Google Map
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SizedBox(
+                height: 300,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: _defaultLocation,
+                      zoom: 12,
+                    ),
+                    markers: _markers,
+                    onMapCreated: (controller) {
+                      _mapController = controller;
+                    },
+                    myLocationEnabled: true,
+                    myLocationButtonEnabled: true,
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 130),
+        ],
+      ),
     );
   }
 }
