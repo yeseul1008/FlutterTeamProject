@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:team_project_flutter/pages/wardrobe/user_wardrobe_edit.dart';
 
+import '../pages/profile/user_schedule_edit.dart';
 import '../routePage1.dart';
 import '../routePage2.dart';
 

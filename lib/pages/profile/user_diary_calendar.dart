@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:table_calendar/table_calendar.dart';
 import 'package:go_router/go_router.dart';
-import '../../widgets/common/weatherWidget.dart';
+import 'package:table_calendar/table_calendar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
@@ -111,10 +111,72 @@ class _CalendarPageState extends State<CalendarPage> {
     }
   }
 
+  String _monthName(int month) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return months[month - 1];
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Column(
         children: [
-          SizedBox(height: 20),
+          SizedBox(height: 60),
+
+          // Custom Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Row(
+              children: [
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _focusedDay =
+                          DateTime(_focusedDay.year, _focusedDay.month - 1, 1);
+                    });
+                  },
+                  icon: const Icon(Icons.chevron_left),
+                ),
+                Expanded(
+                  child: Center(
+                    child: RichText(
+                      text: TextSpan(
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                        ),
+                        children: [
+                          TextSpan(text: _monthName(_focusedDay.month)),
+                          TextSpan(
+                            text: ' ${_focusedDay.year}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _focusedDay =
+                          DateTime(_focusedDay.year, _focusedDay.month + 1, 1);
+                    });
+                  },
+                  icon: const Icon(Icons.chevron_right),
+                ),
+              ],
+            ),
+          ),
+
           TableCalendar(
             firstDay: DateTime.utc(2023, 1, 1),
             lastDay: DateTime.utc(2030, 12, 31),
@@ -128,24 +190,16 @@ class _CalendarPageState extends State<CalendarPage> {
                 _focusedDay = focusedDay;
               });
             },
-            headerStyle: HeaderStyle(
-              titleTextStyle: TextStyle(
-                fontSize: 24,  // Change size
-                fontWeight: FontWeight.bold,  // Make it bold
-                color: Colors.black,  // Change color
-                // fontFamily: 'YourFont',  // Uncomment to use custom font
-              ),
-              formatButtonVisible: false,  // Hide format button
-              titleCentered: true,  // Center the title
-            ),
+            headerVisible: false,  // Hide the default header
             calendarStyle: CalendarStyle(
               selectedDecoration: BoxDecoration(
                 color: Color(0xFFCAD83B).withOpacity(0.5),
-                shape: BoxShape.rectangle,
+                shape: BoxShape.circle,
               ),
               todayDecoration: BoxDecoration(
-                color: Colors.grey[400],
-                shape: BoxShape.rectangle,
+                color: Color(0xFFA88AEE).withOpacity(0.5),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.grey)
               ),
             ),
             calendarBuilders: CalendarBuilders(
@@ -187,31 +241,13 @@ class _CalendarPageState extends State<CalendarPage> {
                               );
                             },
                           ),
-                          children: [
-                            TextSpan(text: _monthName(_focusedDay.month)),
-                            TextSpan(
-                              text: ' ${_focusedDay.year}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
-                                color: Colors.black54,
-                              ),
-                            ),
-                          ],
-                        ),
+                        )
+                            : SizedBox.shrink(),
                       ),
-                    ),
+                    ],
                   ),
-                  IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _focusedDay =
-                            DateTime(_focusedDay.year, _focusedDay.month + 1, 1);
-                      });
-                    },
-                    icon: const Icon(Icons.chevron_right),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
           ),
           SizedBox(height: 20),

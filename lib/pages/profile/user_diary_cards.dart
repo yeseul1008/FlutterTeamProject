@@ -153,6 +153,14 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
               ),
               const SizedBox(height: 12),
               ListTile(
+                leading: const Icon(Icons.person),
+                title: const Text('개인정보'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  context.go('/profileEdit');
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.star_border),
                 title: const Text('구독하기'),
                 onTap: () {
@@ -186,11 +194,91 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
     );
   }
 
+  // Function to delete a diary entry
+
+  Future<void> _deleteDiary(String diaryId) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    if (uid == null) {
+      _showSnack('로그인 상태가 아닙니다');
+      return;
+    }
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text('다이어리 삭제'),
+        content: const Text('정말 이 다이어리를 삭제하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      // Delete the diary from Firestore
+      await fs
+          .collection('users')
+          .doc(uid)
+          .collection('diaries')
+          .doc(diaryId)
+          .delete();
+
+      // Find and update the calendar entry with matching diaryId
+      final calendarQuery = await fs
+          .collection('users')
+          .doc(uid)
+          .collection('calendar')
+          .where('diaryId', isEqualTo: diaryId)
+          .limit(1)
+          .get();
+
+      // Update the calendar entry if found
+      if (calendarQuery.docs.isNotEmpty) {
+        final calendarDocId = calendarQuery.docs.first.id;
+        await fs
+            .collection('users')
+            .doc(uid)
+            .collection('calendar')
+            .doc(calendarDocId)
+            .update({'inDiary': false});
+
+        print('Calendar entry updated: inDiary set to false');
+      }
+
+      _showSnack('다이어리가 삭제되었습니다');
+
+      // Refresh the diaries list
+      await _getUserInfo();
+
+    } catch (e) {
+      _showSnack('삭제 실패: $e');
+      print('Error deleting diary: $e');
+    }
+  }
+
   void _diaryDialog(BuildContext context, int index) {
     if (userDiaries.isEmpty || index >= userDiaries.length) return;
 
     final diary = userDiaries[index];
-    const imageUrl = 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600';
+    final diaryId = diary['diaryId'];
+    final diaryImg = diary['imageUrl'];
+    // const imageUrl = 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600';
 
     showDialog(
       context: context,
@@ -207,14 +295,6 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Weather
-                        Row(
-                          children: [
-                            Icon(Icons.cloud, size: 20),
-                            SizedBox(width: 5),
-                            Text("${diary['weather'] ?? 'N/A'}"),
-                          ],
-                        ),
                         SizedBox(height: 5),
                         // Location - UPDATED TO HANDLE LONG TEXT
                         Row(
@@ -231,7 +311,7 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
                             ),
                           ],
                         ),
-                        SizedBox(height: 5),
+                        SizedBox(height: 10),
                         // Date
                         Row(
                           children: [
@@ -244,7 +324,7 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
 
                         // Image
                         Image.network(
-                          imageUrl,
+                          diaryImg,
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: 300,
@@ -256,7 +336,6 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
                             );
                           },
                         ),
-
                         // Comment
                         Padding(
                           padding: EdgeInsets.all(16),
@@ -267,6 +346,7 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
                             ),
                           ),
                         ),
+                        SizedBox(height: 20 ),
                       ],
                     ),
                   ),
@@ -274,11 +354,36 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
               ),
             ),
             Positioned(
-              top: 8,
+              bottom: 3,
               right: 8,
-              child: IconButton(
-                icon: Icon(Icons.edit),
-                onPressed: () {},
+              child: Row(
+                children: [
+                  IconButton(
+                    iconSize: 20.0,
+                    icon: Icon(Icons.edit),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      final date = diary['date'] as Timestamp?;
+                      context.go('/userDiaryAdd', extra: {
+                        'lookbookId': diary['lookbookId'],
+                        'date': date,
+                        'selectedDay': date?.toDate(),
+                      });
+                    },
+                  ),
+                  IconButton(
+                    iconSize: 20.0,
+                      onPressed: () async {
+                        await _deleteDiary(
+                            diaryId); // wait for the function to complete
+                        // await Future.delayed(Duration(milliseconds: 300));
+                        if (mounted && Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        }
+                      },
+                      icon: Icon(Icons.delete)
+                  )
+                ],
               ),
             ),
           ],
@@ -292,6 +397,7 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
     final topPad = MediaQuery.of(context).padding.top;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           // Custom AppBar
@@ -313,7 +419,7 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        "${userInfo['userId'] ?? 'UID'} \n@${userInfo['nickname'] ?? 'nickname'}",
+                        "${userInfo['nickname'] ?? 'UID'} \n@${userInfo['loginId'] ?? 'user ID'}",
                         style: const TextStyle(color: Colors.white),
                       ),
                       const SizedBox(height: 15),
@@ -463,9 +569,18 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
                       children: [
                         Expanded(
                           child: Center(
-                            child: Text(
-                              diary['lookbookId'] ?? 'No lookbook',
-                              textAlign: TextAlign.center,
+                            child: Image.network(
+                              diary['imageUrl'],
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: 300,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  height: 300,
+                                  color: Colors.grey[300],
+                                  child: Icon(Icons.image_not_supported, size: 80),
+                                );
+                              },
                             ),
                           ),
                         ),
