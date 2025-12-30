@@ -466,7 +466,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
               children: [
                 InkWell(
                   onTap: () {
-                    context.push('/publicLookBook', extra: {
+                    context.push('/publicWardrobe', extra: {
                       'userId': authorId,
                       'nickname': nickname,
                     });
@@ -488,7 +488,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
                     children: [
                       InkWell(
                         onTap: () {
-                          context.push('/publicWardrobe', extra: {
+                          context.push('/publicLookBook', extra: {
                             'userId': authorId,
                             'nickname': nickname,
                           });

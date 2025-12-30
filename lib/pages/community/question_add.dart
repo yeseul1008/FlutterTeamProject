@@ -2,8 +2,6 @@ import 'dart:io'; // File 사용
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-
-// 🔧 [추가] Firebase
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -26,9 +24,7 @@ class _QuestionAddState extends State<QuestionAdd> {
 
   /// post 버튼 활성화 여부
   bool _canPost = false;
-  /// ================================
 
-  /// ================================
   /// 이미지 선택
   Future<void> _pickImage() async {
     final XFile? image = await _picker.pickImage(
@@ -60,10 +56,8 @@ class _QuestionAddState extends State<QuestionAdd> {
       _canPost = hasText || hasImage;
     });
   }
-  /// ================================
 
-  /// ================================
-  /// 🔧 [추가] post 저장 로직 (핵심)
+  /// post 저장 로직 (핵심)
   Future<void> _submitPost() async {
     try {
       debugPrint('submit start');
@@ -93,7 +87,7 @@ class _QuestionAddState extends State<QuestionAdd> {
           .collection('questions')
           .add({
         'text': _questionController.text.trim(),
-        'imageUrl': imageUrl,
+        'imageUrl': imageUrl,  // imageUrl을 제대로 Firestore에 저장
         'authorId': user.uid,
         'createdAt': FieldValue.serverTimestamp(),
       });
@@ -105,7 +99,6 @@ class _QuestionAddState extends State<QuestionAdd> {
       debugPrint('post upload error: $e');
     }
   }
-  /// ================================
 
   @override
   void dispose() {
