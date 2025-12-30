@@ -1,66 +1,108 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
+import 'package:http/http.dart' as http;
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-class AiOutfitResultScreen extends StatefulWidget {
+class AiOutfitMakerScreen extends StatefulWidget {
   final List<String> selectedImageUrls;
 
-  const AiOutfitResultScreen({super.key, required this.selectedImageUrls});
+  const AiOutfitMakerScreen({super.key, required this.selectedImageUrls});
 
   @override
-  State<AiOutfitResultScreen> createState() => _AiOutfitResultScreenState();
+  State<AiOutfitMakerScreen> createState() => _AiOutfitMakerScreenState();
 }
 
-class _AiOutfitResultScreenState extends State<AiOutfitResultScreen> {
-  String? aiOutfitImageUrl;
+class _AiOutfitMakerScreenState extends State<AiOutfitMakerScreen> {
+  String? generatedImageUrl;
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _generateAiOutfit();
+    _generateAiImage();
   }
 
-  // AI 합성 API 호출 예시
-  Future<void> _generateAiOutfit() async {
-    setState(() {
-      isLoading = true;
-    });
+  // URL 이미지를 다운로드 후 File로 변환
+  Future<File> _downloadImage(String url, String filename) async {
+    final response = await http.get(Uri.parse(url));
+    final bytes = response.bodyBytes;
+    final tempDir = await getTemporaryDirectory();
+    final file = File('${tempDir.path}/$filename');
+    await file.writeAsBytes(bytes);
+    return file;
+  }
+
+  Future<void> _generateAiImage() async {
+    setState(() => isLoading = true);
 
     try {
-      // 예: 선택된 옷 이미지들을 AI API로 보내고 합성 이미지 URL 받기
-      // 실제 API 호출 로직에 맞춰 수정 필요
-      String generatedUrl = await generateAiOutfit(widget.selectedImageUrls);
+      final dio = Dio();
+      List<MultipartFile> images = [];
+
+      // 선택된 이미지들을 MultipartFile로 변환
+      for (int i = 0; i < widget.selectedImageUrls.length; i++) {
+        final file = await _downloadImage(widget.selectedImageUrls[i], 'img_$i.png');
+        final mp = await MultipartFile.fromFile(file.path, filename: 'img_$i.png');
+        images.add(mp);
+      }
+
+      // prompt: 선택한 옷들을 입은 한 사람, 흰 배경
+      final prompt = """
+A full-body person wearing the selected clothes. 
+Realistic style, plain white background. 
+Focus on clearly showing each clothing item.
+""";
+
+      final formData = FormData.fromMap({
+        "model": "gpt-image-1",
+        "images": images,
+        "prompt": prompt,
+      });
+
+      final response = await dio.post(
+        'https://api.openai.com/v1/images/edits',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer ${dotenv.env['GPT_API']}',
+          },
+        ),
+        data: formData,
+      );
+
+      final imageUrl = response.data['data'][0]['url'] as String;
 
       setState(() {
-        aiOutfitImageUrl = generatedUrl;
-      });
-    } catch (e) {
-      print('AI 착용샷 생성 실패: $e');
-    } finally {
-      setState(() {
+        generatedImageUrl = imageUrl;
         isLoading = false;
       });
+    } catch (e) {
+      print('AI 이미지 생성 실패: $e');
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('AI 이미지 생성에 실패했습니다.')),
+      );
     }
-  }
-
-  // 예시: AI 합성 API 호출
-  Future<String> generateAiOutfit(List<String> imageUrls) async {
-    await Future.delayed(const Duration(seconds: 2)); // API 대기 시간 시뮬레이션
-    // 실제로는 서버나 클라우드 함수 호출 후 합성 이미지 URL 반환
-    return 'https://example.com/generated_outfit_image.jpg';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI 착용샷 결과'),
+        title: const Text('AI 착용샷'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
       ),
       body: Center(
         child: isLoading
             ? const CircularProgressIndicator()
-            : aiOutfitImageUrl != null
-            ? Image.network(aiOutfitImageUrl!)
-            : const Text('AI 착용샷 생성에 실패했습니다.'),
+            : (generatedImageUrl != null
+            ? InteractiveViewer(
+          child: Image.network(generatedImageUrl!),
+        )
+            : const Text('이미지 생성 실패')),
       ),
     );
   }

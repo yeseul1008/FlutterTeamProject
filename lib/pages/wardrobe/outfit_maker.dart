@@ -119,24 +119,39 @@ class _AiOutfitMakerState extends State<AiOutfitMaker> {
                         onTap: () {
                           if (selectedWardrobeIds.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('하나 이상의 옷을 선택해주세요.')),
+                              const SnackBar(
+                                content: Text('하나 이상의 옷을 선택해주세요.'),
+                              ),
                             );
                             return;
                           }
 
-                          // 선택된 옷 이미지 URL만 가져오기
-                          final selectedDocs = snapshot.data!.docs
+                          // 선택된 옷 이미지 URL 리스트 추출
+                          final selectedUrls = snapshot.data!.docs
                               .where((doc) => selectedWardrobeIds.contains(doc.id))
-                              .map((doc) => doc.data()['imageUrl'] as String)
+                              .map((doc) => (doc.data()['imageUrl'] ?? '') as String)
+                              .where((url) => url.isNotEmpty) // 빈 문자열 제거
                               .toList();
 
-                          // 새 화면으로 전달
-                          context.push('/aiOutfitResult', extra: selectedDocs);
+                          // 콘솔에 출력
+                          print('선택된 옷 URL: $selectedUrls');
+
+                          // AI 생성 화면으로 이동 (빈 리스트도 전달)
+                          context.push(
+                            '/aiOutfitMakerScreen',
+                            extra: selectedUrls.isNotEmpty ? selectedUrls : <String>[],
+                          );
                         },
+
+
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: const [
-                            Icon(Icons.auto_awesome, size: 20, color: Colors.white),
+                            Icon(
+                              Icons.auto_awesome,
+                              size: 20,
+                              color: Colors.white,
+                            ),
                             SizedBox(width: 8),
                             Text(
                               'ai착용샷 생성',
@@ -235,7 +250,9 @@ class _AiOutfitMakerState extends State<AiOutfitMaker> {
 
                     final filteredDocs = allDocs.where((doc) {
                       final data = doc.data();
-                      final productName = (data['productName'] ?? '').toString().toLowerCase();
+                      final productName = (data['productName'] ?? '')
+                          .toString()
+                          .toLowerCase();
                       if (searchText.isEmpty) return true;
                       return productName.contains(searchText.toLowerCase());
                     }).toList();
@@ -246,12 +263,13 @@ class _AiOutfitMakerState extends State<AiOutfitMaker> {
 
                     return GridView.builder(
                       itemCount: filteredDocs.length,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 1,
-                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 1,
+                          ),
                       itemBuilder: (context, index) {
                         final data = filteredDocs[index].data();
                         final imageUrl = data['imageUrl'] ?? '';
@@ -278,14 +296,14 @@ class _AiOutfitMakerState extends State<AiOutfitMaker> {
                                   // 사진 확대 적용
                                   child: imageUrl.isNotEmpty
                                       ? Transform.scale(
-                                    scale: 1.3, // 확대 정도 조정 가능
-                                    child: Image.network(
-                                      imageUrl,
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                    ),
-                                  )
+                                          scale: 1.3, // 확대 정도 조정 가능
+                                          child: Image.network(
+                                            imageUrl,
+                                            fit: BoxFit.cover,
+                                            width: double.infinity,
+                                            height: double.infinity,
+                                          ),
+                                        )
                                       : null,
                                 ),
                               ),
@@ -296,14 +314,26 @@ class _AiOutfitMakerState extends State<AiOutfitMaker> {
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(),
                                   icon: data['liked'] == true
-                                      ? const Icon(Icons.favorite, color: Colors.black, size: 22)
+                                      ? const Icon(
+                                          Icons.favorite,
+                                          color: Colors.black,
+                                          size: 22,
+                                        )
                                       : Stack(
-                                    alignment: Alignment.center,
-                                    children: const [
-                                      Icon(Icons.favorite, color: Colors.white, size: 22),
-                                      Icon(Icons.favorite_border, color: Colors.black, size: 22),
-                                    ],
-                                  ),
+                                          alignment: Alignment.center,
+                                          children: const [
+                                            Icon(
+                                              Icons.favorite,
+                                              color: Colors.white,
+                                              size: 22,
+                                            ),
+                                            Icon(
+                                              Icons.favorite_border,
+                                              color: Colors.black,
+                                              size: 22,
+                                            ),
+                                          ],
+                                        ),
                                   onPressed: () async {
                                     final docRef = fs
                                         .collection('users')
@@ -311,7 +341,9 @@ class _AiOutfitMakerState extends State<AiOutfitMaker> {
                                         .collection('wardrobe')
                                         .doc(docId);
                                     final currentLiked = data['liked'] == true;
-                                    await docRef.update({'liked': !currentLiked});
+                                    await docRef.update({
+                                      'liked': !currentLiked,
+                                    });
                                   },
                                 ),
                               ),
@@ -319,7 +351,11 @@ class _AiOutfitMakerState extends State<AiOutfitMaker> {
                                 Positioned.fill(
                                   child: Container(
                                     color: Colors.black26,
-                                    child: const Icon(Icons.check_circle, color: Colors.white, size: 32),
+                                    child: const Icon(
+                                      Icons.check_circle,
+                                      color: Colors.white,
+                                      size: 32,
+                                    ),
                                   ),
                                 ),
                             ],
