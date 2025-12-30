@@ -94,7 +94,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                         postId: doc.id,
                         nickname: data['nickname'] ?? '',
                         authorId: data['authorId'] ?? '',
-                        content: data['content'] ?? '',
+                        content: data['text'] ?? '',
                         imageUrl: data['imageUrl'] ?? '',
                         commentCount: data['commentCount'] ?? 0,
                       );
@@ -254,6 +254,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                 const Spacer(),
                 InkWell(
                   onTap: () {
+                    debugPrint('🔵 공유 버튼 클릭됨');
                     _showShareOptions(context, content, imageUrl);
                   },
                   child: const Icon(Icons.share_outlined),
@@ -268,6 +269,8 @@ class _QuestionFeedState extends State<QuestionFeed> {
 
   // 공유 옵션 선택 다이얼로그
   void _showShareOptions(BuildContext context, String content, String imageUrl) {
+    debugPrint('🔵 공유 옵션 다이얼로그 열림');
+
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
@@ -278,6 +281,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                 leading: const Icon(Icons.chat),
                 title: const Text('카카오톡'),
                 onTap: () {
+                  debugPrint('🔵 카카오톡 메뉴 선택됨');
                   Navigator.pop(context);
                   _shareToKakao(content, imageUrl);
                 },
@@ -319,9 +323,13 @@ class _QuestionFeedState extends State<QuestionFeed> {
     await Share.share(shareContent, subject: '질문 공유');
   }
 
-  // 카카오톡 공유
+  // ✅ 카카오톡 공유 - 디버그 버전
   Future<void> _shareToKakao(String content, String imageUrl) async {
     try {
+      debugPrint('=== 카카오 공유 시작 ===');
+      debugPrint('content: $content');
+      debugPrint('imageUrl: $imageUrl');
+
       final template = FeedTemplate(
         content: Content(
           title: '외출 다이어리 질문',
@@ -334,21 +342,40 @@ class _QuestionFeedState extends State<QuestionFeed> {
         ),
       );
 
-      final isKakaoTalkSharingAvailable =
-      await ShareClient.instance.isKakaoTalkSharingAvailable();
+      debugPrint('템플릿 생성 완료');
 
-      if (isKakaoTalkSharingAvailable) {
-        await ShareClient.instance.shareDefault(template: template);
-      } else {
-        final sharerUrl = await WebSharerClient.instance
-            .makeDefaultUrl(template: template);
-        await launchUrl(sharerUrl, mode: LaunchMode.externalApplication);
+      // 에뮬레이터에서는 항상 웹 공유 사용
+      debugPrint('🌐 웹으로 공유 시도');
+      final sharerUrl = await WebSharerClient.instance
+          .makeDefaultUrl(template: template);
+      debugPrint('공유 URL: $sharerUrl');
+
+      final launched = await launchUrl(
+          sharerUrl,
+          mode: LaunchMode.externalApplication
+      );
+      debugPrint('브라우저 열림 여부: $launched');
+
+      if (!launched) {
+        debugPrint('❌ 브라우저 열기 실패');
+        // url_launcher 패키지로 강제 실행
+        final fallbackUrl = Uri.parse(sharerUrl.toString());
+        await launchUrl(fallbackUrl);
       }
-    } catch (e) {
-      debugPrint('Kakao share error: $e');
+
+      debugPrint('=== 카카오 공유 완료 ===');
+    } catch (e, stackTrace) {
+      debugPrint('=== ❌ 카카오 공유 에러 ===');
+      debugPrint('에러: $e');
+      debugPrint('스택트레이스: $stackTrace');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('카카오톡 공유에 실패했습니다')),
+          SnackBar(
+            content: Text('카카오톡 공유 실패: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 5),
+          ),
         );
       }
     }

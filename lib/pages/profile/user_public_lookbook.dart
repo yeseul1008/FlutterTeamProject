@@ -323,9 +323,9 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size(150, 35),
                         ),
-                        onPressed: () => context.go('/calendarPage'),
+                        onPressed: () => context.go('/followList'),
                         child: const Text(
-                          "+ diary",
+                          "follow",
                           style: TextStyle(
                             color: Colors.black,
                             fontWeight: FontWeight.bold,
@@ -371,9 +371,9 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                   child: SizedBox(
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () => context.go('/userDiaryCards'),
+                      onPressed: () => context.go('/publicWardrobe'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFCAD83B),
+                        backgroundColor: Colors.white,
                         foregroundColor: Colors.black,
                         elevation: 0,
                         padding: EdgeInsets.zero,
@@ -383,7 +383,7 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                         ),
                       ),
                       child: const Text(
-                        'diary',
+                        'wardrobe',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 20,
@@ -397,9 +397,9 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                   child: SizedBox(
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () => context.go('/diaryMap'),
+                      onPressed: () => context.go('/publicLookBook'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
+                        backgroundColor: const Color(0xFFCAD83B),
                         foregroundColor: Colors.black,
                         elevation: 0,
                         padding: EdgeInsets.zero,
@@ -409,10 +409,10 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                         ),
                       ),
                       child: const Text(
-                        'map',
+                        'lookbook',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 18,
+                          fontSize: 20,
                         ),
                       ),
                     ),

@@ -323,9 +323,9 @@ class _UserDiaryCardsState extends State<PublicWardrobe> {
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size(150, 35),
                         ),
-                        onPressed: () => context.go('/calendarPage'),
+                        onPressed: () => context.go('/followList'),
                         child: const Text(
-                          "+ diary",
+                          "follow",
                           style: TextStyle(
                             color: Colors.black,
                             fontWeight: FontWeight.bold,
@@ -371,7 +371,7 @@ class _UserDiaryCardsState extends State<PublicWardrobe> {
                   child: SizedBox(
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () => context.go('/userDiaryCards'),
+                      onPressed: () => context.go('/publicWardrobe'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFCAD83B),
                         foregroundColor: Colors.black,
@@ -383,7 +383,7 @@ class _UserDiaryCardsState extends State<PublicWardrobe> {
                         ),
                       ),
                       child: const Text(
-                        'diary',
+                        'wardrobe',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 20,
@@ -397,7 +397,7 @@ class _UserDiaryCardsState extends State<PublicWardrobe> {
                   child: SizedBox(
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () => context.go('/diaryMap'),
+                      onPressed: () => context.go('/publicLookBook'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: Colors.black,
@@ -409,10 +409,10 @@ class _UserDiaryCardsState extends State<PublicWardrobe> {
                         ),
                       ),
                       child: const Text(
-                        'map',
+                        'lookbook',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 18,
+                          fontSize: 20,
                         ),
                       ),
                     ),

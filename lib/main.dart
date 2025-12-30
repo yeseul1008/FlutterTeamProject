@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'routes/mainRoute.dart'; // ⬅️ router 가져오기
 import 'pages/wardrobe/user_wardrobe_list.dart';
 import 'firebase/firebase_options.dart';
+import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart'; // kakao api 공유
 
 
 void main() async {
@@ -10,6 +11,12 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform, // Firebase 초기화 설정
   );
+
+  // ⭐ Kakao SDK 초기화
+  KakaoSdk.init(
+    nativeAppKey: 'd965237ababfd11fc09f8f3314a782cc',
+  );
+
   runApp(const MyApp());
 }
 
