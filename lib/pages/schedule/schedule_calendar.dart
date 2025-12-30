@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:go_router/go_router.dart';
-// import '../../widgets/common/weatherWidget.dart';
+import '../../widgets/common/weatherWidget.dart';
 
 class UserScheduleCalendar extends StatefulWidget {
   const UserScheduleCalendar({super.key});
@@ -43,15 +43,21 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
     const double bottomBarH = 68;
     final double safeBottom = MediaQuery.of(context).padding.bottom;
 
-    final bool isPastSelected = _isPast(_selectedDay);
-    final bool hasSchedule = selectedThumb != null; // 썸네일 있으면 일정 등록된 것으로 간주
+    // 룩북(코디) 존재 여부
+    final bool hasLookbook = selectedThumb != null;
 
-    final String btnText =
-    isPastSelected ? '일기 등록' : (hasSchedule ? '일정 수정' : '일정 추가');
+    // 목적지 / 목적 (아직 미구현 → 임시 false)
+    final bool hasDestination = false; // TODO: 목적지 값 연결
+    final bool hasPurpose = false; // TODO: 목적 값 연결
+
+    // 셋 중 하나라도 비어 있으면 일정 추가
+    final bool needAdd = !(hasLookbook && hasDestination && hasPurpose);
+
+    // 버튼 텍스트
+    final String btnText = needAdd ? '일정 추가' : '일정 수정';
 
     return Scaffold(
       backgroundColor: Colors.white,
-
       floatingActionButton: null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
@@ -200,96 +206,103 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
 
             const SizedBox(height: 10),
 
-            // 스크롤 영역
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
-                child: Column(
-                  children: [
-                    Text(
-                      '${_selectedDay.year} ${_monthName(_selectedDay.month)} ${_selectedDay.day}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-
-                    // WeatherWidget (5일 예보 기반 버전)
-                    // apiKey는 weatherWidget.dart에서 fallback 사용 중이면 여기선 생략 가능
-                    // 권장: apiKey를 주입하세요.
-                    // WeatherWidget(
-                    //   date: _selectedDay,
-                    //   lat: 37.5665,
-                    //   lon: 126.9780,
-                    //   apiKey: '5ebe456d15b6fd5e52fbf09d1ab110ae',
-                    // ),
-
-                    const SizedBox(height: 14),
-
-                    // 프리뷰
-                    Container(
-                      width: double.infinity,
-                      height: 320,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.black12),
-                        color: Colors.white,
-                      ),
-                      child: (selectedThumb == null)
-                          ? const Center(
-                        child: Text(
-                          '등록된 코디가 없습니다',
-                          style: TextStyle(color: Colors.black38),
-                        ),
-                      )
-                          : Image.network(
-                        selectedThumb,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Center(
-                          child: Icon(Icons.image_not_supported),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // ✅ 버튼: 스크롤 밖(한 화면에서 바로 보이게)
+            // 날짜 텍스트
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
-              child: SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (btnText == '일정 추가') {
-                      context.go('/AddSchedule');
-                    } else if (btnText == '일정 수정') {
-                      context.go('/EditSchedule');
-                    } else {
-                      // '일기 등록' 라우트는 아직 안 주셔서 여기서는 이동 안 합니다.
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    elevation: 0,
-                    backgroundColor: const Color(0xFFCAD83B),
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      side: const BorderSide(color: Colors.black),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: Text(
+                '${_monthName(_selectedDay.month)} ${_selectedDay.day}',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            // 날씨(왼쪽) + 일정추가 버튼(오른쪽)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: WeatherWidget(
+                        date: _selectedDay,
+                        lat: 37.5665,
+                        lon: 126.9780,
+                        apiKey: '5ebe456d15b6fd5e52fbf09d1ab110ae',
+                      ),
                     ),
                   ),
-                  child: Text(
-                    btnText,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 15,
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    height: 34,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (btnText == '일정 추가') {
+                          context.go('/AddSchedule');
+                        } else {
+                          context.go('/EditSchedule');
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        elevation: 0,
+                        backgroundColor: const Color(0xFFCAD83B),
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          side: const BorderSide(color: Colors.black),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                      ),
+                      child: Text(
+                        btnText,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // 프리뷰가 남은 높이 전부 차지
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.black12),
+                    color: Colors.white,
+                  ),
+                  child: (selectedThumb == null)
+                      ? const SizedBox.expand(
+                    child: Center(
+                      child: Text(
+                        '등록된 코디가 없습니다',
+                        style: TextStyle(color: Colors.black38),
+                      ),
+                    ),
+                  )
+                      : Image.network(
+                    selectedThumb,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Center(
+                      child: Icon(Icons.image_not_supported),
                     ),
                   ),
                 ),
               ),
             ),
+
+            const SizedBox(height: 10),
           ],
         ),
       ),

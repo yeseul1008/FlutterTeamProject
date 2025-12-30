@@ -124,7 +124,7 @@ final GoRouter router = GoRouter(
         GoRoute(
           path: '/calendarPage',
           builder: (context, state) => const CalendarPage(),
-),
+        ),
         GoRoute(
           path: '/userDiaryCards',
           builder: (context, state) => const UserDiaryCards(),
