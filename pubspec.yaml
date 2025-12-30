@@ -30,24 +30,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  qr_flutter: any
+
+  # UI / Utils
+  qr_flutter:
   flutter_rating_bar: ^4.0.1
-  fluttertoast: any
-  table_calendar: any
-  confetti: any
-  percent_indicator: any
-  sqflite: any
-  path: any
-  go_router: any
-  firebase_core: any
-  cloud_firestore: any
-  firebase_storage: any
-  image_picker: any
-  share_plus: any
-  firebase_auth: any
-  google_sign_in: ^6.2.1
-  flutter_dotenv: any
-  http: ^1.2.0
   fluttertoast:
   table_calendar:
   confetti:
@@ -55,17 +41,32 @@ dependencies:
   sqflite:
   path:
   go_router:
+
+  # Firebase
   firebase_core:
   cloud_firestore:
   firebase_storage: ^13.0.5
-  image_picker:
-  share_plus:
   firebase_auth:
+
+  # Media / Share
+  image_picker:
+  image:
+  share_plus:
+
+  # Auth / Social
   google_sign_in: ^6.2.1
+  kakao_flutter_sdk_share: ^1.10.0
+
+  # Map / Location
   google_maps_flutter:
   geocoding: ^3.0.0
   google_places_flutter: ^2.0.9
-  image:
+
+  # Network / Env
+  http: ^1.2.0
+
+  # External
+  url_launcher:
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -127,4 +128,4 @@ flutter:
   #         weight: 700
   #
   # For details regarding fonts from package dependencies,
-  # see https://flutter.dev/to/font-from-package 야멜파일도 체크해봐
+  # see https://flutter.dev/to/font-from-package

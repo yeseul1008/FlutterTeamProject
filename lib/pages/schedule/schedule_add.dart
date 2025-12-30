@@ -16,7 +16,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
 
   final TextEditingController _scheduleController = TextEditingController();
 
-  // ✅ 목적지(좌표) 상태값: 기본 서울
+  // 목적지(좌표) 상태값: 기본 서울
   String _placeName = '서울';
   double _lat = 37.5665;
   double _lon = 126.9780;
@@ -70,7 +70,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
               child: Row(
                 children: [
                   IconButton(
-                    onPressed: () => context.go('/calendarPage'),
+                    onPressed: () => context.go('/userScheduleCalendar'),
                     icon: const Icon(Icons.arrow_back_ios_new),
                   ),
                   Expanded(
@@ -138,7 +138,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
 
             const SizedBox(height: 10),
 
-            // ✅ 날씨(왼쪽) + 일정추가 버튼(오른쪽)
+            // 날씨(왼쪽) + 일정추가 버튼(오른쪽)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18),
               child: Row(
@@ -211,7 +211,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
               height: 52,
               child: ElevatedButton(
                 onPressed: () {
-                  // TODO
+                  context.go('/scheduleWardrobe');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: lime,
