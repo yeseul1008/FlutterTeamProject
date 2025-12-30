@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:team_project_flutter/pages/schedule/schedule_lookbook.dart';
 import 'package:team_project_flutter/pages/wardrobe/user_wardrobe_edit.dart';
 
 import '../pages/profile/user_schedule_edit.dart';
@@ -20,7 +21,7 @@ import '../pages/community/question_comment.dart';
 import '../pages/community/question_feed.dart';
 import '../pages/profile/user_diary_calendar.dart';
 import '../pages/profile/user_diary_cards.dart';
-import '../pages/profile/user_schedule_calendar.dart';
+import '../pages/schedule/schedule_calendar.dart';
 import '../pages/profile/user_diary_map.dart';
 import '../pages/profile/user_profile_edit.dart';
 import '../pages/profile/user_public_lookbook.dart';
@@ -32,12 +33,14 @@ import '../pages/wardrobe/user_lookbook_add.dart';
 import '../pages/wardrobe/user_scrap.dart';
 import '../pages/wardrobe/user_scrap_view.dart';
 import '../pages/wardrobe/user_wardrobe_add.dart';
-import '../pages/wardrobe/user_wardrobe_category.dart';
+import '../pages/wardrobe/outfit_maker_result.dart';
 import '../pages/wardrobe/user_wardrobe_list.dart';
 import '../pages/wardrobe/user_wardrobe_detail.dart';
 import '../widgets/common/bottom_nav_bar.dart';
-import '../pages/profile/user_schedule_add.dart';
+import '../pages/schedule/schedule_add.dart';
 import '../pages/map/PlaceSearchPage.dart';
+import '../pages/schedule/schedule_wardrobe.dart';
+import '../pages/schedule/schedule_combine.dart';
 
 final GlobalKey<NavigatorState> _shellNavigatorKey =
 GlobalKey<NavigatorState>();
@@ -107,16 +110,36 @@ final GoRouter router = GoRouter(
 
         // profile 폴더 속 파일이름
 
+
+        //Schedule전용 라우터
         //일정 추가
         GoRoute(
           path: '/AddSchedule',
           builder: (context, state) => const UserScheduleAdd(),
         ),
-        //일정 수정
+        // 일정 수정
+        // GoRoute(
+        //   path: '/EditSchedule',
+        //   builder: (context, state) => const UserScheduleEdit(),
+        // ),
+        //스케줄 옷 리스트 호출
         GoRoute(
-          path: '/EditSchedule',
-          builder: (context, state) => const UserScheduleEdit(),
+          path: '/scheduleWardrobe',
+          builder : (context, state) => const ScheduleWardrobe(),
         ),
+        //스케줄 룩북
+        GoRoute(
+            path: '/scheduleLookbook',
+            builder: (context, state) => const ScheduleLookbook()
+        ),
+        //스케줄 옷 조합
+        GoRoute(
+          path: '/scheduleCombine',
+          builder: (context, state) =>
+              ScheduleCombine(extra: state.extra),
+        ),
+
+
         GoRoute(
           path: '/userScheduleCalendar',
           builder: (context, state) => const UserScheduleCalendar(),
@@ -124,7 +147,7 @@ final GoRouter router = GoRouter(
         GoRoute(
           path: '/calendarPage',
           builder: (context, state) => const CalendarPage(),
-),
+        ),
         GoRoute(
           path: '/userDiaryCards',
           builder: (context, state) => const UserDiaryCards(),
@@ -273,6 +296,23 @@ final GoRouter router = GoRouter(
             );
           },
         ),
+        GoRoute(
+          path: '/aiOutfitMakerScreen',
+          builder: (context, state) {
+            final extra = state.extra;
+
+            if (extra is List<String>) {
+              // URL 리스트를 바로 전달
+              return AiOutfitMakerScreen(selectedImageUrls: extra);
+            } else {
+              return const Scaffold(
+                body: Center(child: Text('잘못된 데이터가 전달되었습니다.')),
+              );
+            }
+          },
+        ),
+
+
       ],
     ),
   ],

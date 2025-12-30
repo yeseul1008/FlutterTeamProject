@@ -92,174 +92,176 @@ class _UserLookbookState extends State<UserLookbook> {
         ),
       ),
 
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          children: [
-            const SizedBox(height: 30),
-
-            // 상단 버튼 3개
-            Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: () => context.go('/userWardrobeList'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        elevation: 0,
-                        padding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          side: const BorderSide(color: Colors.black),
-                        ),
-                      ),
-                      child: const Text(
-                        'closet',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 20),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: SizedBox(
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: () => context.go('/userLookbook'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFCAD83B),
-                        foregroundColor: Colors.black,
-                        elevation: 0,
-                        padding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          side: const BorderSide(color: Colors.black),
-                        ),
-                      ),
-                      child: const Text(
-                        'lookbooks',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 18),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: SizedBox(
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: () => context.go('/userScrap'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        elevation: 0,
-                        padding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          side: const BorderSide(color: Colors.black),
-                        ),
-                      ),
-                      child: const Text(
-                        'scrap',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 20),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // 검색 바 (정적)
-            Row(
-              children: [
-                const Icon(Icons.menu),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Container(
-                    height: 36,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.black),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      children: const [
-                        Expanded(
-                          child: Text(
-                            'search...',
-                            style: TextStyle(color: Colors.grey),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+        
+              // 상단 버튼 3개
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: () => context.go('/userWardrobeList'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black,
+                          elevation: 0,
+                          padding: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            side: const BorderSide(color: Colors.black),
                           ),
                         ),
-                        Icon(Icons.search, size: 18),
-                      ],
+                        child: const Text(
+                          'closet',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 20),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // 룩북 그리드
-            loading
-                ? const Expanded(
-                child: Center(child: CircularProgressIndicator()))
-                : lookbooks.isEmpty
-                ? const Expanded(
-                child: Center(child: Text('등록된 룩북이 없습니다.')))
-                : Expanded(
-              child: GridView.builder(
-                itemCount: lookbooks.length,
-                gridDelegate:
-                const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.7,
-                ),
-                itemBuilder: (context, index) {
-                  final item = lookbooks[index];
-                  final imageUrl = item['imageUrl'] ?? '';
-
-                  return GestureDetector(
-                    onTap: () {
-                    },
-                    child: Stack(
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey),
-                            color: Colors.white,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: SizedBox(
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: () => context.go('/userLookbook'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFCAD83B),
+                          foregroundColor: Colors.black,
+                          elevation: 0,
+                          padding: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            side: const BorderSide(color: Colors.black),
                           ),
-                          child: imageUrl != ''
-                              ? ClipRRect(
-                            borderRadius:
-                            BorderRadius.circular(8),
-                            child: Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                            ),
-                          )
-                              : null,
                         ),
-                      ],
+                        child: const Text(
+                          'lookbooks',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 18),
+                        ),
+                      ),
                     ),
-                  );
-                },
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: SizedBox(
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: () => context.go('/userScrap'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black,
+                          elevation: 0,
+                          padding: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            side: const BorderSide(color: Colors.black),
+                          ),
+                        ),
+                        child: const Text(
+                          'scrap',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 20),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
+        
+              const SizedBox(height: 16),
+        
+              // 검색 바 (정적)
+              Row(
+                children: [
+                  const Icon(Icons.menu),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Container(
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.black),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        children: const [
+                          Expanded(
+                            child: Text(
+                              'search...',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                          Icon(Icons.search, size: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+              ),
+        
+              const SizedBox(height: 16),
+        
+              // 룩북 그리드
+              loading
+                  ? const Expanded(
+                  child: Center(child: CircularProgressIndicator()))
+                  : lookbooks.isEmpty
+                  ? const Expanded(
+                  child: Center(child: Text('등록된 룩북이 없습니다.')))
+                  : Expanded(
+                child: GridView.builder(
+                  itemCount: lookbooks.length,
+                  gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.7,
+                  ),
+                  itemBuilder: (context, index) {
+                    final item = lookbooks[index];
+                    final imageUrl = item['imageUrl'] ?? '';
+        
+                    return GestureDetector(
+                      onTap: () {
+                      },
+                      child: Stack(
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              color: Colors.white,
+                            ),
+                            child: imageUrl != ''
+                                ? ClipRRect(
+                              borderRadius:
+                              BorderRadius.circular(8),
+                              child: Image.network(
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                              ),
+                            )
+                                : null,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
