@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:table_calendar/table_calendar.dart';
 import 'package:go_router/go_router.dart';
-import '../../widgets/common/weatherWidget.dart';
+import 'package:table_calendar/table_calendar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
@@ -111,6 +111,8 @@ class _CalendarPageState extends State<CalendarPage> {
     }
   }
 
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
         children: [
@@ -187,31 +189,13 @@ class _CalendarPageState extends State<CalendarPage> {
                               );
                             },
                           ),
-                          children: [
-                            TextSpan(text: _monthName(_focusedDay.month)),
-                            TextSpan(
-                              text: ' ${_focusedDay.year}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
-                                color: Colors.black54,
-                              ),
-                            ),
-                          ],
-                        ),
+                        )
+                            : SizedBox.shrink(),
                       ),
-                    ),
+                    ],
                   ),
-                  IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _focusedDay =
-                            DateTime(_focusedDay.year, _focusedDay.month + 1, 1);
-                      });
-                    },
-                    icon: const Icon(Icons.chevron_right),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
           ),
           SizedBox(height: 20),
