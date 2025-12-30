@@ -34,8 +34,9 @@ import '../pages/wardrobe/user_wardrobe_add.dart';
 import '../pages/wardrobe/user_wardrobe_category.dart';
 import '../pages/wardrobe/user_wardrobe_list.dart';
 import '../pages/wardrobe/user_wardrobe_detail.dart';
-
 import '../widgets/common/bottom_nav_bar.dart';
+import '../pages/profile/user_schedule_add.dart';
+import '../pages/map/PlaceSearchPage.dart';
 
 final GlobalKey<NavigatorState> _shellNavigatorKey =
 GlobalKey<NavigatorState>();
@@ -96,7 +97,25 @@ final GoRouter router = GoRouter(
           builder: (context, state) => const QuestionFeed(),
         ),
 
+        //카카오 지도
+        GoRoute(
+          path: '/placeSearch',
+          builder: (context, state) => const PlaceSearchPage(),
+        ),
+
+
         // profile 폴더 속 파일이름
+
+        //일정 추가
+        GoRoute(
+          path: '/AddSchedule',
+          builder: (context, state) => const UserScheduleAdd(),
+        ),
+        //일정 수정
+        GoRoute(
+          path: '/EditSchedule',
+          builder: (context, state) => const UserScheduleEdit(),
+        ),
         GoRoute(
           path: '/userScheduleCalendar',
           builder: (context, state) => const UserScheduleCalendar(),
@@ -104,7 +123,7 @@ final GoRouter router = GoRouter(
         GoRoute(
           path: '/calendarPage',
           builder: (context, state) => const CalendarPage(),
-        ),
+),
         GoRoute(
           path: '/userDiaryCards',
           builder: (context, state) => const UserDiaryCards(),
@@ -126,7 +145,7 @@ final GoRouter router = GoRouter(
           builder: (context, state) => const PublicWardrobe(),
         ),
         GoRoute(
-          path: '/userDiaryAdd ',
+          path: '/userDiaryAdd',
           builder: (context, state) => const UserDiaryAdd (),
         ),
         // wardrobe 폴더 속 파일 이동
