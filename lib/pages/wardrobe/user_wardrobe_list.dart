@@ -63,14 +63,27 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
 
   // wardrobe 컬렉션 스트림
   Stream<QuerySnapshot<Map<String, dynamic>>> _wardrobeStream() {
-    final ref = fs.collection('users').doc(userId).collection('wardrobe').orderBy('createdAt', descending: true);
+    if (userId == null) return const Stream.empty();
 
+    var ref = fs
+        .collection('users')
+        .doc(userId)
+        .collection('wardrobe')
+        .orderBy('createdAt', descending: true);
+
+    // 카테고리 필터 적용
+    if (selectedCategoryId != null && selectedCategoryId != 'all') {
+      ref = ref.where('categoryId', isEqualTo: selectedCategoryId);
+    }
+
+    // 좋아요 필터 적용
     if (showLikedOnly) {
-      return ref.where('liked', isEqualTo: true).snapshots();
+      ref = ref.where('liked', isEqualTo: true);
     }
 
     return ref.snapshots();
   }
+
 
   @override
   void initState() {
@@ -85,7 +98,7 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
 
       // AI 착용샷 버튼
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 80),
+        padding: const EdgeInsets.only(bottom: 100),
         child: SizedBox(
           height: 44,
           child: FloatingActionButton.extended(
@@ -303,27 +316,28 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                             children: [
                               Container(
                                 decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.grey),
+                                  border: Border.all(color: Colors.grey), // 테두리 유지
                                   color: Colors.white,
-                                  image: imageUrl.isNotEmpty
-                                      ? DecorationImage(
-                                    image: NetworkImage(imageUrl),
-                                    fit: BoxFit.cover,
+                                ),
+                                child: ClipRRect(
+                                  // 테두리 안에서 사진만 자르기
+                                  child: imageUrl.isNotEmpty
+                                      ? Transform.scale(
+                                    scale: 1.3, // 사진 10% 확대
+                                    child: Image.network(
+                                      imageUrl,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                    ),
                                   )
                                       : null,
                                 ),
                               ),
                               Positioned(
-                                top: 4,
-                                right: 4,
+                                top: 1,
+                                right: 1,
                                 child: IconButton(
-                                  icon: Icon(
-                                    data['liked'] == true
-                                        ? Icons.favorite
-                                        : Icons.favorite_border,
-                                    color: Colors.black,
-                                    size: 18,
-                                  ),
                                   onPressed: () async {
                                     final docRef = fs
                                         .collection('users')
@@ -334,11 +348,34 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                                     final currentLiked = data['liked'] == true;
                                     await docRef.update({'liked': !currentLiked});
                                   },
+                                  icon: data['liked'] == true
+                                      ? const Icon(
+                                    Icons.favorite,
+                                    color: Colors.black,
+                                    size: 22,
+                                  )
+                                      : Stack(
+                                    alignment: Alignment.center,
+                                    children: const [
+                                      Icon(
+                                        Icons.favorite,
+                                        color: Colors.white, // 하얀색 채움
+                                        size: 22,
+                                      ),
+                                      Icon(
+                                        Icons.favorite_border,
+                                        color: Colors.black, // 테두리
+                                        size: 22,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         );
+
+
                       },
                     );
                   },

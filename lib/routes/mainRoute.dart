@@ -32,7 +32,7 @@ import '../pages/wardrobe/user_lookbook_add.dart';
 import '../pages/wardrobe/user_scrap.dart';
 import '../pages/wardrobe/user_scrap_view.dart';
 import '../pages/wardrobe/user_wardrobe_add.dart';
-import '../pages/wardrobe/user_wardrobe_category.dart';
+import '../pages/wardrobe/outfit_maker_result.dart';
 import '../pages/wardrobe/user_wardrobe_list.dart';
 import '../pages/wardrobe/user_wardrobe_detail.dart';
 import '../widgets/common/bottom_nav_bar.dart';
@@ -295,6 +295,23 @@ final GoRouter router = GoRouter(
             );
           },
         ),
+        GoRoute(
+          path: '/aiOutfitMakerScreen',
+          builder: (context, state) {
+            final extra = state.extra;
+
+            if (extra is List<String>) {
+              // URL 리스트를 바로 전달
+              return AiOutfitMakerScreen(selectedImageUrls: extra);
+            } else {
+              return const Scaffold(
+                body: Center(child: Text('잘못된 데이터가 전달되었습니다.')),
+              );
+            }
+          },
+        ),
+
+
       ],
     ),
   ],
