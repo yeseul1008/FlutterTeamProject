@@ -19,6 +19,7 @@ import '../pages/community/question_comment.dart';
 import '../pages/community/question_feed.dart';
 import '../pages/profile/user_diary_calendar.dart';
 import '../pages/profile/user_diary_cards.dart';
+import '../pages/profile/user_schedule_calendar.dart';
 import '../pages/profile/user_diary_map.dart';
 import '../pages/profile/user_profile_edit.dart';
 import '../pages/profile/user_public_lookbook.dart';
@@ -96,6 +97,10 @@ final GoRouter router = GoRouter(
         ),
 
         // profile 폴더 속 파일이름
+        GoRoute(
+          path: '/userScheduleCalendar',
+          builder: (context, state) => const UserScheduleCalendar(),
+        ),
         GoRoute(
           path: '/calendarPage',
           builder: (context, state) => const CalendarPage(),
