@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:team_project_flutter/pages/wardrobe/user_wardrobe_edit.dart';
 
-import '../pages/profile/user_schedule_edit.dart';
 import '../routePage1.dart';
 import '../routePage2.dart';
 
@@ -20,7 +19,7 @@ import '../pages/community/question_comment.dart';
 import '../pages/community/question_feed.dart';
 import '../pages/profile/user_diary_calendar.dart';
 import '../pages/profile/user_diary_cards.dart';
-import '../pages/profile/user_schedule_calendar.dart';
+import '../pages/schedule/schedule_calendar.dart';
 import '../pages/profile/user_diary_map.dart';
 import '../pages/profile/user_profile_edit.dart';
 import '../pages/profile/user_public_lookbook.dart';
@@ -32,12 +31,13 @@ import '../pages/wardrobe/user_lookbook_add.dart';
 import '../pages/wardrobe/user_scrap.dart';
 import '../pages/wardrobe/user_scrap_view.dart';
 import '../pages/wardrobe/user_wardrobe_add.dart';
-import '../pages/wardrobe/user_wardrobe_category.dart';
+import '../pages/wardrobe/outfit_maker_result.dart';
 import '../pages/wardrobe/user_wardrobe_list.dart';
 import '../pages/wardrobe/user_wardrobe_detail.dart';
 import '../widgets/common/bottom_nav_bar.dart';
-import '../pages/profile/user_schedule_add.dart';
+import '../pages/schedule/schedule_add.dart';
 import '../pages/map/PlaceSearchPage.dart';
+import '../pages/schedule/schedule_wardrobe.dart';
 
 final GlobalKey<NavigatorState> _shellNavigatorKey =
 GlobalKey<NavigatorState>();
@@ -112,11 +112,13 @@ final GoRouter router = GoRouter(
           path: '/AddSchedule',
           builder: (context, state) => const UserScheduleAdd(),
         ),
-        //일정 수정
-        GoRoute(
-          path: '/EditSchedule',
-          builder: (context, state) => const UserScheduleEdit(),
-        ),
+        // 일정 수정
+        // GoRoute(
+        //   path: '/EditSchedule',
+        //   builder: (context, state) => const UserScheduleEdit(),
+        // ),
+
+
         GoRoute(
           path: '/userScheduleCalendar',
           builder: (context, state) => const UserScheduleCalendar(),
@@ -271,6 +273,13 @@ final GoRouter router = GoRouter(
             return const NoTransitionPage(
               child: UserWardrobeList(),
             );
+          },
+        ),
+        GoRoute(
+          path: '/aiOutfitResult',
+          builder: (context, state) {
+            final selectedImageUrls = state.extra as List<String>;
+            return AiOutfitResultScreen(selectedImageUrls: selectedImageUrls);
           },
         ),
       ],

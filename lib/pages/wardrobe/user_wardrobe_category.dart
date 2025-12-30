@@ -146,7 +146,6 @@ class UserWardrobeCategory extends StatelessWidget {
                       if (isAdd) {
                         _showAddCategoryDialog(context);
                       } else {
-                        Navigator.pop(context);
                         onSelect(docId!); // 문서 ID 전달
                       }
                     },

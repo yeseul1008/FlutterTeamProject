@@ -41,7 +41,7 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
 
   // 🔹 추가: 이미지 확대/이동 컨트롤러
   final TransformationController _transformController =
-  TransformationController();
+      TransformationController();
 
   // =========================
   // remove.bg 누끼 처리
@@ -68,8 +68,9 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
 
     final bytes = await response.stream.toBytes();
     final dir = await getTemporaryDirectory();
-    final file =
-    File('${dir.path}/nobg_${DateTime.now().millisecondsSinceEpoch}.png');
+    final file = File(
+      '${dir.path}/nobg_${DateTime.now().millisecondsSinceEpoch}.png',
+    );
 
     return file.writeAsBytes(bytes);
   }
@@ -111,9 +112,7 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
         barrierDismissible: false,
         builder: (dialogContext) => AlertDialog(
           title: const Text('알림'),
-          content: const Text(
-            '누끼화가 안되는 이미지입니다.\n다른 사진을 이용해주세요',
-          ),
+          content: const Text('누끼화가 안되는 이미지입니다.\n다른 사진을 이용해주세요'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
@@ -134,18 +133,17 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
       ),
     );
   }
+
   Future<File> _applyTransformToImage(File originalFile) async {
     final bytes = await originalFile.readAsBytes();
     final img.Image original = img.decodeImage(bytes)!;
 
     // 결과 캔버스 (미리보기 박스와 동일 비율 권장)
     const int canvasSize = 800;
-    final img.Image canvas =
-    img.Image(width: canvasSize, height: canvasSize);
+    final img.Image canvas = img.Image(width: canvasSize, height: canvasSize);
 
     // 흰색 배경
     img.fill(canvas, color: img.ColorRgb8(255, 255, 255));
-
 
     final Matrix4 matrix = _transformController.value;
 
@@ -156,22 +154,17 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
     final int newWidth = (original.width * scale).toInt();
     final int newHeight = (original.height * scale).toInt();
 
-    final img.Image resized =
-    img.copyResize(original, width: newWidth, height: newHeight);
-
-    // 중앙 기준 보정
-    final int centerX =
-        (canvas.width - resized.width) ~/ 2 + dx.toInt();
-    final int centerY =
-        (canvas.height - resized.height) ~/ 2 + dy.toInt();
-
-    img.compositeImage(
-      canvas,
-      resized,
-      dstX: centerX,
-      dstY: centerY,
+    final img.Image resized = img.copyResize(
+      original,
+      width: newWidth,
+      height: newHeight,
     );
 
+    // 중앙 기준 보정
+    final int centerX = (canvas.width - resized.width) ~/ 2 + dx.toInt();
+    final int centerY = (canvas.height - resized.height) ~/ 2 + dy.toInt();
+
+    img.compositeImage(canvas, resized, dstX: centerX, dstY: centerY);
 
     final dir = await getTemporaryDirectory();
     final file = File(
@@ -216,45 +209,44 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
                         ),
                         child: selectedImage == null
                             ? Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.add_a_photo, size: 36),
-                            SizedBox(height: 12),
-                            Text(
-                              '옷만 보이도록 촬영해주세요',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                            SizedBox(height: 6),
-                            Text(
-                              '• 옷걸이 / 바닥에 놓고 촬영\n'
-                                  '• 단색 배경에서 촬영\n'
-                                  '• 인물 착용 사진은 인식이 어려워요',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.black54,
-                                height: 1.4,
-                              ),
-                            ),
-                          ],
-                        )
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(Icons.add_a_photo, size: 36),
+                                  SizedBox(height: 12),
+                                  Text(
+                                    '옷만 보이도록 촬영해주세요',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  SizedBox(height: 6),
+                                  Text(
+                                    '• 옷걸이 / 바닥에 놓고 촬영\n'
+                                    '• 단색 배경에서 촬영\n'
+                                    '• 인물 착용 사진은 인식이 어려워요',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.black54,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                              )
                             : ClipRect(
-                          child: InteractiveViewer(
-                            transformationController:
-                            _transformController,
-                            minScale: 0.5,
-                            maxScale: 4.0,
-                            boundaryMargin:
-                            const EdgeInsets.all(80),
-                            child: Image.file(
-                              selectedImage!,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
+                                child: InteractiveViewer(
+                                  transformationController:
+                                      _transformController,
+                                  minScale: 0.5,
+                                  maxScale: 4.0,
+                                  boundaryMargin: const EdgeInsets.all(80),
+                                  child: Image.file(
+                                    selectedImage!,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                              ),
                       ),
 
                       /// 🔹 자동 중앙 정렬 버튼
@@ -265,8 +257,7 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
                           child: ElevatedButton(
                             onPressed: () {
                               setState(() {
-                                _transformController.value =
-                                    Matrix4.identity();
+                                _transformController.value = Matrix4.identity();
                               });
                             },
                             style: ElevatedButton.styleFrom(
@@ -324,23 +315,25 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
                           value: selectedCategoryId,
                           hint: const Text(':: 카테고리를 선택하세요 ::'),
                           isExpanded: true,
-                          dropdownColor: Colors.white, // ✅ 펼쳐지는 메뉴도 흰색
+                          dropdownColor: Colors.white,
+                          // ✅ 펼쳐지는 메뉴도 흰색
                           items: categories
                               .map(
                                 (cat) => DropdownMenuItem<String>(
-                              value: cat['id'] as String,
-                              child: Text(
-                                cat['name'] as String,
-                                style: const TextStyle(color: Colors.black),
-                              ),
-                            ),
-                          )
+                                  value: cat['id'] as String,
+                                  child: Text(
+                                    cat['name'] as String,
+                                    style: const TextStyle(color: Colors.black),
+                                  ),
+                                ),
+                              )
                               .toList(),
                           onChanged: (v) {
                             setState(() {
                               selectedCategoryId = v;
-                              selectedCategoryName =
-                              categories.firstWhere((e) => e['id'] == v)['name'];
+                              selectedCategoryName = categories.firstWhere(
+                                (e) => e['id'] == v,
+                              )['name'];
                             });
                           },
                         ),
@@ -349,15 +342,26 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
                   ),
                 ),
 
-
                 const SizedBox(height: 16),
 
                 Row(
                   children: [
-                    _seasonCheck('봄', spring, (v) => setState(() => spring = v)),
-                    _seasonCheck('여름', summer, (v) => setState(() => summer = v)),
+                    _seasonCheck(
+                      '봄',
+                      spring,
+                      (v) => setState(() => spring = v),
+                    ),
+                    _seasonCheck(
+                      '여름',
+                      summer,
+                      (v) => setState(() => summer = v),
+                    ),
                     _seasonCheck('가을', fall, (v) => setState(() => fall = v)),
-                    _seasonCheck('겨울', winter, (v) => setState(() => winter = v)),
+                    _seasonCheck(
+                      '겨울',
+                      winter,
+                      (v) => setState(() => winter = v),
+                    ),
                   ],
                 ),
 
@@ -393,8 +397,9 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
                       }
 
                       // 🔥 변환 적용된 최종 이미지 생성
-                      final File finalImage =
-                      await _applyTransformToImage(selectedImage!);
+                      final File finalImage = await _applyTransformToImage(
+                        selectedImage!,
+                      );
 
                       final ref = FirebaseStorage.instance.ref(
                         'wardrobe_images/${DateTime.now().millisecondsSinceEpoch}.png',
@@ -402,29 +407,43 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
 
                       await ref.putFile(finalImage);
                       final imageUrl = await ref.getDownloadURL();
+                      // 선택된 계절만 리스트로 변환
+                      List<String> selectedSeasons = [];
+                      if (spring) selectedSeasons.add('봄');
+                      if (summer) selectedSeasons.add('여름');
+                      if (fall) selectedSeasons.add('가을');
+                      if (winter) selectedSeasons.add('겨울');
 
                       await _db
                           .collection('users')
                           .doc(userId)
                           .collection('wardrobe')
                           .add({
-                        'categoryId': selectedCategoryId,
-                        'categoryName': selectedCategoryName,
-                        'imageUrl': imageUrl,
-                        'createdAt': FieldValue.serverTimestamp(),
-                      });
+                            'categoryId': selectedCategoryId,
+                            'categoryName': selectedCategoryName,
+                            'imageUrl': imageUrl,
+                            'productName': nameCtrl.text.trim(),
+                            'shop': storeCtrl.text.trim(),
+                            'material': materialCtrl.text.trim(),
+                            'comment': commentCtrl.text.trim(),
+                            'season': selectedSeasons, // 선택된 계절 리스트
+                            'createdAt': FieldValue.serverTimestamp(),
+                          });
 
                       _showToast('등록되었습니다');
                       context.pop();
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFCAD83B),
-                      foregroundColor: Colors.black,         // 텍스트 색상
-                      side: const BorderSide(color: Colors.black), // 검정 테두리
+                      foregroundColor: Colors.black,
+                      // 텍스트 색상
+                      side: const BorderSide(color: Colors.black),
+                      // 검정 테두리
                       padding: const EdgeInsets.symmetric(
                         horizontal: 35,
                         vertical: 14,
-                      ), // 크기 살짝 증가
+                      ),
+                      // 크기 살짝 증가
                       textStyle: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
@@ -432,7 +451,6 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
                     ),
                     child: const Text('add'),
                   ),
-
                 ),
                 SizedBox(height: MediaQuery.of(context).padding.bottom + 40),
               ],
@@ -467,7 +485,7 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
         Checkbox(
           value: value,
           activeColor: Colors.black, // 체크된 상태 색상
-          checkColor: Colors.white,  // 체크 표시 색상
+          checkColor: Colors.white, // 체크 표시 색상
           onChanged: (v) => onChanged(v ?? false),
         ),
         Text(label),
@@ -475,15 +493,11 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
     );
   }
 
-
   Widget _label(String text) {
     return Text(text, style: const TextStyle(fontWeight: FontWeight.bold));
   }
 
-  Widget _input({
-    required TextEditingController controller,
-    int maxLines = 1,
-  }) {
+  Widget _input({required TextEditingController controller, int maxLines = 1}) {
     return TextField(
       controller: controller,
       maxLines: maxLines,
@@ -506,5 +520,4 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
       ),
     );
   }
-
 }
