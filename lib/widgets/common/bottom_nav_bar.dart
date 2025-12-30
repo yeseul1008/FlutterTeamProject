@@ -21,7 +21,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
         context.go('/userWardrobeList');
         break;
       case 1:
-        context.go('/calendarPage');
+        context.go('/userScheduleCalendar');
         break;
       case 2:
         context.go('/userDiaryCards');

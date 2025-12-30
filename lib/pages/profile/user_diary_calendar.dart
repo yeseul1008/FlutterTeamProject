@@ -13,42 +13,103 @@ class CalendarPage extends StatefulWidget {
 
 class _CalendarPageState extends State<CalendarPage> {
   DateTime _focusedDay = DateTime.now();
-  DateTime _selectedDay = DateTime.now();
+  DateTime? _selectedDay;
+  final FirebaseFirestore fs = FirebaseFirestore.instance;
 
-  // UI용 더미 썸네일
-  final Map<DateTime, String> _outfitImages = {
-    DateTime(2025, 12, 23):
-    'https://images.unsplash.com/photo-1520975958225-5f61fdd7b13a?w=600',
-    DateTime(2025, 12, 24):
-    'https://images.unsplash.com/photo-1520975682031-a3d3ad9c0b3a?w=600',
-    DateTime(2025, 12, 25):
-    'https://images.unsplash.com/photo-1520975900602-1f81b190e0b8?w=600',
-    DateTime(2025, 12, 26):
-    'https://images.unsplash.com/photo-1520975910938-2dba43f8e812?w=600',
-    DateTime(2025, 12, 27):
-    'https://images.unsplash.com/photo-1520975923003-56a5d7a6d5d1?w=600',
-  };
-
-  DateTime _normalize(DateTime d) => DateTime(d.year, d.month, d.day);
-  String? _getThumb(DateTime day) => _outfitImages[_normalize(day)];
-
-  bool _isPast(DateTime day) {
-    final today = _normalize(DateTime.now());
-    return _normalize(day).isBefore(today);
-  }
+  // Store lookbooks by date
+  Map<DateTime, Map<String, dynamic>> _lookbooksByDate = {};
 
   @override
-  Widget build(BuildContext context) {
-    final selectedThumb = _getThumb(_selectedDay);
+  void initState() {
+    super.initState();
+    _loadLookbooks();
+  }
 
-    const double bottomBarH = 68;
-    final double safeBottom = MediaQuery.of(context).padding.bottom;
+  Future<void> _loadLookbooks() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
-    final bool isPastSelected = _isPast(_selectedDay);
-    final bool hasSchedule = selectedThumb != null; // 썸네일 있으면 일정 등록된 것으로 간주
+    if (uid == null) {
+      print('User not logged in');
+      return;
+    }
 
-    final String btnText =
-    isPastSelected ? '일기 등록' : (hasSchedule ? '일정 수정' : '일정 추가');
+    try {
+      // Get all calendar entries for the logged-in user
+      final calendarSnapshot = await fs
+          .collection('users')
+          .doc(uid)
+          .collection('calendar')
+          .get();
+
+      print('Found ${calendarSnapshot.docs.length} calendar entries');
+
+      Map<DateTime, Map<String, dynamic>> lookbooksMap = {};
+
+      for (var doc in calendarSnapshot.docs) {
+        final data = doc.data();
+        final dateTimestamp = data['date'] as Timestamp?;
+
+        if (dateTimestamp != null) {
+          final date = dateTimestamp.toDate();
+          final normalizedDate = DateTime(date.year, date.month, date.day);
+
+          lookbooksMap[normalizedDate] = {
+            'imageUrl': data['imageUrl'],
+            'lookbookId': data['lookbookId'],
+            'date': dateTimestamp,
+            'createdAt': data['createdAt'],
+          };
+
+          print('Added lookbook for date: $normalizedDate, imageUrl: ${data['imageUrl']}');
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _lookbooksByDate = lookbooksMap;
+      });
+
+      print('Loaded ${_lookbooksByDate.length} lookbooks');
+    } catch (e) {
+      print('Error loading lookbooks: $e');
+    }
+  }
+
+  String? _getOutfitImage(DateTime day) {
+    final normalizedDay = DateTime(day.year, day.month, day.day);
+    return _lookbooksByDate[normalizedDay]?['imageUrl'];
+  }
+
+  Future<Map<String, dynamic>?> _getCalendarEntry(DateTime date) async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+
+      if (userId == null) {
+        print('User not logged in');
+        return null;
+      }
+
+      final startOfDay = DateTime(date.year, date.month, date.day, 0, 0, 0);
+      final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
+
+      final querySnapshot = await fs
+          .collection('users')
+          .doc(userId)
+          .collection('calendar')
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        return querySnapshot.docs.first.data();
+      }
+      return null;
+    } catch (e) {
+      print('Error getting calendar entry: $e');
+      return null;
+    }
+  }
 
     return Scaffold(
       body: Column(
