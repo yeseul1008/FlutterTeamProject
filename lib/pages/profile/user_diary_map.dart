@@ -390,6 +390,14 @@ class _DiaryMapState extends State<DiaryMap> {
               ),
               const SizedBox(height: 12),
               ListTile(
+                leading: const Icon(Icons.person),
+                title: const Text('개인정보'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  context.go('/profileEdit');
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.star_border),
                 title: const Text('구독하기'),
                 onTap: () {
@@ -428,6 +436,7 @@ class _DiaryMapState extends State<DiaryMap> {
     final topPad = MediaQuery.of(context).padding.top;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           // Custom AppBar
@@ -449,7 +458,7 @@ class _DiaryMapState extends State<DiaryMap> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        "${userInfo['userId'] ?? 'UID'} \n@${userInfo['nickname'] ?? 'nickname'}",
+                        "${userInfo['nickname'] ?? 'UID'} \n@${userInfo['loginId'] ?? 'user ID'}",
                         style: const TextStyle(color: Colors.white),
                       ),
                       const SizedBox(height: 15),
@@ -576,19 +585,48 @@ class _DiaryMapState extends State<DiaryMap> {
 
           const SizedBox(height: 20),
 
-          // Search Field - UPDATED
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search location (예: 서울역)',
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: () => _searchLocation(_searchController.text),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    onSubmitted: (_) => _searchLocation(_searchController.text),
+                    decoration: InputDecoration(
+                      hintText: '예) 강남역, 성수동, 홍대입구',
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.black),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.black, width: 1.2),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              onSubmitted: (value) => _searchLocation(value),
+                const SizedBox(width: 8),
+                SizedBox(
+                  height: 44,
+                  child: ElevatedButton(
+                    onPressed: () => _searchLocation(_searchController.text),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('검색'),
+                  ),
+                ),
+              ],
             ),
           ),
 
