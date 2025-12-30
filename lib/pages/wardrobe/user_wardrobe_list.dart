@@ -1,128 +1,119 @@
-  import 'package:flutter/material.dart';
-  import '../../widgets/common/main_btn.dart';
-  import 'package:go_router/go_router.dart';
-  import 'package:cloud_firestore/cloud_firestore.dart';
-  import 'package:firebase_auth/firebase_auth.dart';
-  import 'package:flutter/material.dart';
-  import '../wardrobe/user_wardrobe_category.dart';
+import 'package:flutter/material.dart';
+import '../../widgets/common/main_btn.dart';
+import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import '../wardrobe/user_wardrobe_category.dart';
 
-  class UserWardrobeList extends StatefulWidget {
-    const UserWardrobeList({super.key});
+class UserWardrobeList extends StatefulWidget {
+  const UserWardrobeList({super.key});
 
-    @override
-    State<UserWardrobeList> createState() => _UserWardrobeListState();
+  @override
+  State<UserWardrobeList> createState() => _UserWardrobeListState();
+}
 
+class _UserWardrobeListState extends State<UserWardrobeList> {
+  final FirebaseFirestore fs = FirebaseFirestore.instance;
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+
+  // 검색
+  TextEditingController searchController = TextEditingController();
+  String searchText = '';
+
+  // 선택된 카테고리 ID
+  String? selectedCategoryId;
+
+  Map<String, dynamic> userInfo = {};
+
+  // 좋아요 필터 토글
+  bool showLikedOnly = false;
+
+  // 사용자 정보 가져오기
+  Future<void> _getUserInfo() async {
+    final snapshot = await fs.collection('users').doc(userId).get();
+    if (snapshot.exists) {
+      setState(() {
+        userInfo = snapshot.data()!;
+      });
+      print(userInfo);
+    } else {
+      print('User not found');
+    }
   }
 
-  class _UserWardrobeListState extends State<UserWardrobeList> {
-    final FirebaseFirestore fs = FirebaseFirestore.instance;
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    // 선택된 카테고리 ID
-    String? selectedCategoryId;
+  void _openCategoryModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) {
+        return UserWardrobeCategory(
+          onSelect: (categoryId) {
+            print('선택된 카테고리 ID: $categoryId');
+            setState(() {
+              selectedCategoryId = categoryId; // 상태에 저장
+            });
+            Navigator.pop(context); // 모달 닫기
+          },
+        );
+      },
+    );
+  }
 
-    Map<String, dynamic> userInfo = {};
+  // wardrobe 컬렉션 스트림
+  Stream<QuerySnapshot<Map<String, dynamic>>> _wardrobeStream() {
+    final ref = fs.collection('users').doc(userId).collection('wardrobe').orderBy('createdAt', descending: true);
 
-    // 좋아요 필터 토글
-    bool showLikedOnly = false;
-
-    // 사용자 정보 가져오기
-    Future<void> _getUserInfo() async {
-      final snapshot = await fs.collection('users').doc(userId).get();
-      if (snapshot.exists) {
-        setState(() {
-          userInfo = snapshot.data()!;
-        });
-        print(userInfo);
-      } else {
-        print('User not found');
-      }
+    if (showLikedOnly) {
+      return ref.where('liked', isEqualTo: true).snapshots();
     }
 
-    void _openCategoryModal(BuildContext context) {
-      showModalBottomSheet(
-        context: context,
-        backgroundColor: Colors.transparent,
-        isScrollControlled: true,
-        builder: (_) {
-          return UserWardrobeCategory(
-            onSelect: (categoryId) {
-              print('선택된 카테고리 ID: $categoryId');
-              setState(() {
-                selectedCategoryId = categoryId; // 상태에 저장
-              });
-              Navigator.pop(context); // 모달 닫기
-            },
-          );
-        },
-      );
-    }
+    return ref.snapshots();
+  }
 
+  @override
+  void initState() {
+    super.initState();
+    _getUserInfo();
+  }
 
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
 
-
-    // wardrobe 컬렉션 스트림
-    Stream<QuerySnapshot<Map<String, dynamic>>> _wardrobeStream() {
-      final ref = fs
-          .collection('users')
-          .doc(userId)
-          .collection('wardrobe');
-
-      if (showLikedOnly) {
-        return ref.where('liked', isEqualTo: true).snapshots();
-      }
-
-      return ref.snapshots();
-    }
-
-    @override
-    void initState() {
-      super.initState();
-      _getUserInfo();
-    }
-
-
-
-    @override
-    Widget build(BuildContext context) {
-      return Scaffold(
-        backgroundColor: Colors.white,
-
-        // AI 착용샷 버튼
-        floatingActionButton: Padding(
-          padding: const EdgeInsets.only(bottom: 80),
-          child: SizedBox(
-            height: 44,
-            child: FloatingActionButton.extended(
-              onPressed: () => context.push('/aiOutfitMaker'),
-              backgroundColor: const Color(0xFFA88AEE),
-              elevation: 6,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(22),
-                side: const BorderSide(color: Colors.black),
-              ),
-              icon: const Icon(
-                Icons.auto_awesome,
-                size: 18,
+      // AI 착용샷 버튼
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 80),
+        child: SizedBox(
+          height: 44,
+          child: FloatingActionButton.extended(
+            onPressed: () => context.push('/aiOutfitMaker'),
+            backgroundColor: const Color(0xFFA88AEE),
+            elevation: 6,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(22),
+              side: const BorderSide(color: Colors.black),
+            ),
+            icon: const Icon(Icons.auto_awesome, size: 18, color: Colors.white),
+            label: const Text(
+              'ai착용샷',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
                 color: Colors.white,
-              ),
-              label: const Text(
-                'ai착용샷',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
               ),
             ),
           ),
         ),
-
-        body: Padding(
+      ),
+      body: SafeArea(
+        child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
-              const SizedBox(height: 30),
-
+              const SizedBox(height: 10),
               // 상단 버튼 3개
               Row(
                 children: [
@@ -205,9 +196,9 @@
                   ),
                 ],
               ),
-
+        
               const SizedBox(height: 16),
-
+        
               // 검색 바 영역
               Row(
                 children: [
@@ -224,27 +215,28 @@
                         border: Border.all(color: Colors.black),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Row(
-                        children: const [
-                          Expanded(
-                            child: Text(
-                              'search...',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          ),
-                          Icon(Icons.search, size: 18),
-                        ],
+                      child: TextField(
+                        controller: searchController,
+                        onChanged: (value) {
+                          setState(() {
+                            searchText = value.trim();
+                          });
+                        },
+                        decoration: const InputDecoration(
+                          hintText: 'search...',
+                          border: InputBorder.none,
+                          isDense: true,
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
 
+                  const SizedBox(width: 12),
+        
                   // ❤️ 하트 필터 버튼
                   IconButton(
                     icon: Icon(
-                      showLikedOnly
-                          ? Icons.favorite
-                          : Icons.favorite_border,
+                      showLikedOnly ? Icons.favorite : Icons.favorite_border,
                       color: Colors.black,
                     ),
                     onPressed: () {
@@ -255,58 +247,67 @@
                   ),
                 ],
               ),
-
+        
               const SizedBox(height: 16),
-
+        
               // 옷 그리드
               Expanded(
                 child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                   stream: _wardrobeStream(),
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState ==
-                        ConnectionState.waiting) {
-                      return const Center(
-                          child: CircularProgressIndicator());
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
                     }
 
-                    if (!snapshot.hasData ||
-                        snapshot.data!.docs.isEmpty) {
-                      return const Center(
-                          child: Text('옷장이 비어있습니다.'));
+                    // 전체 옷장 문서
+                    final allDocs = snapshot.data?.docs ?? [];
+
+                    if (allDocs.isEmpty) {
+                      return const Center(child: Text('옷장이 비어있습니다.'));
                     }
 
-                    final docs = snapshot.data!.docs;
+                    // 검색 필터 적용
+                    final filteredDocs = allDocs.where((doc) {
+                      final data = doc.data();
+                      final productName = (data['productName'] ?? '').toString().toLowerCase();
+
+                      if (searchText.isEmpty) return true;
+
+                      return productName.contains(searchText.toLowerCase());
+                    }).toList();
+
+                    // 검색 결과 없을 경우
+                    if (filteredDocs.isEmpty) {
+                      return const Center(child: Text('검색 결과가 없습니다.'));
+                    }
 
                     return GridView.builder(
-                      itemCount: docs.length,
-                      gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
+                      itemCount: filteredDocs.length,
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
                         crossAxisSpacing: 8,
                         mainAxisSpacing: 12,
-                        childAspectRatio: 0.7,
+                        childAspectRatio: 1,
                       ),
                       itemBuilder: (context, index) {
-                        final data = docs[index].data();
+                        final data = filteredDocs[index].data();
                         final imageUrl = data['imageUrl'] ?? '';
-                        final docId = docs[index].id;
+                        final docId = filteredDocs[index].id;
 
                         return GestureDetector(
                           onTap: () => context.push(
                             '/userWardrobeDetail',
-                            extra: docs[index].id,
+                            extra: docId,
                           ),
                           child: Stack(
                             children: [
                               Container(
                                 decoration: BoxDecoration(
-                                  border:
-                                  Border.all(color: Colors.grey),
+                                  border: Border.all(color: Colors.grey),
                                   color: Colors.white,
                                   image: imageUrl.isNotEmpty
                                       ? DecorationImage(
-                                    image:
-                                    NetworkImage(imageUrl),
+                                    image: NetworkImage(imageUrl),
                                     fit: BoxFit.cover,
                                   )
                                       : null,
@@ -330,11 +331,8 @@
                                         .collection('wardrobe')
                                         .doc(docId);
 
-                                    final currentLiked =
-                                        data['liked'] == true;
-                                    await docRef.update({
-                                      'liked': !currentLiked
-                                    });
+                                    final currentLiked = data['liked'] == true;
+                                    await docRef.update({'liked': !currentLiked});
                                   },
                                 ),
                               ),
@@ -346,10 +344,10 @@
                   },
                 ),
               ),
-
             ],
           ),
         ),
-      );
-    }
+      ),
+    );
   }
+}
