@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,8 +10,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import 'package:image/image.dart' as img;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/services.dart';
 
 class UserWardrobeAdd extends StatefulWidget {
   const UserWardrobeAdd({super.key});
@@ -39,9 +40,9 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
   File? selectedImage;
   bool isProcessingImage = false;
 
-  // 🔹 추가: 이미지 확대/이동 컨트롤러
+  // 이미지 확대/이동 컨트롤러
   final TransformationController _transformController =
-      TransformationController();
+  TransformationController();
 
   // =========================
   // remove.bg 누끼 처리
@@ -92,7 +93,7 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
 
       setState(() {
         selectedImage = noBgPng;
-        _transformController.value = Matrix4.identity(); // 🔹 중앙 초기화
+        _transformController.value = Matrix4.identity(); // 중앙 초기화
       });
     } catch (e) {
       _showFailDialog();
@@ -102,9 +103,7 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
   }
 
   void _showFailDialog() {
-    if (mounted) {
-      setState(() => isProcessingImage = false);
-    }
+    if (mounted) setState(() => isProcessingImage = false);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       showDialog(
@@ -134,46 +133,47 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
     );
   }
 
+  // =========================
+  // Transform + 투명 배경 PNG 생성
+  // =========================
   Future<File> _applyTransformToImage(File originalFile) async {
     final bytes = await originalFile.readAsBytes();
-    final img.Image original = img.decodeImage(bytes)!;
+    final codec = await ui.instantiateImageCodec(bytes);
+    final frame = await codec.getNextFrame();
+    final ui.Image original = frame.image;
 
-    // 결과 캔버스 (미리보기 박스와 동일 비율 권장)
     const int canvasSize = 800;
-    final img.Image canvas = img.Image(width: canvasSize, height: canvasSize);
-
-    // 흰색 배경
-    img.fill(canvas, color: img.ColorRgb8(255, 255, 255));
-
-    final Matrix4 matrix = _transformController.value;
-
-    final double scale = matrix.getMaxScaleOnAxis();
-    final double dx = matrix.storage[12];
-    final double dy = matrix.storage[13];
-
-    final int newWidth = (original.width * scale).toInt();
-    final int newHeight = (original.height * scale).toInt();
-
-    final img.Image resized = img.copyResize(
-      original,
-      width: newWidth,
-      height: newHeight,
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(
+      recorder,
+      Rect.fromLTWH(0, 0, canvasSize.toDouble(), canvasSize.toDouble()),
     );
 
-    // 중앙 기준 보정
-    final int centerX = (canvas.width - resized.width) ~/ 2 + dx.toInt();
-    final int centerY = (canvas.height - resized.height) ~/ 2 + dy.toInt();
+    // 배경을 그리지 않는다 → 자동으로 투명
+    // canvas.drawRect(...);  <- 삭제
 
-    img.compositeImage(canvas, resized, dstX: centerX, dstY: centerY);
+    // transform 적용
+    canvas.save();
+    canvas.transform(_transformController.value.storage);
+
+    // 이미지 중앙 정렬
+    final dx = (canvasSize - original.width) / 2;
+    final dy = (canvasSize - original.height) / 2;
+    canvas.drawImage(original, Offset(dx, dy), Paint());
+    canvas.restore();
+
+    final picture = recorder.endRecording();
+    final ui.Image img = await picture.toImage(canvasSize, canvasSize);
+    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+    final pngBytes = byteData!.buffer.asUint8List();
 
     final dir = await getTemporaryDirectory();
-    final file = File(
-      '${dir.path}/final_${DateTime.now().millisecondsSinceEpoch}.png',
-    );
+    final file = File('${dir.path}/final_${DateTime.now().millisecondsSinceEpoch}.png');
+    await file.writeAsBytes(pngBytes);
 
-    await file.writeAsBytes(img.encodePng(canvas));
     return file;
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -195,7 +195,7 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                /// ================= 이미지 영역 =================
+                /// 이미지 선택/누끼 영역
                 GestureDetector(
                   onTap: _pickImage,
                   child: Stack(
@@ -209,47 +209,36 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
                         ),
                         child: selectedImage == null
                             ? Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: const [
-                                  Icon(Icons.add_a_photo, size: 36),
-                                  SizedBox(height: 12),
-                                  Text(
-                                    '옷만 보이도록 촬영해주세요',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  SizedBox(height: 6),
-                                  Text(
-                                    '• 옷걸이 / 바닥에 놓고 촬영\n'
-                                    '• 단색 배경에서 촬영\n'
-                                    '• 인물 착용 사진은 인식이 어려워요',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.black54,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                ],
-                              )
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.add_a_photo, size: 36),
+                            SizedBox(height: 12),
+                            Text(
+                              '옷만 보이도록 촬영해주세요',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                            SizedBox(height: 6),
+                            Text(
+                              '• 옷걸이 / 바닥에 놓고 촬영\n'
+                                  '• 단색 배경에서 촬영\n'
+                                  '• 인물 착용 사진은 인식이 어려워요',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.black54, height: 1.4),
+                            ),
+                          ],
+                        )
                             : ClipRect(
-                                child: InteractiveViewer(
-                                  transformationController:
-                                      _transformController,
-                                  minScale: 0.5,
-                                  maxScale: 4.0,
-                                  boundaryMargin: const EdgeInsets.all(80),
-                                  child: Image.file(
-                                    selectedImage!,
-                                    fit: BoxFit.contain,
-                                  ),
-                                ),
-                              ),
+                          child: InteractiveViewer(
+                            transformationController: _transformController,
+                            minScale: 0.5,
+                            maxScale: 4.0,
+                            boundaryMargin: const EdgeInsets.all(80),
+                            child: Image.file(selectedImage!, fit: BoxFit.contain),
+                          ),
+                        ),
                       ),
-
-                      /// 🔹 자동 중앙 정렬 버튼
                       if (selectedImage != null)
                         Positioned(
                           top: 10,
@@ -263,16 +252,11 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.black87,
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
+                                  horizontal: 10, vertical: 6),
                             ),
                             child: const Text(
                               '중앙 정렬',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                              ),
+                              style: TextStyle(color: Colors.white, fontSize: 12),
                             ),
                           ),
                         ),
@@ -282,12 +266,12 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
 
                 const SizedBox(height: 20),
 
-                /// ================= 카테고리 =================
+                /// 카테고리 선택
                 const Text('*', style: TextStyle(color: Color(0xFFA88AEE))),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
-                    color: Colors.white, // ✅ 배경 흰색
+                    color: Colors.white,
                     border: Border.all(color: Colors.black),
                   ),
                   child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -304,11 +288,9 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
                           child: CircularProgressIndicator(),
                         );
                       }
-
                       final docs = snapshot.data!.docs;
-                      final categories = docs
-                          .map((d) => {'id': d.id, 'name': d['name']})
-                          .toList();
+                      final categories =
+                      docs.map((d) => {'id': d.id, 'name': d['name']}).toList();
 
                       return DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
@@ -316,24 +298,22 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
                           hint: const Text(':: 카테고리를 선택하세요 ::'),
                           isExpanded: true,
                           dropdownColor: Colors.white,
-                          // ✅ 펼쳐지는 메뉴도 흰색
                           items: categories
                               .map(
                                 (cat) => DropdownMenuItem<String>(
-                                  value: cat['id'] as String,
-                                  child: Text(
-                                    cat['name'] as String,
-                                    style: const TextStyle(color: Colors.black),
-                                  ),
-                                ),
-                              )
+                              value: cat['id'] as String,
+                              child: Text(
+                                cat['name'] as String,
+                                style: const TextStyle(color: Colors.black),
+                              ),
+                            ),
+                          )
                               .toList(),
                           onChanged: (v) {
                             setState(() {
                               selectedCategoryId = v;
-                              selectedCategoryName = categories.firstWhere(
-                                (e) => e['id'] == v,
-                              )['name'];
+                              selectedCategoryName = categories
+                                  .firstWhere((e) => e['id'] == v)['name'];
                             });
                           },
                         ),
@@ -346,22 +326,10 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
 
                 Row(
                   children: [
-                    _seasonCheck(
-                      '봄',
-                      spring,
-                      (v) => setState(() => spring = v),
-                    ),
-                    _seasonCheck(
-                      '여름',
-                      summer,
-                      (v) => setState(() => summer = v),
-                    ),
+                    _seasonCheck('봄', spring, (v) => setState(() => spring = v)),
+                    _seasonCheck('여름', summer, (v) => setState(() => summer = v)),
                     _seasonCheck('가을', fall, (v) => setState(() => fall = v)),
-                    _seasonCheck(
-                      '겨울',
-                      winter,
-                      (v) => setState(() => winter = v),
-                    ),
+                    _seasonCheck('겨울', winter, (v) => setState(() => winter = v)),
                   ],
                 ),
 
@@ -369,22 +337,15 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
 
                 _label('제품명 *'),
                 _input(controller: nameCtrl),
-
                 const SizedBox(height: 14),
-
                 _label('구매처 *'),
                 _input(controller: storeCtrl),
-
                 const SizedBox(height: 14),
-
                 _label('재질'),
                 _input(controller: materialCtrl),
-
                 const SizedBox(height: 14),
-
                 _label('comment'),
                 _input(controller: commentCtrl, maxLines: 3),
-
                 const SizedBox(height: 30),
 
                 Align(
@@ -396,58 +357,56 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
                         return;
                       }
 
-                      // 🔥 변환 적용된 최종 이미지 생성
-                      final File finalImage = await _applyTransformToImage(
-                        selectedImage!,
-                      );
+                      setState(() => isProcessingImage = true);
 
-                      final ref = FirebaseStorage.instance.ref(
-                        'wardrobe_images/${DateTime.now().millisecondsSinceEpoch}.png',
-                      );
+                      try {
+                        final File finalImage =
+                        await _applyTransformToImage(selectedImage!);
 
-                      await ref.putFile(finalImage);
-                      final imageUrl = await ref.getDownloadURL();
-                      // 선택된 계절만 리스트로 변환
-                      List<String> selectedSeasons = [];
-                      if (spring) selectedSeasons.add('봄');
-                      if (summer) selectedSeasons.add('여름');
-                      if (fall) selectedSeasons.add('가을');
-                      if (winter) selectedSeasons.add('겨울');
+                        final ref = FirebaseStorage.instance.ref(
+                            'wardrobe_images/${DateTime.now().millisecondsSinceEpoch}.png');
 
-                      await _db
-                          .collection('users')
-                          .doc(userId)
-                          .collection('wardrobe')
-                          .add({
-                            'categoryId': selectedCategoryId,
-                            'categoryName': selectedCategoryName,
-                            'imageUrl': imageUrl,
-                            'productName': nameCtrl.text.trim(),
-                            'shop': storeCtrl.text.trim(),
-                            'material': materialCtrl.text.trim(),
-                            'comment': commentCtrl.text.trim(),
-                            'season': selectedSeasons, // 선택된 계절 리스트
-                            'createdAt': FieldValue.serverTimestamp(),
-                          });
+                        await ref.putFile(finalImage);
+                        final imageUrl = await ref.getDownloadURL();
 
-                      _showToast('등록되었습니다');
-                      context.pop();
+                        List<String> selectedSeasons = [];
+                        if (spring) selectedSeasons.add('봄');
+                        if (summer) selectedSeasons.add('여름');
+                        if (fall) selectedSeasons.add('가을');
+                        if (winter) selectedSeasons.add('겨울');
+
+                        await _db
+                            .collection('users')
+                            .doc(userId)
+                            .collection('wardrobe')
+                            .add({
+                          'categoryId': selectedCategoryId,
+                          'categoryName': selectedCategoryName,
+                          'imageUrl': imageUrl,
+                          'productName': nameCtrl.text.trim(),
+                          'shop': storeCtrl.text.trim(),
+                          'material': materialCtrl.text.trim(),
+                          'comment': commentCtrl.text.trim(),
+                          'season': selectedSeasons,
+                          'createdAt': FieldValue.serverTimestamp(),
+                        });
+
+                        _showToast('등록되었습니다');
+                        context.pop();
+                      } catch (e) {
+                        _showToast('이미지 처리 실패');
+                      } finally {
+                        setState(() => isProcessingImage = false);
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFCAD83B),
                       foregroundColor: Colors.black,
-                      // 텍스트 색상
                       side: const BorderSide(color: Colors.black),
-                      // 검정 테두리
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 35,
-                        vertical: 14,
-                      ),
-                      // 크기 살짝 증가
+                      padding:
+                      const EdgeInsets.symmetric(horizontal: 35, vertical: 14),
                       textStyle: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                      ),
+                          fontSize: 20, fontWeight: FontWeight.w600),
                     ),
                     child: const Text('add'),
                   ),
@@ -466,10 +425,8 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
                   children: [
                     CircularProgressIndicator(color: Colors.white),
                     SizedBox(height: 12),
-                    Text(
-                      '사진 처리 중입니다...',
-                      style: TextStyle(color: Colors.white),
-                    ),
+                    Text('사진 처리 중입니다...',
+                        style: TextStyle(color: Colors.white)),
                   ],
                 ),
               ),
@@ -484,8 +441,8 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
       children: [
         Checkbox(
           value: value,
-          activeColor: Colors.black, // 체크된 상태 색상
-          checkColor: Colors.white, // 체크 표시 색상
+          activeColor: Colors.black,
+          checkColor: Colors.white,
           onChanged: (v) => onChanged(v ?? false),
         ),
         Text(label),
@@ -502,12 +459,10 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
       controller: controller,
       maxLines: maxLines,
       decoration: InputDecoration(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
+        contentPadding:
+        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(999), // 완전 둥글게
+          borderRadius: BorderRadius.circular(999),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(999),

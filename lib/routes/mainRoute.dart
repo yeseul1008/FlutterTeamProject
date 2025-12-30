@@ -276,12 +276,22 @@ final GoRouter router = GoRouter(
           },
         ),
         GoRoute(
-          path: '/aiOutfitResult',
+          path: '/aiOutfitMakerScreen',
           builder: (context, state) {
-            final selectedImageUrls = state.extra as List<String>;
-            return AiOutfitResultScreen(selectedImageUrls: selectedImageUrls);
+            final extra = state.extra;
+
+            if (extra is List<String>) {
+              // URL 리스트를 바로 전달
+              return AiOutfitMakerScreen(selectedImageUrls: extra);
+            } else {
+              return const Scaffold(
+                body: Center(child: Text('잘못된 데이터가 전달되었습니다.')),
+              );
+            }
           },
         ),
+
+
       ],
     ),
   ],
