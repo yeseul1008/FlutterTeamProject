@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
 
 class UserWardrobeDetail extends StatelessWidget {
   final String? docId;
@@ -42,9 +44,17 @@ class UserWardrobeDetail extends StatelessWidget {
       );
     }
 
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+
+    if (userId == null) {
+      return const Scaffold(
+        body: Center(child: Text('로그인이 필요합니다')),
+      );
+    }
+
     final docRef = FirebaseFirestore.instance
         .collection('users')
-        .doc('tHuRzoBNhPhONwrBeUME')
+        .doc(userId)
         .collection('wardrobe')
         .doc(docId);
 
@@ -223,9 +233,14 @@ class UserWardrobeDetail extends StatelessWidget {
               Expanded(
                 child: ElevatedButton(
                   onPressed: () {
-                    // TODO: 수정 화면으로 이동
-                    // 예: context.push('/wardrobe/edit', extra: docId);
+                    if (docId == null) return;
+
+                    context.push(
+                      '/userWardrobeEdit',
+                      extra: docId, // 🔑 문서 ID 전달
+                    );
                   },
+
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFCAD83B),
                     padding: const EdgeInsets.symmetric(vertical: 14),

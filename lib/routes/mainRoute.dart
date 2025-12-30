@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:team_project_flutter/pages/wardrobe/user_wardrobe_edit.dart';
 
 import '../routePage1.dart';
 import '../routePage2.dart';
@@ -18,6 +19,7 @@ import '../pages/community/question_comment.dart';
 import '../pages/community/question_feed.dart';
 import '../pages/profile/user_diary_calendar.dart';
 import '../pages/profile/user_diary_cards.dart';
+import '../pages/profile/user_schedule_calendar.dart';
 import '../pages/profile/user_diary_map.dart';
 import '../pages/profile/user_profile_edit.dart';
 import '../pages/profile/user_public_lookbook.dart';
@@ -32,8 +34,9 @@ import '../pages/wardrobe/user_wardrobe_add.dart';
 import '../pages/wardrobe/user_wardrobe_category.dart';
 import '../pages/wardrobe/user_wardrobe_list.dart';
 import '../pages/wardrobe/user_wardrobe_detail.dart';
-
 import '../widgets/common/bottom_nav_bar.dart';
+import '../pages/profile/user_schedule_add.dart';
+import '../pages/map/PlaceSearchPage.dart';
 
 final GlobalKey<NavigatorState> _shellNavigatorKey =
 GlobalKey<NavigatorState>();
@@ -94,11 +97,33 @@ final GoRouter router = GoRouter(
           builder: (context, state) => const QuestionFeed(),
         ),
 
+        //카카오 지도
+        GoRoute(
+          path: '/placeSearch',
+          builder: (context, state) => const PlaceSearchPage(),
+        ),
+
+
         // profile 폴더 속 파일이름
+
+        //일정 추가
+        GoRoute(
+          path: '/AddSchedule',
+          builder: (context, state) => const UserScheduleAdd(),
+        ),
+        //일정 수정
+        GoRoute(
+          path: '/EditSchedule',
+          builder: (context, state) => const UserScheduleEdit(),
+        ),
+        GoRoute(
+          path: '/userScheduleCalendar',
+          builder: (context, state) => const UserScheduleCalendar(),
+        ),
         GoRoute(
           path: '/calendarPage',
           builder: (context, state) => const CalendarPage(),
-        ),
+),
         GoRoute(
           path: '/userDiaryCards',
           builder: (context, state) => const UserDiaryCards(),
@@ -176,10 +201,34 @@ final GoRouter router = GoRouter(
         GoRoute(
           path: '/userWardrobeDetail',
           pageBuilder: (context, state) {
-            final id = state.extra as String?; // 전달받은 ID
+            final id = state.extra as String; // ❗ null 허용 제거
+
             return CustomTransitionPage(
               key: state.pageKey,
-              child: UserWardrobeDetail(docId: id), // 여기 id로 맞춤
+              child: UserWardrobeDetail(docId: id),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                final tween = Tween<Offset>(
+                  begin: const Offset(0, 1),
+                  end: Offset.zero,
+                ).chain(CurveTween(curve: Curves.easeOutCubic));
+
+                return SlideTransition(
+                  position: animation.drive(tween),
+                  child: child,
+                );
+              },
+            );
+          },
+        ),
+
+        GoRoute(
+          path: '/userWardrobeEdit',
+          pageBuilder: (context, state) {
+            final id = state.extra as String; // ❗ null 허용 제거
+
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: UserWardrobeEdit(docId: id),
               transitionsBuilder: (context, animation, secondaryAnimation, child) {
                 final tween = Tween<Offset>(
                   begin: const Offset(0, 1),
@@ -214,10 +263,6 @@ final GoRouter router = GoRouter(
               },
             );
           },
-        ),
-        GoRoute(
-          path: '/userWardrobeCategory',
-          builder: (context, state) => const UserWardrobeCategory(),
         ),
         GoRoute(
           path: '/userWardrobeList',
