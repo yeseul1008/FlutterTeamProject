@@ -1,21 +1,24 @@
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  // =========================
+  // ======================================================
   // 1) users (Auth UID = userId)
-  // =========================
+  // ======================================================
   Future<void> createUser({
-    required String userId, // Firebase Auth UID
+    required String userId,
     required String email,
     required String phone,
-    required String provider, // "email" | "google"
+    required String provider,
     required String nickname,
-    required String loginId, // uid와 다른 로그인용 아이디
+    required String loginId,
     String? profileImageUrl,
   }) async {
-    // 1️⃣ users/{uid} 문서 생성
     await _db.collection('users').doc(userId).set({
       'userId': userId,
       'loginId': loginId,
@@ -28,7 +31,6 @@ class FirestoreService {
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
-    // 2️⃣ 기본 카테고리 자동 생성 (서브컬렉션 users/{uid}/categories)
     final defaultCategories = [
       'outer',
       'top',
@@ -39,18 +41,13 @@ class FirestoreService {
     ];
 
     for (final name in defaultCategories) {
-      await _db
-          .collection('users')
-          .doc(userId)
-          .collection('categories')
-          .add({
+      await _db.collection('users').doc(userId).collection('categories').add({
         'name': name,
         'isDefault': true,
         'createdAt': FieldValue.serverTimestamp(),
       });
     }
   }
-
 
   Future<void> updateUserProfile({
     required String userId,
@@ -72,62 +69,60 @@ class FirestoreService {
     return _db.collection('users').doc(userId).get();
   }
 
-  // =========================
-  // 2) categories (default + user custom)
-  // - 기본 6개: isDefault=true, ownerId=null
-  // - 유저 추가: isDefault=false, ownerId=userId
-  // =========================
-  Future<String> createCategory({
+  // ======================================================
+  // 2) categories (users/{uid}/categories)
+  // ======================================================
+  Stream<QuerySnapshot<Map<String, dynamic>>> watchMyCategories(String userId) {
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('categories')
+        .orderBy('createdAt', descending: false)
+        .snapshots();
+  }
+
+  Future<String> createMyCategory({
+    required String userId,
     required String name,
-    required bool isDefault,
-    String? ownerId, // 유저 추가면 userId 넣기
+    bool isDefault = false,
   }) async {
-    final doc = await _db.collection('categories').add({
+    final doc =
+    await _db.collection('users').doc(userId).collection('categories').add({
       'name': name,
       'isDefault': isDefault,
-      'ownerId': ownerId, // default면 null
       'createdAt': FieldValue.serverTimestamp(),
     });
     return doc.id;
   }
 
-  /// 유저가 볼 수 있는 카테고리: (기본) + (내가 만든 것)
-  /// 주의: OR 쿼리는 2번 조회 후 합칩니다.
-  Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> getCategoriesForUser(
-      String userId) async {
-    final defaults = await _db
+  Future<void> deleteMyCategory({
+    required String userId,
+    required String categoryId,
+  }) {
+    return _db
+        .collection('users')
+        .doc(userId)
         .collection('categories')
-        .where('isDefault', isEqualTo: true)
-        .get();
-
-    final customs = await _db
-        .collection('categories')
-        .where('isDefault', isEqualTo: false)
-        .where('ownerId', isEqualTo: userId)
-        .get();
-
-    return [...defaults.docs, ...customs.docs];
+        .doc(categoryId)
+        .delete();
   }
 
-  Future<void> deleteCategory(String categoryId) {
-    return _db.collection('categories').doc(categoryId).delete();
-  }
-
-  // =========================
-  // 3) wardrobe (top-level, clothesId auto, userId 필드로 소유자 구분)
-  // =========================
+  // ======================================================
+  // 3) wardrobe (users/{uid}/wardrobe)
+  // ======================================================
   Future<String> createClothes({
     required String userId,
     required String imageUrl,
     required String categoryId,
-    required List<String> season, // ["spring","summer"]
+    required List<String> season,
     String? productName,
     String? shop,
     String? material,
     String? comment,
     bool liked = false,
   }) async {
-    final doc = await _db.collection('wardrobe').add({
+    final doc =
+    await _db.collection('users').doc(userId).collection('wardrobe').add({
       'userId': userId,
       'imageUrl': imageUrl,
       'categoryId': categoryId,
@@ -145,43 +140,71 @@ class FirestoreService {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> watchWardrobe(String userId) {
     return _db
+        .collection('users')
+        .doc(userId)
         .collection('wardrobe')
-        .where('userId', isEqualTo: userId)
         .orderBy('createdAt', descending: true)
         .snapshots();
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> watchLikedClothes(String userId) {
     return _db
+        .collection('users')
+        .doc(userId)
         .collection('wardrobe')
-        .where('userId', isEqualTo: userId)
         .where('liked', isEqualTo: true)
         .orderBy('createdAt', descending: true)
         .snapshots();
   }
 
   Future<void> toggleClothesLiked({
+    required String userId,
     required String clothesId,
     required bool liked,
   }) {
-    return _db.collection('wardrobe').doc(clothesId).update({
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('wardrobe')
+        .doc(clothesId)
+        .update({
       'liked': liked,
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
-  Future<void> deleteClothes(String clothesId) {
-    return _db.collection('wardrobe').doc(clothesId).delete();
+  Future<void> deleteClothes({
+    required String userId,
+    required String clothesId,
+  }) {
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('wardrobe')
+        .doc(clothesId)
+        .delete();
   }
 
-  // =========================
+  Future<DocumentSnapshot<Map<String, dynamic>>> getClothesDoc({
+    required String userId,
+    required String clothesId,
+  }) {
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('wardrobe')
+        .doc(clothesId)
+        .get();
+  }
+
+  // ======================================================
   // 4) lookbooks (top-level)
-  // =========================
+  // ======================================================
   Future<String> createLookbook({
     required String userId,
     required String alias,
     required String resultImageUrl,
-    required List<String> clothesIds, // 2개 이상
+    required List<String> clothesIds,
     required bool publishToCommunity,
   }) async {
     final doc = await _db.collection('lookbooks').add({
@@ -207,51 +230,121 @@ class FirestoreService {
     return _db.collection('lookbooks').doc(lookbookId).delete();
   }
 
-  // =========================
-  // 5) calendar (top-level)  date(YYYY-MM-DD) + lookbookId
-  // =========================
-  Future<String> createCalendar({
+  // ======================================================
+  // ✅ NEW) canvas png -> Firebase Storage 업로드 -> URL 반환
+  // - ScheduleCombine에서 받은 canvasPngBytes를 여기로 넘기면
+  //   resultImageUrl로 저장 가능한 "진짜 사진 URL"이 만들어집니다.
+  // ======================================================
+  Future<String> uploadLookbookCanvasPng({
     required String userId,
-    required String date, // "2025-01-10"
-    required String lookbookId,
+    required Uint8List pngBytes,
   }) async {
-    final doc = await _db.collection('calendar').add({
+    final String fileName = '${DateTime.now().millisecondsSinceEpoch}.png';
+    final ref = _storage.ref().child('lookbooks/$userId/$fileName');
+
+    await ref.putData(
+      pngBytes,
+      SettableMetadata(contentType: 'image/png'),
+    );
+
+    return await ref.getDownloadURL();
+  }
+
+  // ======================================================
+  // 12) schedules + calendar (users/{uid}/...)
+  // ======================================================
+  Future<String> createLookbookWithFlag({
+    required String userId,
+    required String alias,
+    required String resultImageUrl,
+    required List<String> clothesIds,
+    required bool inLookbook,
+    bool publishToCommunity = false,
+  }) async {
+    final doc = await _db.collection('lookbooks').add({
       'userId': userId,
-      'date': date,
-      'lookbookId': lookbookId,
+      'alias': alias,
+      'resultImageUrl': resultImageUrl,
+      'clothesIds': clothesIds,
+      'inLookbook': inLookbook,
+      'publishToCommunity': publishToCommunity,
       'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
     });
     return doc.id;
   }
 
+  Future<String> createScheduleAndCalendar({
+    required String userId,
+    required DateTime date,
+    required String weather,
+    required String destinationName,
+    required double lat,
+    required double lon,
+    required String planText,
+    required String lookbookId,
+  }) async {
+    final scheduleDoc =
+    await _db.collection('users').doc(userId).collection('schedules').add({
+      'date': Timestamp.fromDate(date),
+      'weather': weather,
+      'destinationName': destinationName,
+      'destination': GeoPoint(lat, lon),
+      'planText': planText,
+      'lookbookId': lookbookId,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    await _db.collection('users').doc(userId).collection('calendar').add({
+      'date': Timestamp.fromDate(date),
+      'lookbookId': lookbookId,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    return scheduleDoc.id;
+  }
+
+  // ======================================================
+  // 5) calendar (users/{uid}/calendar)
+  // ======================================================
   Stream<QuerySnapshot<Map<String, dynamic>>> watchCalendar(String userId) {
     return _db
+        .collection('users')
+        .doc(userId)
         .collection('calendar')
-        .where('userId', isEqualTo: userId)
         .orderBy('date', descending: true)
         .snapshots();
   }
 
-  Future<void> deleteCalendar(String calendarId) {
-    return _db.collection('calendar').doc(calendarId).delete();
+  Future<void> deleteCalendar({
+    required String userId,
+    required String calendarId,
+  }) {
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('calendar')
+        .doc(calendarId)
+        .delete();
   }
 
-  // =========================
-  // 6) diaries (top-level)
-  // =========================
+  // ======================================================
+  // 6) diaries (users/{uid}/diaries)  ✅ date: Timestamp
+  // ======================================================
   Future<String> createDiary({
     required String userId,
-    required String date, // "2025-01-10"
+    required DateTime date, // 🔁 CHANGED (String -> DateTime)
     required String lookbookId,
     required double lat,
     required double lng,
     required String locationText,
-    required String weather, // "sunny"
+    required String weather,
     required String comment,
   }) async {
-    final doc = await _db.collection('diaries').add({
+    final doc = await _db.collection('users').doc(userId).collection('diaries').add({
       'userId': userId,
-      'date': date,
+      'date': Timestamp.fromDate(date), // ✅ Timestamp 저장
       'lookbookId': lookbookId,
       'location': {'lat': lat, 'lng': lng},
       'locationText': locationText,
@@ -265,13 +358,15 @@ class FirestoreService {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> watchDiaries(String userId) {
     return _db
+        .collection('users')
+        .doc(userId)
         .collection('diaries')
-        .where('userId', isEqualTo: userId)
         .orderBy('date', descending: true)
         .snapshots();
   }
 
   Future<void> updateDiary({
+    required String userId,
     required String diaryId,
     String? weather,
     String? comment,
@@ -289,16 +384,29 @@ class FirestoreService {
     if (locationText != null) data['locationText'] = locationText;
     if (lat != null && lng != null) data['location'] = {'lat': lat, 'lng': lng};
 
-    return _db.collection('diaries').doc(diaryId).update(data);
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('diaries')
+        .doc(diaryId)
+        .update(data);
   }
 
-  Future<void> deleteDiary(String diaryId) {
-    return _db.collection('diaries').doc(diaryId).delete();
+  Future<void> deleteDiary({
+    required String userId,
+    required String diaryId,
+  }) {
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('diaries')
+        .doc(diaryId)
+        .delete();
   }
 
-  // =========================
+  // ======================================================
   // 7) community_feed (top-level)
-  // =========================
+  // ======================================================
   Future<String> createCommunityFeed({
     required String lookbookId,
     required String authorId,
@@ -334,20 +442,14 @@ class FirestoreService {
     });
   }
 
-  // =========================
-  // 8) scraps (AI안: scraps/{userId}/items/{feedId})
-  // - items는 "목록" 의미의 임의 서브컬렉션 이름입니다.
-  // =========================
+  // ======================================================
+  // 8) scraps (users/{uid}/scraps)
+  // ======================================================
   Future<void> scrapFeed({
     required String userId,
     required String feedId,
   }) {
-    return _db
-        .collection('scraps')
-        .doc(userId)
-        .collection('items')
-        .doc(feedId) // feedId로 문서ID 고정 => 중복 스크랩 방지
-        .set({
+    return _db.collection('users').doc(userId).collection('scraps').doc(feedId).set({
       'feedId': feedId,
       'scrapedAt': FieldValue.serverTimestamp(),
     });
@@ -357,26 +459,21 @@ class FirestoreService {
     required String userId,
     required String feedId,
   }) {
-    return _db
-        .collection('scraps')
-        .doc(userId)
-        .collection('items')
-        .doc(feedId)
-        .delete();
+    return _db.collection('users').doc(userId).collection('scraps').doc(feedId).delete();
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> watchMyScraps(String userId) {
     return _db
-        .collection('scraps')
+        .collection('users')
         .doc(userId)
-        .collection('items')
+        .collection('scraps')
         .orderBy('scrapedAt', descending: true)
         .snapshots();
   }
 
-  // =========================
+  // ======================================================
   // 9) qna_posts (top-level)
-  // =========================
+  // ======================================================
   Future<String> createQnaPost({
     required String authorId,
     required List<String> images,
@@ -396,9 +493,9 @@ class FirestoreService {
     return _db.collection('qna_posts').orderBy('createdAt', descending: true).snapshots();
   }
 
-  // =========================
+  // ======================================================
   // 10) qna_comments (top-level)
-  // =========================
+  // ======================================================
   Future<String> createQnaComment({
     required String qnaId,
     required String authorId,
@@ -428,11 +525,11 @@ class FirestoreService {
     return _db.collection('qna_posts').doc(qnaId).update({'commentCount': newCount});
   }
 
-  // =========================
-  // 11) follows (AI안: follows/{userId}에 배열 저장) - 비추천이지만 그대로 구현
-  // =========================
+  // ======================================================
+  // 11) follows (users/{uid}/follows/meta)
+  // ======================================================
   Future<void> initFollowDoc(String userId) {
-    return _db.collection('follows').doc(userId).set({
+    return _db.collection('users').doc(userId).collection('follows').doc('meta').set({
       'following': <String>[],
       'followers': <String>[],
     }, SetOptions(merge: true));
@@ -442,13 +539,15 @@ class FirestoreService {
     required String myUserId,
     required String targetUserId,
   }) async {
-    // 내 following에 추가
-    await _db.collection('follows').doc(myUserId).set({
+    final myRef = _db.collection('users').doc(myUserId).collection('follows').doc('meta');
+    final targetRef =
+    _db.collection('users').doc(targetUserId).collection('follows').doc('meta');
+
+    await myRef.set({
       'following': FieldValue.arrayUnion([targetUserId]),
     }, SetOptions(merge: true));
 
-    // 상대 followers에 추가
-    await _db.collection('follows').doc(targetUserId).set({
+    await targetRef.set({
       'followers': FieldValue.arrayUnion([myUserId]),
     }, SetOptions(merge: true));
   }
@@ -457,16 +556,20 @@ class FirestoreService {
     required String myUserId,
     required String targetUserId,
   }) async {
-    await _db.collection('follows').doc(myUserId).set({
+    final myRef = _db.collection('users').doc(myUserId).collection('follows').doc('meta');
+    final targetRef =
+    _db.collection('users').doc(targetUserId).collection('follows').doc('meta');
+
+    await myRef.set({
       'following': FieldValue.arrayRemove([targetUserId]),
     }, SetOptions(merge: true));
 
-    await _db.collection('follows').doc(targetUserId).set({
+    await targetRef.set({
       'followers': FieldValue.arrayRemove([myUserId]),
     }, SetOptions(merge: true));
   }
 
   Future<DocumentSnapshot<Map<String, dynamic>>> getFollowDoc(String userId) {
-    return _db.collection('follows').doc(userId).get();
+    return _db.collection('users').doc(userId).collection('follows').doc('meta').get();
   }
 }

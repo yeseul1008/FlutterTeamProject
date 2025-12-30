@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:team_project_flutter/pages/schedule/schedule_lookbook.dart';
 import 'package:team_project_flutter/pages/wardrobe/user_wardrobe_edit.dart';
 
 import '../routePage1.dart';
@@ -38,6 +39,7 @@ import '../widgets/common/bottom_nav_bar.dart';
 import '../pages/schedule/schedule_add.dart';
 import '../pages/map/PlaceSearchPage.dart';
 import '../pages/schedule/schedule_wardrobe.dart';
+import '../pages/schedule/schedule_combine.dart';
 
 final GlobalKey<NavigatorState> _shellNavigatorKey =
 GlobalKey<NavigatorState>();
@@ -107,6 +109,8 @@ final GoRouter router = GoRouter(
 
         // profile 폴더 속 파일이름
 
+
+        //Schedule전용 라우터
         //일정 추가
         GoRoute(
           path: '/AddSchedule',
@@ -117,6 +121,22 @@ final GoRouter router = GoRouter(
         //   path: '/EditSchedule',
         //   builder: (context, state) => const UserScheduleEdit(),
         // ),
+        //스케줄 옷 리스트 호출
+        GoRoute(
+          path: '/scheduleWardrobe',
+          builder : (context, state) => const ScheduleWardrobe(),
+        ),
+        //스케줄 룩북
+        GoRoute(
+            path: '/scheduleLookbook',
+            builder: (context, state) => const ScheduleLookbook()
+        ),
+        //스케줄 옷 조합
+        GoRoute(
+          path: '/scheduleCombine',
+          builder: (context, state) =>
+              ScheduleCombine(extra: state.extra),
+        ),
 
 
         GoRoute(
