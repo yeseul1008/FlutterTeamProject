@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  # UI / Utils
   qr_flutter:
   flutter_rating_bar: ^4.0.1
   fluttertoast:
@@ -39,19 +41,38 @@ dependencies:
   sqflite:
   path:
   go_router:
+
+  # Firebase
   firebase_core:
   cloud_firestore:
-  firebase_storage:
-  image_picker:
-  share_plus:
+  firebase_storage: ^13.0.5
   firebase_auth:
+
+  # Media / Share
+  image_picker:
+  image: ^4.1.3
+  share_plus:
+
+  # Auth / Social
   google_sign_in: ^6.2.1
   kakao_flutter_sdk_share: ^1.10.0
+
+  # Map / Location
+  google_maps_flutter:
+  geocoding: ^3.0.0
+  google_places_flutter: ^2.0.9
+
+  # Network / Env
+  http: ^1.2.0
+  path_provider: ^2.1.2
+
+  # External
   url_launcher:
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  flutter_dotenv: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -70,7 +91,9 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   assets:
+    - .env
     - assets/
+    - assets/models/u2netp.tflite
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

@@ -46,6 +46,7 @@ class _UserJoinState extends State<UserJoin> {
         pw2.isEmpty ||
         phone.isEmpty ||
         nickname.isEmpty) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('모든 항목을 입력해주세요.')),
       );
@@ -53,6 +54,7 @@ class _UserJoinState extends State<UserJoin> {
     }
 
     if (pw != pw2) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('비밀번호가 일치하지 않습니다.')),
       );
@@ -67,8 +69,14 @@ class _UserJoinState extends State<UserJoin> {
         password: pw,
       );
 
-      final uid = cred.user!.uid;
+      final user = cred.user;
+      if (user == null) {
+        throw FirebaseAuthException(code: 'user-null', message: 'user is null');
+      }
 
+      final uid = user.uid;
+
+      // ✅ users/{uid} 문서 생성 (firebase.txt 최신 구조: loginId 포함)
       await _fs.createUser(
         userId: uid,
         loginId: loginId,
@@ -79,6 +87,7 @@ class _UserJoinState extends State<UserJoin> {
         profileImageUrl: null,
       );
 
+      // follows 문서 초기화
       await _fs.initFollowDoc(uid);
 
       if (!mounted) return;
@@ -88,8 +97,10 @@ class _UserJoinState extends State<UserJoin> {
         'email-already-in-use' => '이미 사용 중인 이메일입니다.',
         'invalid-email' => '이메일 형식이 올바르지 않습니다.',
         'weak-password' => '비밀번호가 너무 약합니다.',
+        'operation-not-allowed' => '이메일/비밀번호 로그인이 비활성화되어 있습니다.',
         _ => '회원가입에 실패했습니다. (${e.code})',
       };
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     } catch (_) {
@@ -150,10 +161,10 @@ class _UserJoinState extends State<UserJoin> {
 
                 const SizedBox(height: 10),
 
-                Center(
+                const Center(
                   child: Text(
                     'What you wear?',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: textGrey,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
