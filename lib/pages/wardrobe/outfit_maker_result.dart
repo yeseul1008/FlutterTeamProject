@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:dio/dio.dart';
 import 'package:http/http.dart' as http;
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AiOutfitMakerScreen extends StatefulWidget {
   final List<String> selectedImageUrls;
-
   const AiOutfitMakerScreen({super.key, required this.selectedImageUrls});
 
   @override
@@ -15,94 +12,67 @@ class AiOutfitMakerScreen extends StatefulWidget {
 }
 
 class _AiOutfitMakerScreenState extends State<AiOutfitMakerScreen> {
-  String? generatedImageUrl;
-  bool isLoading = true;
+  bool _isLoading = true;
+  String? _generatedImageUrl;
 
   @override
   void initState() {
     super.initState();
-    _generateAiImage();
+    _generateCombinedImage();
   }
 
-  // URL 이미지를 다운로드 후 File로 변환
-  Future<File> _downloadImage(String url, String filename) async {
-    final response = await http.get(Uri.parse(url));
-    final bytes = response.bodyBytes;
-    final tempDir = await getTemporaryDirectory();
-    final file = File('${tempDir.path}/$filename');
-    await file.writeAsBytes(bytes);
-    return file;
-  }
-
-  Future<void> _generateAiImage() async {
-    setState(() => isLoading = true);
-
+  Future<void> _generateCombinedImage() async {
     try {
-      final dio = Dio();
-      List<MultipartFile> images = [];
+      // 1. 제미나이에게 이미지 분석 및 프롬프트 작성 요청
+      String geminiPrompt = await _fetchPromptFromGemini();
 
-      // 선택된 이미지들을 MultipartFile로 변환
-      for (int i = 0; i < widget.selectedImageUrls.length; i++) {
-        final file = await _downloadImage(widget.selectedImageUrls[i], 'img_$i.png');
-        final mp = await MultipartFile.fromFile(file.path, filename: 'img_$i.png');
-        images.add(mp);
-      }
-
-      // prompt: 선택한 옷들을 입은 한 사람, 흰 배경
-      final prompt = """
-A full-body person wearing the selected clothes. 
-Realistic style, plain white background. 
-Focus on clearly showing each clothing item.
-""";
-
-      final formData = FormData.fromMap({
-        "model": "gpt-image-1",
-        "images": images,
-        "prompt": prompt,
-      });
-
-      final response = await dio.post(
-        'https://api.openai.com/v1/images/edits',
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer ${dotenv.env['GPT_API']}',
-          },
-        ),
-        data: formData,
-      );
-
-      final imageUrl = response.data['data'][0]['url'] as String;
-
+      // 2. Pollinations URL 생성
       setState(() {
-        generatedImageUrl = imageUrl;
-        isLoading = false;
+        _generatedImageUrl = "https://image.pollinations.ai/prompt/${Uri.encodeComponent(geminiPrompt)}?width=800&height=1000&model=flux&nologo=true&seed=${DateTime.now().millisecondsSinceEpoch}";
+        _isLoading = false;
       });
     } catch (e) {
-      print('AI 이미지 생성 실패: $e');
-      setState(() => isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('AI 이미지 생성에 실패했습니다.')),
-      );
+      print("Error: $e");
     }
+  }
+
+  // 이 함수는 이전의 제미나이 API 호출 코드를 활용하여 '텍스트 응답'만 받으면 됩니다.
+  Future<String> _fetchPromptFromGemini() async {
+    final String apiKey = dotenv.env['AI_IMG_API'] ?? '';
+    final url = Uri.parse("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey");
+
+    // 이미지들을 base64로 변환하여 parts 구성 (이전 코드 활용)
+    List<Map<String, dynamic>> imageParts = [];
+    for (var imageUrl in widget.selectedImageUrls) {
+      final res = await http.get(Uri.parse(imageUrl));
+      imageParts.add({
+        "inline_data": {"mime_type": "image/jpeg", "data": base64Encode(res.bodyBytes)}
+      });
+    }
+
+    final response = await http.post(url, headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "contents": [{
+            "parts": [
+              {"text": "Analyze these clothes and write a detailed English image prompt for a model wearing all of them. Only return the prompt text."},
+              ...imageParts
+            ]
+          }]
+        })
+    );
+
+    final data = jsonDecode(response.body);
+    return data['candidates'][0]['content']['parts'][0]['text'];
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('AI 착용샷'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text("AI 코디네이터")),
       body: Center(
-        child: isLoading
+        child: _isLoading
             ? const CircularProgressIndicator()
-            : (generatedImageUrl != null
-            ? InteractiveViewer(
-          child: Image.network(generatedImageUrl!),
-        )
-            : const Text('이미지 생성 실패')),
+            : Image.network(_generatedImageUrl!, fit: BoxFit.contain),
       ),
     );
   }

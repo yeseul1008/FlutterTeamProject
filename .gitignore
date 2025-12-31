@@ -1,7 +1,6 @@
 # Environment variables
 .env
 pubspec.yaml
-
 # Miscellaneous
 *.class
 *.log

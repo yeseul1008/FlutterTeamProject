@@ -351,7 +351,7 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                                   icon: data['liked'] == true
                                       ? const Icon(
                                     Icons.favorite,
-                                    color: Colors.black,
+                                    color: const Color(0xFFCAD83B),
                                     size: 22,
                                   )
                                       : Stack(
