@@ -11,7 +11,6 @@
         android:icon="@mipmap/ic_launcher">
 
 
-
         <!-- 카카오 SDK App Key -->
         <meta-data
             android:name="com.kakao.sdk.AppKey"

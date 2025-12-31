@@ -125,7 +125,7 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
       if (querySnapshot.docs.isNotEmpty) {
         final calendarData = querySnapshot.docs.first.data();
         setState(() {
-          imageUrl = calendarData['imageUrl'];
+          imageUrl = calendarData['imageURL'];
         });
         print('Loaded image URL: $imageUrl');
       }
