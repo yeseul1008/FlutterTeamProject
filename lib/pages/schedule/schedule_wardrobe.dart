@@ -7,9 +7,8 @@ import '../wardrobe/user_wardrobe_category.dart';
 
 /// =============================
 /// ScheduleWardrobe.dart
-/// 👉 원래 UI 그대로 + 클릭 선택 + 조합하기(extra 전달)
-/// ✅ FIX: go -> push 로 진입해서 Combine에서 pop 가능
-/// ✅ FIX: Combine 결과를 받아서 한 번 더 pop으로 상위(UserScheduleAdd)로 전달
+/// ✅ 역할: 옷 선택만 하고 -> 선택값을 UserScheduleAdd로 pop 전달
+/// ❌ 여기서 /scheduleCombine 절대 push 하지 않음 (중복 Combine 방지)
 /// =============================
 class ScheduleWardrobe extends StatefulWidget {
   const ScheduleWardrobe({super.key});
@@ -74,7 +73,8 @@ class _ScheduleWardrobeState extends State<ScheduleWardrobe> {
     });
   }
 
-  Future<void> _goCombine() async {
+  // ✅ 조합하기 버튼: "선택값만" 상위(UserScheduleAdd)로 넘기고 pop
+  Future<void> _returnSelectionToAdd() async {
     if (selectedClothesIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('옷을 먼저 선택해주세요')),
@@ -82,20 +82,10 @@ class _ScheduleWardrobeState extends State<ScheduleWardrobe> {
       return;
     }
 
-    // ✅ go()가 아니라 push()로 들어가야 Combine에서 pop(result) 가능
-    final result = await context.push<Map<String, dynamic>>(
-      '/scheduleCombine',
-      extra: {
-        'clothesIds': selectedClothesIds.toList(),
-        'imageUrls': selectedImageUrls,
-      },
-    );
-
-    // Combine에서 '일정에 등록하기' 누르면 result가 돌아옴
-    if (result == null) return;
-
-    // ✅ 상위(UserScheduleAdd)로 결과 전달
-    context.pop(result);
+    context.pop({
+      'clothesIds': selectedClothesIds.toList(),
+      'imageUrls': selectedImageUrls,
+    });
   }
 
   @override
@@ -111,7 +101,7 @@ class _ScheduleWardrobeState extends State<ScheduleWardrobe> {
                 children: [
                   const SizedBox(height: 8),
 
-                  // 🔹 상단 (원래 UI)
+                  // 🔹 상단
                   Row(
                     children: [
                       IconButton(
@@ -135,7 +125,7 @@ class _ScheduleWardrobeState extends State<ScheduleWardrobe> {
 
                   const SizedBox(height: 12),
 
-                  // 🔹 검색 / 필터 (원래 UI)
+                  // 🔹 검색 / 필터
                   Row(
                     children: [
                       GestureDetector(
@@ -167,9 +157,7 @@ class _ScheduleWardrobeState extends State<ScheduleWardrobe> {
                       const SizedBox(width: 10),
                       IconButton(
                         icon: Icon(
-                          showLikedOnly
-                              ? Icons.favorite
-                              : Icons.favorite_border,
+                          showLikedOnly ? Icons.favorite : Icons.favorite_border,
                           color: Colors.black,
                         ),
                         onPressed: () {
@@ -181,7 +169,7 @@ class _ScheduleWardrobeState extends State<ScheduleWardrobe> {
 
                   const SizedBox(height: 16),
 
-                  // 🔹 그리드 (UI 그대로 + 선택 테두리)
+                  // 🔹 그리드
                   Expanded(
                     child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                       stream: _wardrobeStream(),
@@ -279,7 +267,7 @@ class _ScheduleWardrobeState extends State<ScheduleWardrobe> {
               ),
             ),
 
-            // 🔹 조합하기 버튼 (원래 UI)
+            // 🔹 조합하기 버튼: ✅ 선택값만 pop
             Positioned(
               right: 16,
               bottom: 90,
@@ -289,7 +277,7 @@ class _ScheduleWardrobeState extends State<ScheduleWardrobe> {
                 borderRadius: BorderRadius.circular(22),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(22),
-                  onTap: _goCombine,
+                  onTap: _returnSelectionToAdd,
                   child: Container(
                     padding:
                     const EdgeInsets.symmetric(horizontal: 18, vertical: 10),

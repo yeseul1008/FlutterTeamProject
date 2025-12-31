@@ -20,12 +20,19 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedDay = DateTime.now();
 
-  // ✅ 날짜별 썸네일 캐시 (캘린더 셀/프리뷰 공용)
-  final Map<DateTime, String?> _thumbCache = {};
+  // 날짜별 calendar 문서 캐시 (없으면 null)
+  final Map<DateTime, Map<String, dynamic>?> _calendarCache = {};
 
   DateTime _normalize(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  String? _getThumb(DateTime day) => _thumbCache[_normalize(day)];
+  String _dateKey(DateTime d) {
+    final day = _normalize(d);
+    return '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+  }
+
+  Map<String, dynamic>? _getCalendar(DateTime day) => _calendarCache[_normalize(day)];
+
+  String? _getThumb(DateTime day) => (_getCalendar(day)?['imageURL'] as String?);
 
   bool _isPast(DateTime day) {
     final today = _normalize(DateTime.now());
@@ -35,90 +42,74 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
   @override
   void initState() {
     super.initState();
-    _loadThumbForDay(_selectedDay); // 첫 진입 시 오늘 프리뷰도 로드
+    _loadMonthCalendars(_focusedDay);
+    _loadCalendarForDay(_selectedDay);
   }
 
-  Future<void> _loadThumbForDay(DateTime day) async {
+  Future<void> _loadCalendarForDay(DateTime day) async {
     if (userId == null) return;
 
     final key = _normalize(day);
+    if (_calendarCache.containsKey(key)) return;
 
-    // 이미 캐시가 있으면 또 조회 안함(원하면 제거 가능)
-    if (_thumbCache.containsKey(key)) return;
+    final docId = _dateKey(day);
+    final doc = await fs.collection('users').doc(userId).collection('calendar').doc(docId).get();
 
-    final url = await _fetchResultImageUrlForDay(day);
     if (!mounted) return;
-
     setState(() {
-      _thumbCache[key] = url; // url이 null이면 "등록 없음"으로 캐싱됨
+      _calendarCache[key] = doc.exists ? (doc.data() ?? {}) : null;
     });
   }
 
-  Future<String?> _fetchResultImageUrlForDay(DateTime day) async {
-    if (userId == null) return null;
+  Future<void> _loadMonthCalendars(DateTime anyDayInMonth) async {
+    if (userId == null) return;
 
-    final start = DateTime(day.year, day.month, day.day);
-    final end = start.add(const Duration(days: 1));
+    final monthStart = DateTime(anyDayInMonth.year, anyDayInMonth.month, 1);
+    final monthEnd = DateTime(anyDayInMonth.year, anyDayInMonth.month + 1, 1);
 
-    // 1) schedules에서 해당 날짜 일정 1개 찾기
-    final scheduleSnap = await fs
+    final snap = await fs
         .collection('users')
         .doc(userId)
-        .collection('schedules')
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-        .where('date', isLessThan: Timestamp.fromDate(end))
-        .limit(1)
+        .collection('calendar')
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(monthStart))
+        .where('date', isLessThan: Timestamp.fromDate(monthEnd))
         .get();
 
-    if (scheduleSnap.docs.isEmpty) return null;
+    if (!mounted) return;
 
-    final scheduleData = scheduleSnap.docs.first.data();
-    final lookbookId = (scheduleData['lookbookId'] ?? '').toString();
-    if (lookbookId.isEmpty) return null;
+    setState(() {
+      for (final d in snap.docs) {
+        final data = d.data();
+        final ts = data['date'];
+        if (ts is! Timestamp) continue;
 
-    // 2) lookbooks에서 resultImageUrl 가져오기
-    final lookbookDoc = await fs.collection('lookbooks').doc(lookbookId).get();
-    if (!lookbookDoc.exists) return null;
-
-    final lookbookData = lookbookDoc.data() as Map<String, dynamic>?;
-    final resultImageUrl = (lookbookData?['resultImageUrl'] ?? '').toString();
-
-    if (resultImageUrl.trim().isEmpty) return null;
-    return resultImageUrl;
+        final day = _normalize(ts.toDate());
+        _calendarCache[day] = data; // 있으면 data
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final cal = _getCalendar(_selectedDay);
     final selectedThumb = _getThumb(_selectedDay);
 
-    const double bottomBarH = 68;
-    final double safeBottom = MediaQuery.of(context).padding.bottom;
-
-    // 룩북(코디) 존재 여부
-    final bool hasLookbook = selectedThumb != null;
-
-    // 목적지 / 목적 (아직 미구현 → 임시 false)
-    final bool hasDestination = false; // TODO
-    final bool hasPurpose = false; // TODO
-
-    final bool needAdd = !(hasLookbook && hasDestination && hasPurpose);
-    final String btnText = needAdd ? '일정 추가' : '일정 수정';
+    final hasSchedule = cal != null; // ✅ 7번: 문서 존재 여부로 판단
+    final btnText = hasSchedule ? '일정 수정' : '일정 추가';
 
     return Scaffold(
       backgroundColor: Colors.white,
       floatingActionButton: null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-
-      // 하단 네비
       bottomNavigationBar: SizedBox(
-        height: bottomBarH + safeBottom,
+        height: 68 + MediaQuery.of(context).padding.bottom,
         child: BottomAppBar(
           color: Colors.white,
           elevation: 0,
           shape: const CircularNotchedRectangle(),
           notchMargin: 10,
           child: Padding(
-            padding: EdgeInsets.only(bottom: safeBottom),
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -132,22 +123,21 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
           ),
         ),
       ),
-
       body: SafeArea(
         child: Column(
           children: [
             const SizedBox(height: 6),
 
-            // 상단 월 헤더
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Row(
                 children: [
                   IconButton(
-                    onPressed: () {
+                    onPressed: () async {
                       setState(() {
                         _focusedDay = DateTime(_focusedDay.year, _focusedDay.month - 1, 1);
                       });
+                      await _loadMonthCalendars(_focusedDay);
                     },
                     icon: const Icon(Icons.chevron_left),
                   ),
@@ -175,10 +165,11 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
                     ),
                   ),
                   IconButton(
-                    onPressed: () {
+                    onPressed: () async {
                       setState(() {
                         _focusedDay = DateTime(_focusedDay.year, _focusedDay.month + 1, 1);
                       });
+                      await _loadMonthCalendars(_focusedDay);
                     },
                     icon: const Icon(Icons.chevron_right),
                   ),
@@ -188,7 +179,6 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
 
             const SizedBox(height: 6),
 
-            // 요일
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 18),
               child: Row(
@@ -207,7 +197,6 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
 
             const SizedBox(height: 8),
 
-            // 캘린더
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: TableCalendar(
@@ -223,8 +212,7 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
                     _selectedDay = selectedDay;
                     _focusedDay = focusedDay;
                   });
-                  // ✅ 선택한 날짜의 프리뷰 이미지 로드
-                  await _loadThumbForDay(selectedDay);
+                  await _loadCalendarForDay(selectedDay);
                 },
                 calendarBuilders: CalendarBuilders(
                   defaultBuilder: (context, day, _) => _buildDayCell(day, isSelected: false),
@@ -238,23 +226,8 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
               ),
             ),
 
-            const SizedBox(height: 10),
-
-            // 날짜 텍스트
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              child: Text(
-                '${_monthName(_selectedDay.month)} ${_selectedDay.day}',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-
             const SizedBox(height: 6),
 
-            // 날씨(왼쪽) + 일정추가 버튼(오른쪽)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18),
               child: Row(
@@ -275,10 +248,35 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
                     height: 34,
                     child: ElevatedButton(
                       onPressed: () {
-                        if (btnText == '일정 추가') {
-                          context.go('/AddSchedule');
+                        if (!hasSchedule) {
+                          context.go('/AddSchedule', extra: {
+                            'mode': 'create',
+                            'selectedDate': _normalize(_selectedDay),
+                          });
                         } else {
-                          context.go('/EditSchedule');
+                          final scheduleId = (cal?['scheduleId'] ?? '').toString();
+                          final destinationName = (cal?['destinationName'] ?? '').toString();
+                          final planText = (cal?['planText'] ?? '').toString();
+                          final imageURL = (cal?['imageURL'] ?? '').toString();
+                          final dest = cal?['destination'];
+
+                          double lat = 37.5665;
+                          double lon = 126.9780;
+                          if (dest is GeoPoint) {
+                            lat = dest.latitude;
+                            lon = dest.longitude;
+                          }
+
+                          context.go('/AddSchedule', extra: {
+                            'mode': 'edit',
+                            'selectedDate': _normalize(_selectedDay),
+                            'scheduleId': scheduleId,
+                            'destinationName': destinationName,
+                            'planText': planText,
+                            'previewImageUrl': imageURL,
+                            'lat': lat,
+                            'lon': lon,
+                          });
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -306,7 +304,6 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
 
             const SizedBox(height: 10),
 
-            // ✅ 프리뷰 영역: 선택한 날짜의 lookbook.resultImageUrl 표시
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -316,7 +313,7 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
                     border: Border.all(color: Colors.black12),
                     color: Colors.white,
                   ),
-                  child: (selectedThumb == null)
+                  child: (selectedThumb == null || selectedThumb.isEmpty)
                       ? const SizedBox.expand(
                     child: Center(
                       child: Text(
@@ -369,7 +366,7 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
       ),
       child: Stack(
         children: [
-          if (thumb != null)
+          if (thumb != null && thumb.isNotEmpty)
             Positioned.fill(
               child: Opacity(
                 opacity: imgOpacity,
@@ -389,7 +386,7 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
                 fontSize: 11,
                 fontWeight: FontWeight.w900,
                 color: textColor,
-                shadows: thumb != null
+                shadows: (thumb != null && thumb.isNotEmpty)
                     ? const [
                   Shadow(
                     blurRadius: 8,
