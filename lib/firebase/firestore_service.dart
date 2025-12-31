@@ -231,9 +231,7 @@ class FirestoreService {
   }
 
   // ======================================================
-  //  canvas png -> Firebase Storage 업로드 -> URL 반환
-  // - ScheduleCombine에서 받은 canvasPngBytes를 여기로 넘기면
-  //   resultImageUrl로 저장 가능한 "진짜 사진 URL"이 만들어집니다.
+  // canvas png -> Storage 업로드 -> URL 반환
   // ======================================================
   Future<String> uploadLookbookCanvasPng({
     required String userId,
@@ -251,7 +249,7 @@ class FirestoreService {
   }
 
   // ======================================================
-  // ** schedules + calendar (users/{uid}/...)
+  // lookbook 생성 (inLookbook 플래그 포함)
   // ======================================================
   Future<String> createLookbookWithFlag({
     required String userId,
@@ -274,6 +272,12 @@ class FirestoreService {
     return doc.id;
   }
 
+  // ======================================================
+  // ✅ 핵심: schedules + calendar 생성 (완료 버튼 시점)
+  // - schedules: users/{uid}/schedules (date: Timestamp)
+  // - calendar : users/{uid}/calendar/{YYYY-MM-DD} (단일문서)
+  // - calendar에 imageURL + inDiary(false) + edit용 필드 함께 저장
+  // ======================================================
   Future<String> createScheduleAndCalendar({
     required String userId,
     required DateTime date,
@@ -283,13 +287,16 @@ class FirestoreService {
     required double lon,
     required String planText,
     required String lookbookId,
+    required String imageURL, // ✅ 회색 썸네일 해결 핵심
   }) async {
+    final DateTime day = DateTime(date.year, date.month, date.day);
     final dateKey =
-        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+        '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
 
+    // 1) schedules 생성
     final scheduleDoc =
     await _db.collection('users').doc(userId).collection('schedules').add({
-      'date': Timestamp.fromDate(date),
+      'date': Timestamp.fromDate(day),
       'weather': weather,
       'destinationName': destinationName,
       'destination': GeoPoint(lat, lon),
@@ -299,19 +306,82 @@ class FirestoreService {
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
-    // ✅ 날짜별 단일 문서
+    // 2) calendar (날짜별 단일 문서)
     await _db
         .collection('users')
         .doc(userId)
         .collection('calendar')
         .doc(dateKey)
         .set({
-      'date': Timestamp.fromDate(date),
+      'date': Timestamp.fromDate(day),
       'lookbookId': lookbookId,
+
+      // ✅ 썸네일/프리뷰
+      'imageURL': imageURL,
+
+      // ✅ 다이어리 미작성 기본
+      'inDiary': false,
+
+      // ✅ 7번(수정 진입 시 Add 자동 채움)용 필드
+      'scheduleId': scheduleDoc.id,
+      'destinationName': destinationName,
+      'destination': GeoPoint(lat, lon),
+      'planText': planText,
+
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    return scheduleDoc.id;
+  }
+
+  // ======================================================
+  // ✅ 핵심: schedules + calendar 수정 (7번)
+  // ======================================================
+  Future<void> updateScheduleAndCalendar({
+    required String userId,
+    required DateTime date,
+    required String scheduleId,
+    required String destinationName,
+    required double lat,
+    required double lon,
+    required String planText,
+    String? imageURL, // 프리뷰를 바꾸는 경우만
+    String? lookbookId,
+  }) async {
+    final DateTime day = DateTime(date.year, date.month, date.day);
+    final dateKey =
+        '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+
+    // schedules 업데이트
+    await _db
+        .collection('users')
+        .doc(userId)
+        .collection('schedules')
+        .doc(scheduleId)
+        .update({
+      'destinationName': destinationName,
+      'destination': GeoPoint(lat, lon),
+      'planText': planText,
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
-    return scheduleDoc.id;
+    // calendar 업데이트 (Add 자동 채움용 필드 같이 갱신)
+    final calData = <String, dynamic>{
+      'destinationName': destinationName,
+      'destination': GeoPoint(lat, lon),
+      'planText': planText,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+    if (imageURL != null && imageURL.trim().isNotEmpty) calData['imageURL'] = imageURL;
+    if (lookbookId != null && lookbookId.trim().isNotEmpty) calData['lookbookId'] = lookbookId;
+
+    await _db
+        .collection('users')
+        .doc(userId)
+        .collection('calendar')
+        .doc(dateKey)
+        .set(calData, SetOptions(merge: true));
   }
 
   // ======================================================
@@ -339,11 +409,11 @@ class FirestoreService {
   }
 
   // ======================================================
-  // 6) diaries (users/{uid}/diaries)  ✅ date: Timestamp
+  // 6) diaries (users/{uid}/diaries)
   // ======================================================
   Future<String> createDiary({
     required String userId,
-    required DateTime date, // 🔁 CHANGED (String -> DateTime)
+    required DateTime date,
     required String lookbookId,
     required double lat,
     required double lng,
@@ -353,7 +423,7 @@ class FirestoreService {
   }) async {
     final doc = await _db.collection('users').doc(userId).collection('diaries').add({
       'userId': userId,
-      'date': Timestamp.fromDate(date), // ✅ Timestamp 저장
+      'date': Timestamp.fromDate(date),
       'lookbookId': lookbookId,
       'location': {'lat': lat, 'lng': lng},
       'locationText': locationText,

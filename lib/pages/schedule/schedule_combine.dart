@@ -20,6 +20,9 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
   late final List<String> clothesIds;
   late final Map<String, String> imageUrls;
 
+  // ✅ Add로 넘길 선택 날짜
+  DateTime? _selectedDate;
+
   // id -> {offset, scale}
   final Map<String, _CanvasItemState> _canvasItems = {};
 
@@ -37,6 +40,12 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
     final Map<String, dynamic> imageUrlsRaw =
     (data?['imageUrls'] as Map<String, dynamic>? ?? {});
     imageUrls = imageUrlsRaw.map((k, v) => MapEntry(k, v.toString()));
+
+    // ✅ Calendar/이전 화면에서 선택한 날짜를 같이 넘겨받는 구조
+    final dt = data?['selectedDate'];
+    if (dt is DateTime) {
+      _selectedDate = DateTime(dt.year, dt.month, dt.day);
+    }
 
     // ✅ 전부 캔버스에 자동 배치
     for (int i = 0; i < clothesIds.length; i++) {
@@ -114,8 +123,18 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
     );
   }
 
-  Future<void> _registerToSchedule() async {
+  Future<void> _goToAddSchedule() async {
     final selected = _canvasItems.keys.toList();
+
+    if (selected.isEmpty) {
+      _showTempSnack('캔버스에 남은 옷이 없습니다.');
+      return;
+    }
+
+    if (!_imagesReady) {
+      _showTempSnack('이미지 로딩 중입니다.');
+      return;
+    }
 
     final pngBytes = await _captureCanvasPng();
     if (pngBytes == null || pngBytes.isEmpty) {
@@ -123,12 +142,17 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
       return;
     }
 
+    debugPrint('COMBINE pngBytes length = ${pngBytes.length}');
+
     context.pop({
       'action': 'registerToSchedule',
-      'clothesIds': selected,
+      'selectedDate': _selectedDate ?? DateTime.now(),
       'canvasPngBytes': pngBytes,
+      'clothesIds': selected,
+      'imageUrls': imageUrls,
     });
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -251,7 +275,6 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
               ),
             ),
           ),
-
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Row(
@@ -298,7 +321,7 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
                   child: ElevatedButton(
                     onPressed: (_canvasItems.isEmpty || !_imagesReady)
                         ? null
-                        : _registerToSchedule,
+                        : _goToAddSchedule,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFCAD83B),
                       foregroundColor: Colors.black,
@@ -310,7 +333,7 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: Text(
-                      !_imagesReady ? '이미지 로딩중...' : '일정에 등록하기',
+                      !_imagesReady ? '이미지 로딩중...' : '일정 등록하러 가기',
                       style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
                       textAlign: TextAlign.center,
                     ),

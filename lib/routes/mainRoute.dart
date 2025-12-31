@@ -116,11 +116,6 @@ final GoRouter router = GoRouter(
           path: '/AddSchedule',
           builder: (context, state) => const UserScheduleAdd(),
         ),
-        // 일정 수정
-        // GoRoute(
-        //   path: '/EditSchedule',
-        //   builder: (context, state) => const UserScheduleEdit(),
-        // ),
         //스케줄 옷 리스트 호출
         GoRoute(
           path: '/scheduleWardrobe',
