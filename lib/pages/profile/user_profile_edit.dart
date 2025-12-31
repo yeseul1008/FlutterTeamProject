@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../widgets/common/main_btn.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,10 +16,14 @@ class ProfileEdit extends StatefulWidget {
 }
 
 class _ProfileEditState extends State<ProfileEdit> {
-
   final FirebaseFirestore fs = FirebaseFirestore.instance;
+  final FirebaseStorage storage = FirebaseStorage.instance;
   Map<String, dynamic> userInfo = {};
   int lookbookCnt = 0;
+  int itemCnt = 0;
+  File? selectedImage;
+  bool isProcessingImage = false;
+  String? profileImageUrl;
   final TextEditingController _nicknameCtrl = TextEditingController();
   final TextEditingController _idCtrl = TextEditingController();
 
@@ -35,6 +43,13 @@ class _ProfileEditState extends State<ProfileEdit> {
           .where('userId', isEqualTo: uid)
           .get();
 
+      // Get items count
+      final wardrobeSnapshot = await fs
+          .collection('users')
+          .doc(uid)
+          .collection('wardrobe')
+          .get();
+
       final userSnapshot = await fs.collection('users').doc(uid).get();
 
       if (!mounted) return;
@@ -43,6 +58,8 @@ class _ProfileEditState extends State<ProfileEdit> {
         _nicknameCtrl.text = userInfo['nickname'] ?? '';
         _idCtrl.text = userInfo['loginId'] ?? '';
         lookbookCnt = lookbookSnapshot.docs.length;
+        itemCnt = wardrobeSnapshot.docs.length;
+        profileImageUrl = userInfo['profileImageUrl'];
       });
     } catch (e) {
       print('Error loading user info: $e');
@@ -187,7 +204,34 @@ class _ProfileEditState extends State<ProfileEdit> {
     );
   }
 
-  // Function to edit user's info
+  // Function to check if loginId is already taken
+  Future<bool> _isLoginIdTaken(String loginId) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    try {
+      // Query Firestore to find users with this loginId
+      final querySnapshot = await fs
+          .collection('users')
+          .where('loginId', isEqualTo: loginId.trim())
+          .limit(1)
+          .get();
+
+      // If found and it's not the current user, it's taken
+      if (querySnapshot.docs.isNotEmpty) {
+        final docId = querySnapshot.docs.first.id;
+        // Check if it's not the current user's own loginId
+        return docId != uid;
+      }
+
+      return false; // loginId is available
+    } catch (e) {
+      print('Error checking loginId: $e');
+      return false;
+    }
+  }
+
+// Function to edit user's info with validation
+  // UPDATED: Function to edit user's info with validation
   Future<void> _editUserInfo() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
 
@@ -196,11 +240,42 @@ class _ProfileEditState extends State<ProfileEdit> {
       return;
     }
 
+    // Validate inputs
+    if (_nicknameCtrl.text.trim().isEmpty) {
+      _showSnack('닉네임을 입력해주세요');
+      return;
+    }
+
+    if (_idCtrl.text.trim().isEmpty) {
+      _showSnack('아이디를 입력해주세요');
+      return;
+    }
+
+    // Check if loginId has changed
+    final newLoginId = _idCtrl.text.trim();
+    final currentLoginId = userInfo['loginId'] ?? '';
+
+    if (newLoginId != currentLoginId) {
+      // Check if new loginId is already taken
+      final isTaken = await _isLoginIdTaken(newLoginId);
+
+      if (isTaken) {
+        // IMMEDIATELY restore original loginId in the text field
+        _idCtrl.text = currentLoginId;
+
+        // Small delay to let user see the change, then show snackbar
+        await Future.delayed(Duration(milliseconds: 100));
+
+        _showSnack('이미 사용 중인 아이디입니다. 다른 아이디를 입력해주세요.');
+        return;
+      }
+    }
+
     try {
       // Update user info in Firestore
       await fs.collection('users').doc(uid).update({
         'nickname': _nicknameCtrl.text.trim(),
-        'loginId': _idCtrl.text.trim(),
+        'loginId': newLoginId,
       });
 
       _showSnack('정보가 성공적으로 저장되었습니다');
@@ -214,7 +289,6 @@ class _ProfileEditState extends State<ProfileEdit> {
     }
   }
 
-  // Change password bottom sheet
   // Change password bottom sheet
   Future<void> _showChangePasswordSheet() async {
     final TextEditingController oldPasswordCtrl = TextEditingController();
@@ -525,6 +599,68 @@ class _ProfileEditState extends State<ProfileEdit> {
     }
   }
 
+  // Function to select a profile picture
+
+  // 이미지 확대/이동 컨트롤러
+  final TransformationController _transformController =
+  TransformationController();
+
+  Future<void> _pickImage() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      _showSnack('로그인 상태가 아닙니다');
+      return;
+    }
+
+    final picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,  // Optimize image size
+      maxHeight: 800,
+      imageQuality: 85,
+    );
+
+    if (image == null) return;
+
+    setState(() => isProcessingImage = true);
+
+    try {
+      final File imageFile = File(image.path);
+
+      // Create a reference to Firebase Storage
+      final String fileName = 'profile_$uid.jpg';
+      final Reference storageRef = storage
+          .ref('user_profile_pictures/${fileName}');
+
+      // Upload the file
+      final UploadTask uploadTask = storageRef.putFile(imageFile);
+
+      // Wait for upload to complete
+      final TaskSnapshot snapshot = await uploadTask;
+
+      // Get download URL
+      final String downloadUrl = await snapshot.ref.getDownloadURL();
+
+      // Update Firestore with the new profile image URL
+      await fs.collection('users').doc(uid).update({
+        'profileImageUrl': downloadUrl,
+      });
+
+      setState(() {
+        selectedImage = imageFile;
+        profileImageUrl = downloadUrl;
+      });
+
+      _showSnack('프로필 사진이 업데이트되었습니다');
+
+    } catch (e) {
+      print('Error uploading profile image: $e');
+      _showSnack('프로필 사진 업로드 실패: $e');
+    } finally {
+      setState(() => isProcessingImage = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
@@ -539,10 +675,58 @@ class _ProfileEditState extends State<ProfileEdit> {
             color: Colors.black,
             child: Stack(
               children: [
-                const Positioned(
+                Positioned(
                   left: 15,
                   top: 40,
-                  child: CircleAvatar(radius: 40),
+                  child: GestureDetector(
+                    onTap: isProcessingImage ? null : _pickImage,
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 40,
+                          backgroundColor: Colors.grey[300],
+                          backgroundImage: profileImageUrl != null
+                              ? NetworkImage(profileImageUrl!)
+                              : null,
+                          child: profileImageUrl == null
+                              ? Icon(
+                            Icons.person,
+                            size: 40,
+                            color: Colors.grey[600],
+                          )
+                              : null,
+                        ),
+                        if (isProcessingImage)
+                          Positioned.fill(
+                            child: CircleAvatar(
+                              radius: 40,
+                              backgroundColor: Colors.black54,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.black, width: 1),
+                            ),
+                            child: Icon(
+                              Icons.camera_alt,
+                              size: 16,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 Positioned(
                   top: 20,
@@ -558,10 +742,10 @@ class _ProfileEditState extends State<ProfileEdit> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
-                            "0 \nitems",
+                          Text(
+                            "${itemCnt} \nitems",
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.white),
+                            style: const TextStyle(color: Colors.white),
                           ),
                           const SizedBox(width: 20),
                           Text(
@@ -606,19 +790,22 @@ class _ProfileEditState extends State<ProfileEdit> {
             child: SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Center(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(height: 10),
-                      Text(
-                        "개인정보 수정",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
+                      SizedBox(height: 15),
+                      Center(
+                        child: Text(
+                          "개인정보 수정",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                          ),
                         ),
                       ),
-                      SizedBox(height: 10),
+                      SizedBox(height: 15),
                       Text("닉네임 수정"),
+                      SizedBox(height: 10),
                       TextField(
                         controller: _nicknameCtrl,
                         decoration: InputDecoration(
@@ -639,6 +826,7 @@ class _ProfileEditState extends State<ProfileEdit> {
                       ),
                       SizedBox(height: 10),
                       Text("아이디 수정"),
+                      SizedBox(height: 10),
                       TextField(
                         controller: _idCtrl,
                         decoration: InputDecoration(
@@ -657,7 +845,7 @@ class _ProfileEditState extends State<ProfileEdit> {
                           ),
                         ),
                       ),
-                      SizedBox(height: 28),
+                      SizedBox(height: 35),
                       // Password change button
                       GestureDetector(
                         onTap: _showChangePasswordSheet,
@@ -679,28 +867,30 @@ class _ProfileEditState extends State<ProfileEdit> {
                           ),
                         ),
                       ),
-                      SizedBox(height: 20),
-                      SizedBox(
-                        height: 50,
-                        width: 180,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            _editUserInfo();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFA88AEE),
-                            foregroundColor: Colors.black,
-                            elevation: 0,
-                            padding: EdgeInsets.zero,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
+                      SizedBox(height: 25),
+                      Center(
+                        child: SizedBox(
+                          height: 50,
+                          width: 180,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              _editUserInfo();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFA88AEE),
+                              foregroundColor: Colors.black,
+                              elevation: 0,
+                              padding: EdgeInsets.zero,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
                             ),
-                          ),
-                          child: const Text(
-                            '저장',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
+                            child: const Text(
+                              '저장',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
                             ),
                           ),
                         ),
@@ -708,7 +898,6 @@ class _ProfileEditState extends State<ProfileEdit> {
                       SizedBox(height: 20),
                     ],
                   ),
-                ),
               ),
             ),
           ),
