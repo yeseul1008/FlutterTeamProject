@@ -83,6 +83,7 @@ class _AiOutfitMakerState extends State<AiOutfitMaker> {
   void initState() {
     super.initState();
     _getUserInfo();
+    selectedWardrobeIds = {};
   }
 
   @override
@@ -151,7 +152,7 @@ class _AiOutfitMakerState extends State<AiOutfitMaker> {
                             ),
                             SizedBox(width: 8),
                             Text(
-                              'ai착용샷 생성',
+                              'AI착용샷 생성',
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -173,7 +174,7 @@ class _AiOutfitMakerState extends State<AiOutfitMaker> {
         backgroundColor: Colors.white,
         elevation: 0,
         title: const Text(
-          'Wearing ai clothes',
+          'AI generated look',
           style: TextStyle(color: Colors.black),
         ),
         leading: IconButton(

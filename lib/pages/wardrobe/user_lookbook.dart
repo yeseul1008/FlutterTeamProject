@@ -232,6 +232,7 @@ class _UserLookbookState extends State<UserLookbook> {
                     final item = filteredLookbooks[index];
                     final imageUrl = item['resultImageUrl'] ?? '';
                     final alias = item['alias'] ?? '';
+                    final type = item['type'] ?? '';
 
                     return GestureDetector(
                       onTap: () {
@@ -260,15 +261,30 @@ class _UserLookbookState extends State<UserLookbook> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            alias,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (type == 'ai_generated')
+                                const Icon(
+                                  Icons.auto_awesome,
+                                  size: 12,
+                                  color: Color(0xFFA88AEE), // Your purple color
+                                ),
+                              if (type == 'ai_generated')
+                                const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  alias,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

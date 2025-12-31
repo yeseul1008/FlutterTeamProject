@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -25,6 +26,7 @@ class _AiOutfitMakerScreenState extends State<AiOutfitMakerScreen> {
   String _currentStep = "이미지 분석 중...";
   Map<String, dynamic> userInfo = {};
   String? gender;
+  TextEditingController _AILookbookName = TextEditingController();
 
   Future <void> _getUserInfo () async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -114,9 +116,8 @@ class _AiOutfitMakerScreenState extends State<AiOutfitMakerScreen> {
       throw Exception('No valid images to analyze');
     }
 
-    // STRONGER emphasis on white background
     final textPrompt = TextPart(
-        'Analyze these clothing items. Create an image generation prompt for: A Korean ${gender} fashion model standing perfectly straight with arms relaxed at sides, neutral facial expression, front-facing view, full body shot showing head to toe including shoes. The model should wear ALL these clothing items together. Style: Clean Korean fashion e-commerce product photo with PURE WHITE seamless background (like StyleNanda, Ader Error, or W Concept product photos). No floor line visible, no shadows on background, model should appear to float on white. Professional lighting, sharp focus on clothing details.'
+        'Analyze these clothing items. Create an image generation prompt for: A Korean fashion model standing perfectly straight with arms relaxed at sides, neutral facial expression, front-facing view, full body shot showing head to toe including shoes. The model should wear ALL these clothing items together. Style: Clean Korean fashion e-commerce product photo with PURE WHITE seamless background (like StyleNanda, Ader Error, or W Concept product photos). No floor line visible, no shadows on background, model should appear to float on white. Professional lighting, sharp focus on clothing details.'
     );
 
     print("Sending request to Gemini...");
@@ -132,7 +133,25 @@ class _AiOutfitMakerScreenState extends State<AiOutfitMakerScreen> {
 
       print("Generated prompt: ${response.text}");
       return response.text!;
+
     } catch (e) {
+      final errorMsg = e.toString();
+
+      // Check if it's a rate limit error
+      if (errorMsg.contains('quota') || errorMsg.contains('rate limit')) {
+        // Extract wait time from error message (default to 60 seconds)
+        int waitSeconds = 60;
+        final match = RegExp(r'retry in (\d+)').firstMatch(errorMsg);
+        if (match != null) {
+          waitSeconds = double.parse(match.group(1)!).ceil();
+        }
+
+        print("Rate limit hit. Waiting $waitSeconds seconds...");
+
+        // Show user-friendly message
+        throw Exception('Gemini API 사용량 초과. ${waitSeconds}초 후에 다시 시도해주세요.');
+      }
+
       print("Gemini API Error: $e");
       throw Exception('Failed to generate prompt: $e');
     }
@@ -141,6 +160,11 @@ class _AiOutfitMakerScreenState extends State<AiOutfitMakerScreen> {
   // Save AI outfit to Firebase
   Future<void> _saveOutfitToFirebase() async {
     if (_generatedImageUrl == null) return;
+
+    if (_AILookbookName.text.trim().isEmpty) {
+      _showSnack('Enter a name for your outfit !');
+      return;
+    }
 
     setState(() => _currentStep = "저장 중...");
 
@@ -172,13 +196,21 @@ class _AiOutfitMakerScreenState extends State<AiOutfitMakerScreen> {
           .collection('lookbooks')
           .add({
         'userId': uid,
-        'imageUrl': downloadUrl,
+        'resultImageUrl': downloadUrl,
         'type': 'ai_generated',
         'sourceImages': widget.selectedImageUrls,
         'createdAt': FieldValue.serverTimestamp(),
+        'inLookbook': true,
+        'publishToCommunity': false,
+        'alias' : _AILookbookName.text.trim(),
       });
 
       _showSnack('AI 룩북이 저장되었습니다!');
+      
+      await Future.delayed(Duration(milliseconds: 800));
+
+      if(!mounted) return;
+      context.pop();
 
     } catch (e) {
       print('Error saving outfit: $e');
@@ -317,18 +349,31 @@ class _AiOutfitMakerScreenState extends State<AiOutfitMakerScreen> {
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
 
             // "Outfit complete!" text
             const Text(
               'Outfit complete!',
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
+            // Enter name of the AI lookbook
+            TextField(
+              // maxLines: maxLines,
+              controller: _AILookbookName,
+              decoration: InputDecoration(
+                label: Text('Name your outfit'),
+                contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+            ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 3),
 
             // Download icon button
             IconButton(
