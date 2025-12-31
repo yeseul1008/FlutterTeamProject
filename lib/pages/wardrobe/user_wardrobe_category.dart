@@ -2,8 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+/// 카테고리 이름 → asset 이미지 매핑
+const Map<String, String> categoryImageMap = {
+  'all': 'assets/categories/all.png',
+  'outer': 'assets/categories/outer.png',
+  'top': 'assets/categories/top.png',
+  'bottom': 'assets/categories/bottom.png',
+  'dress': 'assets/categories/dress.png',
+  'shoes': 'assets/categories/shoes.png',
+  'accessories': 'assets/categories/accessories.png',
+};
+
 class UserWardrobeCategory extends StatelessWidget {
-  final void Function(String categoryId) onSelect; // 문서 ID 반환
+  final void Function(String categoryId) onSelect;
 
   const UserWardrobeCategory({
     super.key,
@@ -29,15 +40,11 @@ class UserWardrobeCategory extends StatelessWidget {
           ),
           title: const Text(
             '카테고리 추가',
-            style: TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold),
           ),
           content: TextField(
             controller: ctrl,
             autofocus: true,
-            style: const TextStyle(color: Colors.black),
             decoration: InputDecoration(
               hintText: '카테고리 이름 입력',
               enabledBorder: OutlineInputBorder(
@@ -53,13 +60,12 @@ class UserWardrobeCategory extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('취소', style: TextStyle(color: Colors.black)),
+              child: const Text('취소'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
                 foregroundColor: Colors.white,
-                elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -101,11 +107,12 @@ class UserWardrobeCategory extends StatelessWidget {
           .orderBy('createdAt')
           .snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
         final docs = snapshot.data!.docs;
 
-        // categories 컬렉션 앞에 "all" 추가
         final categories = [
           {'name': 'all', 'isDefault': true, 'id': 'all'},
           ...docs.map((d) => {
@@ -113,7 +120,7 @@ class UserWardrobeCategory extends StatelessWidget {
             'isDefault': d['isDefault'] ?? false,
             'id': d.id,
           }),
-          null, // 마지막 add 버튼
+          null, // add 버튼
         ];
 
         return Center(
@@ -138,7 +145,8 @@ class UserWardrobeCategory extends StatelessWidget {
                   final doc = categories[index];
                   final isAdd = doc == null;
                   final name = isAdd ? 'add' : doc['name'] as String;
-                  final isDefault = !isAdd && (doc['isDefault'] as bool? ?? false);
+                  final isDefault =
+                      !isAdd && (doc['isDefault'] as bool? ?? false);
                   final docId = !isAdd ? doc['id'] as String : null;
 
                   return GestureDetector(
@@ -146,7 +154,7 @@ class UserWardrobeCategory extends StatelessWidget {
                       if (isAdd) {
                         _showAddCategoryDialog(context);
                       } else {
-                        onSelect(docId!); // 문서 ID 전달
+                        onSelect(docId!);
                       }
                     },
                     child: Stack(
@@ -156,14 +164,40 @@ class UserWardrobeCategory extends StatelessWidget {
                             Expanded(
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: isAdd ? Colors.black : Colors.grey.shade300,
+                                  color: isAdd
+                                      ? Colors.black
+                                      : Colors.grey.shade300,
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: isAdd
                                     ? const Center(
-                                  child: Icon(Icons.add, size: 36, color: Colors.white),
+                                  child: Icon(
+                                    Icons.add,
+                                    size: 36,
+                                    color: Colors.white,
+                                  ),
                                 )
-                                    : null,
+                                    : ClipRRect(
+                                  borderRadius:
+                                  BorderRadius.circular(16),
+                                  child: categoryImageMap
+                                      .containsKey(name)
+                                      ? Image.asset(
+                                    categoryImageMap[name]!,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                  )
+                                      : Container(
+                                    color: Colors.grey.shade400,
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.category,
+                                        size: 30,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -195,7 +229,11 @@ class UserWardrobeCategory extends StatelessWidget {
                                   shape: BoxShape.circle,
                                 ),
                                 padding: const EdgeInsets.all(4),
-                                child: const Icon(Icons.close, size: 16, color: Colors.white),
+                                child: const Icon(
+                                  Icons.close,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           ),
