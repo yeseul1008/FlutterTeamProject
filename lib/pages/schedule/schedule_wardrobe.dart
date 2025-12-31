@@ -48,7 +48,7 @@ class _ScheduleWardrobeState extends State<ScheduleWardrobe> {
     Query<Map<String, dynamic>> ref =
     fs.collection('users').doc(userId).collection('wardrobe');
 
-    if (selectedCategoryId != null && selectedCategoryId!.isNotEmpty) {
+    if (selectedCategoryId != null && selectedCategoryId != 'all') {
       ref = ref.where('categoryId', isEqualTo: selectedCategoryId);
     }
 

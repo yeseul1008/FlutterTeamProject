@@ -1,9 +1,12 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../firebase/firestore_service.dart';
+
+final FirestoreService _firestoreService = FirestoreService();
 
 class ScheduleCombine extends StatefulWidget {
   const ScheduleCombine({super.key, required this.extra});
@@ -31,6 +34,9 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
 
   // ✅ 캡처 순간에만 편집 UI 숨김(테두리/삭제 버튼/리사이즈 핸들)
   bool _isCapturing = false;
+
+  // ✅ 룩북 저장 중
+  bool _isSavingLookbook = false;
 
   @override
   void initState() {
@@ -161,6 +167,102 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
     });
   }
 
+  Future<String?> _askLookbookAlias() async {
+    final controller = TextEditingController();
+
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text(
+            '룩북 이름',
+            style: TextStyle(fontWeight: FontWeight.w900),
+          ),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            maxLength: 30,
+            decoration: const InputDecoration(
+              hintText: '예) 오늘의 코디',
+              counterText: '',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('취소'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final alias = controller.text.trim();
+                if (alias.isEmpty) return;
+                Navigator.pop(ctx, alias);
+              },
+              child: const Text('저장'),
+            ),
+          ],
+        );
+      },
+    );
+
+    return result?.trim().isEmpty == true ? null : result?.trim();
+  }
+
+  Future<void> _saveToLookbook() async {
+    if (_isSavingLookbook) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      _showTempSnack('로그인이 필요합니다.');
+      return;
+    }
+
+    final selected = _canvasItems.keys.toList();
+    if (selected.isEmpty) {
+      _showTempSnack('캔버스에 남은 옷이 없습니다.');
+      return;
+    }
+
+    if (!_imagesReady) {
+      _showTempSnack('이미지 로딩 중입니다.');
+      return;
+    }
+
+    final alias = await _askLookbookAlias();
+    if (alias == null || alias.isEmpty) return;
+
+    setState(() => _isSavingLookbook = true);
+
+    try {
+      final pngBytes = await _captureCanvasPng();
+      if (pngBytes == null || pngBytes.isEmpty) {
+        _showTempSnack('캡처 실패(빈 이미지)');
+        return;
+      }
+
+      final resultImageUrl = await _firestoreService.uploadLookbookCanvasPng(
+        userId: user.uid,
+        pngBytes: pngBytes,
+      );
+
+      await _firestoreService.createLookbookWithFlag(
+        userId: user.uid,
+        alias: alias,
+        resultImageUrl: resultImageUrl,
+        clothesIds: selected,
+        inLookbook: true,
+        publishToCommunity: false,
+      );
+
+      _showTempSnack('룩북에 저장되었습니다.');
+    } catch (_) {
+      _showTempSnack('룩북 저장 실패');
+    } finally {
+      if (mounted) setState(() => _isSavingLookbook = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool hasAny = clothesIds.isNotEmpty;
@@ -186,172 +288,158 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
           ),
         ],
       ),
+
+      // ✅ 캔버스 중앙 배치
       body: !hasAny
           ? const Center(child: Text('선택된 옷이 없습니다.'))
-          : Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-            child: RepaintBoundary(
-              key: _canvasKey,
-              child: Container(
-                height: 320,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  // ✅ 저장 이미지 배경도 깔끔하게 흰색
-                  color: Colors.white,
-                  border: Border.all(color: Colors.black),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Stack(
-                    children: [
-                      if (_canvasItems.isEmpty)
-                        const Center(
-                          child: Text(
-                            '캔버스에 남아있는 옷이 없습니다.\nX로 지운 경우 초기화로 되돌릴 수 있어요.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              color: Colors.black54,
-                            ),
+          : Center(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          child: RepaintBoundary(
+            key: _canvasKey,
+            child: Container(
+              height: 320,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.black),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Stack(
+                  children: [
+                    if (_canvasItems.isEmpty)
+                      const Center(
+                        child: Text(
+                          '캔버스에 남아있는 옷이 없습니다.\nX로 지운 경우 초기화로 되돌릴 수 있어요.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: Colors.black54,
                           ),
                         ),
-                      if (!_imagesReady)
-                        const Positioned(
-                          left: 12,
-                          top: 12,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: Colors.black,
-                              borderRadius: BorderRadius.all(Radius.circular(10)),
-                            ),
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              child: Text(
-                                '이미지 불러오는 중...',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 12,
-                                ),
+                      ),
+                    if (!_imagesReady)
+                      const Positioned(
+                        left: 12,
+                        top: 12,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.black,
+                            borderRadius: BorderRadius.all(Radius.circular(10)),
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            child: Text(
+                              '이미지 불러오는 중...',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12,
                               ),
                             ),
                           ),
                         ),
-                      ..._canvasItems.entries.map((e) {
-                        final id = e.key;
-                        final state = e.value;
-                        final url = imageUrls[id] ?? '';
-                        if (url.isEmpty) return const SizedBox.shrink();
+                      ),
+                    ..._canvasItems.entries.map((e) {
+                      final id = e.key;
+                      final state = e.value;
+                      final url = imageUrls[id] ?? '';
+                      if (url.isEmpty) return const SizedBox.shrink();
 
-                        return Positioned(
-                          left: state.offset.dx,
-                          top: state.offset.dy,
-                          child: _DraggableCanvasItem(
-                            id: id,
-                            imageUrl: url,
-                            scale: state.scale,
-                            hideControls: _isCapturing, // ✅ 캡처 시 숨김
-                            onMove: (delta) {
-                              setState(() {
-                                final cur = _canvasItems[id];
-                                if (cur == null) return;
-                                _canvasItems[id] = cur.copyWith(
-                                  offset: cur.offset + delta,
-                                );
-                              });
-                            },
-                            onScale: (nextScale) {
-                              setState(() {
-                                final cur = _canvasItems[id];
-                                if (cur == null) return;
-                                _canvasItems[id] = cur.copyWith(
-                                  scale: nextScale.clamp(0.6, 1.8),
-                                );
-                              });
-                            },
-                            onRemove: () {
-                              setState(() => _canvasItems.remove(id));
-                            },
-                          ),
-                        );
-                      }),
-                    ],
-                  ),
+                      return Positioned(
+                        left: state.offset.dx,
+                        top: state.offset.dy,
+                        child: _DraggableCanvasItem(
+                          id: id,
+                          imageUrl: url,
+                          scale: state.scale,
+                          hideControls: _isCapturing, // ✅ 캡처 시 숨김
+                          onMove: (delta) {
+                            setState(() {
+                              final cur = _canvasItems[id];
+                              if (cur == null) return;
+                              _canvasItems[id] = cur.copyWith(
+                                offset: cur.offset + delta,
+                              );
+                            });
+                          },
+                          onScale: (nextScale) {
+                            setState(() {
+                              final cur = _canvasItems[id];
+                              if (cur == null) return;
+                              _canvasItems[id] = cur.copyWith(
+                                scale: nextScale.clamp(0.6, 1.8),
+                              );
+                            });
+                          },
+                          onRemove: () {
+                            setState(() => _canvasItems.remove(id));
+                          },
+                        ),
+                      );
+                    }),
+                  ],
                 ),
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _showTempSnack('AI생성 결과 보기는 추후 연결'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.black,
-                      side: const BorderSide(color: Colors.black),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+        ),
+      ),
+
+      // ✅ 희끗한 배경/그림자 제거된 하단 버튼 2개만
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: (_canvasItems.isEmpty || !_imagesReady || _isSavingLookbook)
+                      ? null
+                      : _saveToLookbook,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.black,
+                    side: const BorderSide(color: Colors.black, width: 1.2),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Text(
-                      'AI생성 결과 보기',
-                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
-                      textAlign: TextAlign.center,
-                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: Text(
+                    _isSavingLookbook ? '저장 중...' : '룩북에 저장하기',
+                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
+                    textAlign: TextAlign.center,
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _showTempSnack('코디로 저장하기는 추후 연결'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.black,
-                      side: const BorderSide(color: Colors.black),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: (_canvasItems.isEmpty || !_imagesReady) ? null : _goToAddSchedule,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFCAD83B),
+                    foregroundColor: Colors.black,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: const BorderSide(color: Colors.black, width: 1.2),
                     ),
-                    child: const Text(
-                      '룩북에 저장하기',
-                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
-                      textAlign: TextAlign.center,
-                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: Text(
+                    !_imagesReady ? '이미지 로딩중...' : '코디 생성 완료',
+                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
+                    textAlign: TextAlign.center,
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: (_canvasItems.isEmpty || !_imagesReady)
-                        ? null
-                        : _goToAddSchedule,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFCAD83B),
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        side: const BorderSide(color: Colors.black),
-                      ),
-                      elevation: 2,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: Text(
-                      !_imagesReady ? '이미지 로딩중...' : '코디 생성 완료',
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

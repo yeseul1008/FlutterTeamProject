@@ -10,10 +10,10 @@ class UserScheduleCalendar extends StatefulWidget {
   const UserScheduleCalendar({super.key});
 
   @override
-  State<UserScheduleCalendar> createState() => _UserScheduleCalendarState();
+  State<UserScheduleCalendar> createState() => UserScheduleCalendarState();
 }
 
-class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
+class UserScheduleCalendarState extends State<UserScheduleCalendar> {
   final FirebaseFirestore fs = FirebaseFirestore.instance;
   final String? userId = FirebaseAuth.instance.currentUser?.uid;
 
