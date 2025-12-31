@@ -4,11 +4,31 @@
     <uses-permission android:name="android.permission.INTERNET"/>
 
 
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>ㅅ
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <application
         android:label="team_project_flutter"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+
+        <!-- 카카오 SDK App Key -->
+        <meta-data
+            android:name="com.kakao.sdk.AppKey"
+            android:value="d965237ababfd11fc09f8f3314a782cc" />
+
+        <!-- 카카오톡 공유를 위한 Custom URL Scheme 설정 -->
+        <activity
+            android:name="com.kakao.sdk.flutter.AuthCodeCustomTabsActivity"
+            android:exported="true">
+            <intent-filter android:label="flutter_web_auth">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <!-- kakao{NATIVE_APP_KEY}://oauth 형식 -->
+                <data android:scheme="kakaod965237ababfd11fc09f8f3314a782cc"
+                    android:host="oauth"/>
+            </intent-filter>
+        </activity>
 
         <activity
             android:name=".MainActivity"
@@ -37,9 +57,6 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyBO2BgSMtsxin9A8SXXBfprPGKLVy2CxRA"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
@@ -51,5 +68,7 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- 카카오톡 앱 확인을 위한 쿼리 -->
+        <package android:name="com.kakao.talk" />
     </queries>
 </manifest>

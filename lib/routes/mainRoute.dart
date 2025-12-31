@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:team_project_flutter/pages/schedule/schedule_lookbook.dart';
 import 'package:team_project_flutter/pages/wardrobe/user_wardrobe_edit.dart';
 
+// import '../pages/profile/user_schedule_edit.dart';
 import '../routePage1.dart';
 import '../routePage2.dart';
 
@@ -32,7 +33,7 @@ import '../pages/wardrobe/user_lookbook_add.dart';
 import '../pages/wardrobe/user_scrap.dart';
 import '../pages/wardrobe/user_scrap_view.dart';
 import '../pages/wardrobe/user_wardrobe_add.dart';
-import '../pages/wardrobe/user_wardrobe_category.dart';
+import '../pages/wardrobe/outfit_maker_result.dart';
 import '../pages/wardrobe/user_wardrobe_list.dart';
 import '../pages/wardrobe/user_wardrobe_detail.dart';
 import '../widgets/common/bottom_nav_bar.dart';
@@ -290,6 +291,23 @@ final GoRouter router = GoRouter(
             );
           },
         ),
+        GoRoute(
+          path: '/aiOutfitMakerScreen',
+          builder: (context, state) {
+            // state.extra를 List<String>으로 형변환
+            final List<String>? extra = state.extra as List<String>?;
+
+            if (extra != null) {
+              return AiOutfitMakerScreen(selectedImageUrls: extra);
+            } else {
+              return const Scaffold(
+                body: Center(child: Text('선택된 옷이 없습니다.')),
+              );
+            }
+          },
+        ),
+
+
       ],
     ),
   ],

@@ -2,8 +2,10 @@ import 'dart:io'; // File 사용
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-/// Stateless → Stateful (이미지 상태 필요)
 class QuestionAdd extends StatefulWidget {
   const QuestionAdd({super.key});
 
@@ -12,20 +14,96 @@ class QuestionAdd extends StatefulWidget {
 }
 
 class _QuestionAddState extends State<QuestionAdd> {
-  /// [추가] 이미지 피커 & 선택된 이미지
   final ImagePicker _picker = ImagePicker();
   XFile? _pickedImage;
 
-  /// [추가] 이미지 선택 함수
+  /// ================================
+  /// 질문 입력 컨트롤러
+  final TextEditingController _questionController =
+  TextEditingController();
+
+  /// post 버튼 활성화 여부
+  bool _canPost = false;
+
+  /// 이미지 선택
   Future<void> _pickImage() async {
-    final XFile? image =
-    await _picker.pickImage(source: ImageSource.gallery);
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 1080,
+    );
+
+    debugPrint('📸 picked image path: ${image?.path}');
 
     if (image != null) {
       setState(() {
         _pickedImage = image;
       });
+      _checkCanPost();
+    } else {
+      debugPrint('❌ image picker returned null');
     }
+  }
+  /// ================================
+
+  /// ================================
+  /// post 버튼 활성화 체크
+  void _checkCanPost() {
+    final hasText = _questionController.text.trim().isNotEmpty;
+    final hasImage = _pickedImage != null;
+
+    setState(() {
+      _canPost = hasText || hasImage;
+    });
+  }
+
+  /// post 저장 로직 (핵심)
+  Future<void> _submitPost() async {
+    try {
+      debugPrint('submit start');
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      String? imageUrl;
+
+      // 이미지 있으면 Storage 업로드
+      if (_pickedImage != null) {
+        debugPrint('image upload start');
+        final ref = FirebaseStorage.instance
+            .ref()
+            .child('question_images')
+            .child(
+          '${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        );
+
+        await ref.putFile(File(_pickedImage!.path));
+        imageUrl = await ref.getDownloadURL();
+
+        debugPrint('image uploaded: $imageUrl');
+      }
+
+      // Firestore 저장
+      await FirebaseFirestore.instance
+          .collection('questions')
+          .add({
+        'text': _questionController.text.trim(),
+        'imageUrl': imageUrl,  // imageUrl을 제대로 Firestore에 저장
+        'authorId': user.uid,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      debugPrint('Firestore post added');
+      // 피드 이동
+      context.go('/questionFeed');
+    } catch (e) {
+      debugPrint('post upload error: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _questionController.dispose();
+    super.dispose();
   }
 
   @override
@@ -141,7 +219,6 @@ class _QuestionAddState extends State<QuestionAdd> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  /// 닫기 버튼
                   Align(
                     alignment: Alignment.centerRight,
                     child: IconButton(
@@ -165,7 +242,7 @@ class _QuestionAddState extends State<QuestionAdd> {
 
                   const SizedBox(height: 24),
 
-                  /// 질문 입력 박스
+                  /// 질문 입력
                   Container(
                     height: 120,
                     padding: const EdgeInsets.all(12),
@@ -173,10 +250,12 @@ class _QuestionAddState extends State<QuestionAdd> {
                       border: Border.all(color: Colors.black),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const TextField(
+                    child: TextField(
+                      controller: _questionController,
+                      onChanged: (_) => _checkCanPost(),
                       maxLines: null,
                       expands: true,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         hintText: 'Write your question...',
                         border: InputBorder.none,
                       ),
@@ -185,9 +264,9 @@ class _QuestionAddState extends State<QuestionAdd> {
 
                   const SizedBox(height: 24),
 
-                  ///  [수정] 이미지 추가 + 미리보기
+                  /// 이미지 추가
                   GestureDetector(
-                    onTap: _pickImage, // 클릭 시 갤러리
+                    onTap: _pickImage,
                     child: Column(
                       children: [
                         Container(
@@ -198,10 +277,7 @@ class _QuestionAddState extends State<QuestionAdd> {
                           ),
                           child: _pickedImage == null
                               ? const Center(
-                            child: Icon(
-                              Icons.add,
-                              size: 48,
-                            ),
+                            child: Icon(Icons.add, size: 48),
                           )
                               : Image.file(
                             File(_pickedImage!.path),
@@ -219,17 +295,16 @@ class _QuestionAddState extends State<QuestionAdd> {
 
                   const Spacer(),
 
-                  /// Post 버튼
+                  /// post 버튼
                   SizedBox(
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () {
-                        /// 다음 단계:
-                        /// 1. Firebase Storage 업로드
-                        /// 2. Firestore에 질문 + 이미지 URL 저장
-                      },
+                      onPressed: _canPost
+                          ? _submitPost // 🔧 [연결]
+                          : null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFCAD83B),
+                        backgroundColor:
+                        const Color(0xFFCAD83B),
                         foregroundColor: Colors.black,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),

@@ -30,6 +30,21 @@ class UserWardrobeDetail extends StatelessWidget {
     return '${date.year}.${date.month.toString().padLeft(2, '0')}.${date.day.toString().padLeft(2, '0')}';
   }
 
+// 카테고리 이름 가져오기 함수
+  Future<String?> _getCategoryName(String userId, String categoryId) async {
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('categories')
+        .doc(categoryId)
+        .get();
+
+    if (doc.exists) {
+      return doc.data()?['name'] as String?;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (docId == null) {
@@ -86,16 +101,32 @@ class UserWardrobeDetail extends StatelessWidget {
               children: [
                 // 카테고리 출력
                 if (data['categoryId'] != null && data['categoryId'] != '')
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Text(
-                      '카테고리: ${data['categoryId']}',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  FutureBuilder<String?>(
+                    future: _getCategoryName(userId, data['categoryId']),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Padding(
+                          padding: EdgeInsets.only(bottom: 12),
+                          child: Text('카테고리: 로딩중...',
+                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                        );
+                      }
+                      if (!snapshot.hasData || snapshot.data == null) {
+                        return const SizedBox.shrink(); // 없으면 그냥 안 보여줌
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Text(
+                          '카테고리: ${snapshot.data}',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      );
+                    },
                   ),
+
 
                 // 이미지 출력
                 if (data['imageUrl'] != null && data['imageUrl'] != '')

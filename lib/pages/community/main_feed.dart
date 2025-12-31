@@ -33,19 +33,15 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
 
     try {
       // where 조건 제거하고 모든 문서 가져오기 (테스트용)
-      // 실제로는 특정 조건으로 필터링해야 합니다
       final qnaPostSnapshot = await fs
           .collection('qna_posts')
           .limit(1) // 첫 번째 문서만 가져오기
           .get();
 
-      print('Number of documents found: ${qnaPostSnapshot.docs.length}');
-
       if (qnaPostSnapshot.docs.isNotEmpty) {
         setState(() {
           qnaPost = qnaPostSnapshot.docs.first.data();
           qnaPostId = qnaPostSnapshot.docs.first.id;
-          print('Post data: $qnaPost');
 
           likeCount = qnaPost['likeCount'] ?? 0;
           List<dynamic> likedUsers = qnaPost['likedUsers'] ?? [];
@@ -61,7 +57,6 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
         });
       }
     } catch (e) {
-      print('Error getting post: $e');
       setState(() {
         isLoading = false;
         errorMessage = '데이터를 불러오는 중 오류가 발생했습니다: $e';
@@ -143,18 +138,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
     );
   }
 
-  // 게시글 옵션 메뉴 - 다이얼로그 스타일로 변경
   void _showPostOptionsMenu(String postAuthorId) {
-    // // 실제 게시글 작성자와 현재 사용자 비교
-    // String actualAuthorId = qnaPost['authorId'] ?? '';
-    //
-    // if (actualAuthorId != userId) {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     const SnackBar(content: Text('본인의 게시글만 수정/삭제할 수 있습니다')),
-    //   );
-    //   return;
-    // }
-
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -309,7 +293,6 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
                   qnaPostId = '';
                 });
 
-                // 삭제 후 다시 데이터 로드
                 await _getQnaPost();
               } catch (e) {
                 print('Error deleting post: $e');
@@ -368,8 +351,6 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
           Expanded(
             child: Stack(
               children: [
-                /// ===== Feed 게시글 표시 =====
-                // 로딩, 에러, 데이터 없음 상태 처리
                 isLoading
                     ? Center(child: CircularProgressIndicator())
                     : errorMessage.isNotEmpty
@@ -425,7 +406,6 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
     );
   }
 
-  /// ===== 상단 버튼 공통 =====
   Widget _topButton({
     required String text,
     required bool active,
@@ -458,7 +438,6 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
     );
   }
 
-  /// ===== QnA 카드 UI =====
   Widget _qnaItem({
     required String nickname,
     required String authorId,
@@ -485,11 +464,9 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
             padding: EdgeInsets.all(16),
             child: Row(
               children: [
-                // 프로필 아이콘을 InkWell로 감싸서 클릭 가능하게
                 InkWell(
                   onTap: () {
-                    // 작성자의 워드로브 페이지로 이동
-                    context.push('/userDiaryCards', extra: {
+                    context.push('/publicWardrobe', extra: {
                       'userId': authorId,
                       'nickname': nickname,
                     });
@@ -509,10 +486,9 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 닉네임도 클릭 가능하게
                       InkWell(
                         onTap: () {
-                          context.push('/userDiaryCards', extra: {
+                          context.push('/publicLookBook', extra: {
                             'userId': authorId,
                             'nickname': nickname,
                           });
@@ -544,8 +520,6 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
               ],
             ),
           ),
-
-          // content 표시
           if (qnaPost['content'] != null && qnaPost['content'].toString().isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -554,9 +528,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
                 style: TextStyle(fontSize: 14),
               ),
             ),
-
           const SizedBox(height: 12),
-
           Container(
             width: double.infinity,
             height: 280,
@@ -582,9 +554,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
               ),
             ),
           ),
-
           const SizedBox(height: 12),
-
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Row(

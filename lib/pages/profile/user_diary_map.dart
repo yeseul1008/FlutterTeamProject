@@ -1,9 +1,12 @@
+import 'dart:io';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:image_picker/image_picker.dart';
 
 class DiaryMap extends StatefulWidget {
   const DiaryMap({super.key});
@@ -14,8 +17,14 @@ class DiaryMap extends StatefulWidget {
 
 class _DiaryMapState extends State<DiaryMap> {
   final FirebaseFirestore fs = FirebaseFirestore.instance;
+  final FirebaseStorage storage = FirebaseStorage.instance;
+
   Map<String, dynamic> userInfo = {};
   int lookbookCnt = 0;
+  int itemCnt = 0;
+  File? selectedImage;
+  bool isProcessingImage = false;
+  String? profileImageUrl;
 
   // Google Maps variables
   GoogleMapController? _mapController;
@@ -46,12 +55,21 @@ class _DiaryMapState extends State<DiaryMap> {
         .where('userId', isEqualTo: uid)
         .get();
 
+    // Get items count
+    final wardrobeSnapshot = await fs
+        .collection('users')
+        .doc(uid)
+        .collection('wardrobe')
+        .get();
+
     final userSnapshot = await fs.collection('users').doc(uid).get();
 
     if (!mounted) return;
     setState(() {
       userInfo = userSnapshot.data() ?? {'userId': uid};
+      itemCnt = wardrobeSnapshot.docs.length;
       lookbookCnt = lookbookSnapshot.docs.length;
+      profileImageUrl = userInfo['profileImageUrl'];
     });
   }
 
@@ -194,13 +212,13 @@ class _DiaryMapState extends State<DiaryMap> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Align(
-                  alignment: Alignment.topRight,
-                  child: IconButton(
-                    icon: Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ),
+                // Align(
+                //   alignment: Alignment.topRight,
+                //   child: IconButton(
+                //     icon: Icon(Icons.close),
+                //     onPressed: () => Navigator.pop(context),
+                //   ),
+                // ),
 
                 Padding(
                   padding: EdgeInsets.all(16),
@@ -271,15 +289,13 @@ class _DiaryMapState extends State<DiaryMap> {
                       SizedBox(height: 16),
 
                       if (diary['comment'] != null && diary['comment'].toString().isNotEmpty)
-                        Container(
-                          padding: EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            diary['comment'],
-                            style: TextStyle(fontSize: 14),
+                        Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(
+                            child: Text(
+                              '${diary['comment'] ?? "No comment"}',
+                              style: TextStyle(fontSize: 14),
+                            ),
                           ),
                         ),
                     ],
@@ -291,6 +307,68 @@ class _DiaryMapState extends State<DiaryMap> {
         ),
       ),
     );
+  }
+
+  // Function to select a profile picture
+
+  // 이미지 확대/이동 컨트롤러
+  final TransformationController _transformController =
+  TransformationController();
+
+  Future<void> _pickImage() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      _showSnack('로그인 상태가 아닙니다');
+      return;
+    }
+
+    final picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,  // Optimize image size
+      maxHeight: 800,
+      imageQuality: 85,
+    );
+
+    if (image == null) return;
+
+    setState(() => isProcessingImage = true);
+
+    try {
+      final File imageFile = File(image.path);
+
+      // Create a reference to Firebase Storage
+      final String fileName = 'profile_$uid.jpg';
+      final Reference storageRef = storage
+          .ref('user_profile_pictures/${fileName}');
+
+      // Upload the file
+      final UploadTask uploadTask = storageRef.putFile(imageFile);
+
+      // Wait for upload to complete
+      final TaskSnapshot snapshot = await uploadTask;
+
+      // Get download URL
+      final String downloadUrl = await snapshot.ref.getDownloadURL();
+
+      // Update Firestore with the new profile image URL
+      await fs.collection('users').doc(uid).update({
+        'profileImageUrl': downloadUrl,
+      });
+
+      setState(() {
+        selectedImage = imageFile;
+        profileImageUrl = downloadUrl;
+      });
+
+      _showSnack('프로필 사진이 업데이트되었습니다');
+
+    } catch (e) {
+      print('Error uploading profile image: $e');
+      _showSnack('프로필 사진 업로드 실패: $e');
+    } finally {
+      setState(() => isProcessingImage = false);
+    }
   }
 
   @override
@@ -390,6 +468,14 @@ class _DiaryMapState extends State<DiaryMap> {
               ),
               const SizedBox(height: 12),
               ListTile(
+                leading: const Icon(Icons.person),
+                title: const Text('개인정보'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  context.go('/profileEdit');
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.star_border),
                 title: const Text('구독하기'),
                 onTap: () {
@@ -428,6 +514,7 @@ class _DiaryMapState extends State<DiaryMap> {
     final topPad = MediaQuery.of(context).padding.top;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           // Custom AppBar
@@ -437,10 +524,58 @@ class _DiaryMapState extends State<DiaryMap> {
             color: Colors.black,
             child: Stack(
               children: [
-                const Positioned(
+                Positioned(
                   left: 15,
                   top: 40,
-                  child: CircleAvatar(radius: 40),
+                  child: GestureDetector(
+                    onTap: isProcessingImage ? null : _pickImage,
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 40,
+                          backgroundColor: Colors.grey[300],
+                          backgroundImage: profileImageUrl != null
+                              ? NetworkImage(profileImageUrl!)
+                              : null,
+                          child: profileImageUrl == null
+                              ? Icon(
+                            Icons.person,
+                            size: 40,
+                            color: Colors.grey[600],
+                          )
+                              : null,
+                        ),
+                        if (isProcessingImage)
+                          Positioned.fill(
+                            child: CircleAvatar(
+                              radius: 40,
+                              backgroundColor: Colors.black54,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.black, width: 1),
+                            ),
+                            child: Icon(
+                              Icons.camera_alt,
+                              size: 16,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 Positioned(
                   top: 20,
@@ -449,15 +584,15 @@ class _DiaryMapState extends State<DiaryMap> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        "${userInfo['userId'] ?? 'UID'} \n@${userInfo['nickname'] ?? 'nickname'}",
+                        "${userInfo['nickname'] ?? 'UID'} \n@${userInfo['loginId'] ?? 'user ID'}",
                         style: const TextStyle(color: Colors.white),
                       ),
                       const SizedBox(height: 15),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
-                            "0 \nitems",
+                          Text(
+                            "${itemCnt} \nitems",
                             textAlign: TextAlign.center,
                             style: TextStyle(color: Colors.white),
                           ),
@@ -576,19 +711,48 @@ class _DiaryMapState extends State<DiaryMap> {
 
           const SizedBox(height: 20),
 
-          // Search Field - UPDATED
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search location (예: 서울역)',
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: () => _searchLocation(_searchController.text),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    onSubmitted: (_) => _searchLocation(_searchController.text),
+                    decoration: InputDecoration(
+                      hintText: '예) 강남역, 성수동, 홍대입구',
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.black),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.black, width: 1.2),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              onSubmitted: (value) => _searchLocation(value),
+                const SizedBox(width: 8),
+                SizedBox(
+                  height: 44,
+                  child: ElevatedButton(
+                    onPressed: () => _searchLocation(_searchController.text),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('검색'),
+                  ),
+                ),
+              ],
             ),
           ),
 
