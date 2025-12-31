@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../firebase/firestore_service.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class UserLogin extends StatefulWidget {
   const UserLogin({super.key});
@@ -137,7 +138,7 @@ class _UserLoginState extends State<UserLogin> {
 
   @override
   Widget build(BuildContext context) {
-    const bg = Color(0xFF0B0B0F);
+    const bg = Color(0xFFFFFFFF);
     const purple = Color(0xFFA88AF7);
     const border = Color(0xFF7B64D6);
     const textGrey = Color(0xFFB8B8C2);
@@ -151,71 +152,55 @@ class _UserLoginState extends State<UserLogin> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 28),
                 Center(
-                  child: Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFFB248C6), Color(0xFF6E62FF)],
-                      ),
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.35),
-                          blurRadius: 14,
-                          offset: const Offset(0, 6),
-                        )
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.checkroom_outlined,
-                      color: Colors.white,
-                      size: 34,
-                    ),
+                  child: Image.asset(
+                    'assets/applogo.png',
+                    width: 220,
+                    fit: BoxFit.contain,
                   ),
                 ),
-                const SizedBox(height: 10),
-                const Center(
-                  child: Text(
-                    'What you wear?',
-                    style: TextStyle(
-                      color: textGrey,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                const SizedBox(height: 54),
+                // const Center(
+                //   child: Text(
+                //     'My Outfits Daily Everyday',
+                //     style: GoogleFonts.Inter(
+                //       fontSize: 16,
+                //       fontWeight: FontWeight.w500,
+                //       color: Colors.white70,
+                //       letterSpacing: 0.5,
+                //     ),
+                //   ),
+                // ),
+                const Text(
+                  '아이디',
+                  style: TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.w700,),
                 ),
-                const SizedBox(height: 26),
-                const Text('아이디',
-                    style: TextStyle(color: textGrey, fontSize: 12)),
                 const SizedBox(height: 8),
                 _InputField(
                   controller: _idController,
                   hintText: '아이디 입력',
                   icon: Icons.account_circle_outlined,
                   borderColor: border,
-                  hintColor: textGrey,
-                  textColor: Colors.white,
+                  hintColor: Colors.black54,
+                  textColor: Colors.black87,
                 ),
                 const SizedBox(height: 16),
-                const Text('비밀번호',
-                    style: TextStyle(color: textGrey, fontSize: 12)),
+                const Text(
+                  '비밀번호',
+                  style: TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.w700,),
+                ),
                 const SizedBox(height: 8),
                 _InputField(
                   controller: _pwController,
                   hintText: '비밀번호 입력',
                   icon: Icons.lock_outline,
                   borderColor: border,
-                  hintColor: textGrey,
-                  textColor: Colors.white,
+                  hintColor: Colors.black54,
+                  textColor: Colors.black87,
                   obscureText: true,
                 ),
                 const SizedBox(height: 18),
+
                 SizedBox(
                   height: 46,
                   child: ElevatedButton(
@@ -240,28 +225,32 @@ class _UserLoginState extends State<UserLogin> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 18),
                 Row(
                   children: [
-                    Expanded(
+                    const Expanded(
                       child: Divider(
-                        color: Colors.white.withOpacity(0.25),
+                        color: Colors.black26,
                         thickness: 1,
                       ),
                     ),
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 10),
-                      child: Text('또는',
-                          style: TextStyle(color: textGrey, fontSize: 12)),
+                      child: Text(
+                        '또는',
+                        style: TextStyle(color: Colors.black54, fontSize: 12),
+                      ),
                     ),
-                    Expanded(
+                    const Expanded(
                       child: Divider(
-                        color: Colors.white.withOpacity(0.25),
+                        color: Colors.black26,
                         thickness: 1,
                       ),
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 14),
                 SizedBox(
                   height: 46,
@@ -273,53 +262,60 @@ class _UserLoginState extends State<UserLogin> {
                       backgroundColor: Colors.white,
                       foregroundColor: Colors.black87,
                       elevation: 0,
+                      side: const BorderSide(
+                        color: Colors.black26,
+                        width: 1.2,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text('G',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w800, fontSize: 14)),
-                        SizedBox(width: 10),
-                        Text('Google로 시작하기',
-                            style: TextStyle(fontWeight: FontWeight.w700)),
+                        Image.asset(
+                          'assets/googleLogo.png',
+                          width: 18,
+                          height: 18,
+                        ),
+                        const SizedBox(width: 10),
+                        const Text(
+                          'Google로 시작하기',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ],
                     ),
+
                   ),
                 ),
+
                 const SizedBox(height: 26),
                 Center(
                   child: TextButton(
                     onPressed: () => context.go('/findId'),
-                    child: Text(
+                    child: const Text(
                       '계정을 잃으셨나요?',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.65),
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: Colors.black87, fontSize: 12, fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
+                    const Text(
                       '계정이 없으신가요? ',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.75),
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: Colors.black87, fontSize: 12, fontWeight: FontWeight.w700,),
                     ),
                     GestureDetector(
                       onTap: () => context.go('/userJoin'),
                       child: const Text(
                         '회원가입',
                         style: TextStyle(
-                          color: border,
+                          color: border, // 포인트 컬러 유지
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
@@ -359,29 +355,50 @@ class _InputField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 44,
+      height: 48,
       child: TextField(
         controller: controller,
         obscureText: obscureText,
-        style: TextStyle(color: textColor, fontSize: 14),
-        cursorColor: borderColor,
+        style: const TextStyle(
+          color: Colors.black87,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        cursorColor: Colors.black,
         decoration: InputDecoration(
           isDense: true,
+          filled: true,
+          fillColor: Colors.white,
+
           hintText: hintText,
-          hintStyle:
-          TextStyle(color: hintColor.withOpacity(0.7), fontSize: 13),
-          prefixIcon:
-          Icon(icon, color: hintColor.withOpacity(0.9), size: 20),
+          hintStyle: const TextStyle(
+            color: Colors.black45,
+            fontSize: 13,
+          ),
+
+          prefixIcon: Icon(
+            icon,
+            color: Colors.black54,
+            size: 20,
+          ),
+
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: borderColor, width: 1.2),
+            borderRadius: BorderRadius.circular(999),
+            borderSide: const BorderSide(
+              color: Colors.black,
+              width: 1.2,
+            ),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: borderColor, width: 1.6),
+            borderRadius: BorderRadius.circular(999),
+            borderSide: const BorderSide(
+              color: Colors.black,
+              width: 1.6,
+            ),
           ),
         ),
       ),
     );
   }
 }
+
