@@ -1,7 +1,10 @@
+import 'dart:io';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
 
 class UserDiaryCards extends StatefulWidget {
   const UserDiaryCards({super.key});
@@ -12,10 +15,15 @@ class UserDiaryCards extends StatefulWidget {
 
 class _UserDiaryCardsState extends State<UserDiaryCards> {
   final FirebaseFirestore fs = FirebaseFirestore.instance;
+  final FirebaseStorage storage = FirebaseStorage.instance;
 
   Map<String, dynamic> userInfo = {};
   List<Map<String, dynamic>> userDiaries = [];
   int lookbookCnt = 0;
+  int itemCnt = 0;
+  File? selectedImage;
+  bool isProcessingImage = false;
+  String? profileImageUrl;
 
   String formatKoreanDate(Timestamp? timestamp) {
     if (timestamp == null) return '날짜 없음';
@@ -46,21 +54,32 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
         .where('userId', isEqualTo: uid)
         .get();
 
+    // Get items count
+    final wardrobeSnapshot = await fs
+      .collection('users')
+      .doc(uid)
+      .collection('wardrobe')
+      .get();
+
     final userSnapshot = await fs.collection('users').doc(uid).get();
 
     if (!mounted) return;
     setState(() {
       userInfo = userSnapshot.data() ?? {'userId': uid};
       lookbookCnt = lookbookSnapshot.docs.length;
+      itemCnt = wardrobeSnapshot.docs.length;
       userDiaries = diariesSnapshot.docs.map((doc) {
         final data = doc.data();
         data['diaryId'] = doc.id;
         data['formattedDate'] = formatKoreanDate(data['date']);
         return data;
       }).toList();
+      profileImageUrl = userInfo['profileImageUrl'];
     });
 
-    print('Diaries count: ${userDiaries.length}');
+    print('Number of diary entries: ${userDiaries.length}');
+    print('Number of lookbooks : ${lookbookCnt}');
+    print('Number of items in the wardrobe : ${itemCnt}');
   }
 
   @override
@@ -392,6 +411,68 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
     );
   }
 
+  // Function to select a profile picture
+
+  // 이미지 확대/이동 컨트롤러
+  final TransformationController _transformController =
+  TransformationController();
+
+  Future<void> _pickImage() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      _showSnack('로그인 상태가 아닙니다');
+      return;
+    }
+
+    final picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,  // Optimize image size
+      maxHeight: 800,
+      imageQuality: 85,
+    );
+
+    if (image == null) return;
+
+    setState(() => isProcessingImage = true);
+
+    try {
+      final File imageFile = File(image.path);
+
+      // Create a reference to Firebase Storage
+      final String fileName = 'profile_$uid.jpg';
+      final Reference storageRef = storage
+          .ref('user_profile_pictures/${fileName}');
+
+      // Upload the file
+      final UploadTask uploadTask = storageRef.putFile(imageFile);
+
+      // Wait for upload to complete
+      final TaskSnapshot snapshot = await uploadTask;
+
+      // Get download URL
+      final String downloadUrl = await snapshot.ref.getDownloadURL();
+
+      // Update Firestore with the new profile image URL
+      await fs.collection('users').doc(uid).update({
+        'profileImageUrl': downloadUrl,
+      });
+
+      setState(() {
+        selectedImage = imageFile;
+        profileImageUrl = downloadUrl;
+      });
+
+      _showSnack('프로필 사진이 업데이트되었습니다');
+
+    } catch (e) {
+      print('Error uploading profile image: $e');
+      _showSnack('프로필 사진 업로드 실패: $e');
+    } finally {
+      setState(() => isProcessingImage = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
@@ -407,37 +488,87 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
             color: Colors.black,
             child: Stack(
               children: [
-                const Positioned(
+                Positioned(
                   left: 15,
                   top: 40,
-                  child: CircleAvatar(radius: 40),
+                  child: GestureDetector(
+                    onTap: isProcessingImage ? null : _pickImage,
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 40,
+                          backgroundColor: Colors.grey[300],
+                          backgroundImage: profileImageUrl != null
+                              ? NetworkImage(profileImageUrl!)
+                              : null,
+                          child: profileImageUrl == null
+                              ? Icon(
+                            Icons.person,
+                            size: 40,
+                            color: Colors.grey[600],
+                          )
+                              : null,
+                        ),
+                        if (isProcessingImage)
+                          Positioned.fill(
+                            child: CircleAvatar(
+                              radius: 40,
+                              backgroundColor: Colors.black54,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.black, width: 1),
+                            ),
+                            child: Icon(
+                              Icons.camera_alt,
+                              size: 16,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 Positioned(
-                  top: 20,
+                  top: 25,
                   left: 130,
+                  right: 70,
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         "${userInfo['nickname'] ?? 'UID'} \n@${userInfo['loginId'] ?? 'user ID'}",
                         style: const TextStyle(color: Colors.white),
                       ),
-                      const SizedBox(height: 15),
+                      const SizedBox(height: 10),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
-                            "0 \nitems",
+                          Text(
+                            "$itemCnt \nitems",
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.white),
+                            style: const TextStyle(color: Colors.white),
                           ),
-                          const SizedBox(width: 20),
+                          const SizedBox(width: 15),
                           Text(
                             "$lookbookCnt \nlookbook",
                             textAlign: TextAlign.center,
                             style: const TextStyle(color: Colors.white),
                           ),
-                          const SizedBox(width: 20),
+                          const SizedBox(width: 15),
                           const Text(
                             "0 \nAI lookbook",
                             textAlign: TextAlign.center,
@@ -448,7 +579,8 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
                       const SizedBox(height: 10),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(150, 35),
+                          minimumSize: const Size(140, 32),
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         ),
                         onPressed: () => context.go('/calendarPage'),
                         child: const Text(
@@ -456,6 +588,7 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
                           style: TextStyle(
                             color: Colors.black,
                             fontWeight: FontWeight.bold,
+                            fontSize: 14,
                           ),
                         ),
                       ),
