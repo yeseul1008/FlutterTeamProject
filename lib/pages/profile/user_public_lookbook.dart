@@ -1,7 +1,10 @@
+import 'dart:io';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
 
 class PublicLookBook extends StatefulWidget {
   const PublicLookBook({super.key});
@@ -12,10 +15,15 @@ class PublicLookBook extends StatefulWidget {
 
 class _UserDiaryCardsState extends State<PublicLookBook> {
   final FirebaseFirestore fs = FirebaseFirestore.instance;
+  final FirebaseStorage storage = FirebaseStorage.instance;
 
   Map<String, dynamic> userInfo = {};
-  List<Map<String, dynamic>> userLookbook = [];
+  List<Map<String, dynamic>> userDiaries = [];
   int lookbookCnt = 0;
+  int itemCnt = 0;
+  File? selectedImage;
+  bool isProcessingImage = false;
+  String? profileImageUrl;
 
   String formatKoreanDate(Timestamp? timestamp) {
     if (timestamp == null) return '날짜 없음';
@@ -32,9 +40,25 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
       return;
     }
 
+    // Get diaries from subcollection
+    final diariesSnapshot = await fs
+        .collection('users')
+        .doc(uid)
+        .collection('diaries')
+        .orderBy('createdAt', descending: true)
+        .get();
+
+    // Get lookbook count
     final lookbookSnapshot = await fs
         .collection('lookbooks')
         .where('userId', isEqualTo: uid)
+        .get();
+
+    // Get items count
+    final wardrobeSnapshot = await fs
+        .collection('users')
+        .doc(uid)
+        .collection('wardrobe')
         .get();
 
     final userSnapshot = await fs.collection('users').doc(uid).get();
@@ -43,13 +67,19 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
     setState(() {
       userInfo = userSnapshot.data() ?? {'userId': uid};
       lookbookCnt = lookbookSnapshot.docs.length;
-      userLookbook = lookbookSnapshot.docs.map((doc) {
+      itemCnt = wardrobeSnapshot.docs.length;
+      userDiaries = diariesSnapshot.docs.map((doc) {
         final data = doc.data();
-        data['lookbookId'] = doc.id;
-        data['formattedDate'] = formatKoreanDate(data['createdAt']);
+        data['diaryId'] = doc.id;
+        data['formattedDate'] = formatKoreanDate(data['date']);
         return data;
       }).toList();
+      profileImageUrl = userInfo['profileImageUrl'];
     });
+
+    print('Number of diary entries: ${userDiaries.length}');
+    print('Number of lookbooks : ${lookbookCnt}');
+    print('Number of items in the wardrobe : ${itemCnt}');
   }
 
   @override
@@ -142,6 +172,14 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
               ),
               const SizedBox(height: 12),
               ListTile(
+                leading: const Icon(Icons.person),
+                title: const Text('개인정보'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  context.go('/profileEdit');
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.star_border),
                 title: const Text('구독하기'),
                 onTap: () {
@@ -175,11 +213,91 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
     );
   }
 
-  void _lookbookDialog(BuildContext context, int index) {
-    if (userLookbook.isEmpty || index >= userLookbook.length) return;
+  // Function to delete a diary entry
 
-    const imageUrl =
-        'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600';
+  Future<void> _deleteDiary(String diaryId) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    if (uid == null) {
+      _showSnack('로그인 상태가 아닙니다');
+      return;
+    }
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text('다이어리 삭제'),
+        content: const Text('정말 이 다이어리를 삭제하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      // Delete the diary from Firestore
+      await fs
+          .collection('users')
+          .doc(uid)
+          .collection('diaries')
+          .doc(diaryId)
+          .delete();
+
+      // Find and update the calendar entry with matching diaryId
+      final calendarQuery = await fs
+          .collection('users')
+          .doc(uid)
+          .collection('calendar')
+          .where('diaryId', isEqualTo: diaryId)
+          .limit(1)
+          .get();
+
+      // Update the calendar entry if found
+      if (calendarQuery.docs.isNotEmpty) {
+        final calendarDocId = calendarQuery.docs.first.id;
+        await fs
+            .collection('users')
+            .doc(uid)
+            .collection('calendar')
+            .doc(calendarDocId)
+            .update({'inDiary': false});
+
+        print('Calendar entry updated: inDiary set to false');
+      }
+
+      _showSnack('다이어리가 삭제되었습니다');
+
+      // Refresh the diaries list
+      await _getUserInfo();
+
+    } catch (e) {
+      _showSnack('삭제 실패: $e');
+      print('Error deleting diary: $e');
+    }
+  }
+
+  void _diaryDialog(BuildContext context, int index) {
+    if (userDiaries.isEmpty || index >= userDiaries.length) return;
+
+    final diary = userDiaries[index];
+    final diaryId = diary['diaryId'];
+    final diaryImg = diary['imageUrl'];
+    // const imageUrl = 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600';
 
     showDialog(
       context: context,
@@ -187,77 +305,104 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
         backgroundColor: Colors.white,
         child: Stack(
           children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start, // aligning on the left
-                    children: [
-                      // Header
-                      Row(
-                        children: [
-                          Icon(Icons.cloud, size : 20),
-                          SizedBox(width: 5),
-                          Text("20C"),
-                        ],
-                      ),
-                      SizedBox(height: 5),
-                      Row(
-                        children: [
-                          Icon(Icons.location_on, size : 20),
-                          SizedBox(width: 5),
-                          Text("서울"),
-                        ],
-                      ),
-                      SizedBox(height: 5),
-                      Row(
-                        children: [
-                          Icon(Icons.calendar_today, size : 20),
-                          SizedBox(width: 5),
-                          Text("${userLookbook[0]['formattedDate'] ?? 'No date'}",),
-                        ],
-                      ),
-                      SizedBox(height: 20),
+            SingleChildScrollView(  // ADD THIS to make dialog scrollable
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 5),
+                        // Location - UPDATED TO HANDLE LONG TEXT
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,  // Align to top
+                          children: [
+                            Icon(Icons.location_on, size: 20),
+                            SizedBox(width: 5),
+                            Expanded(  // ADD THIS to allow text wrapping
+                              child: Text(
+                                "${diary['locationText'] ?? '위치 없음'}",
+                                maxLines: 2,  // Limit to 2 lines
+                                overflow: TextOverflow.ellipsis,  // Show ... if too long
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 10),
+                        // Date
+                        Row(
+                          children: [
+                            Icon(Icons.calendar_today, size: 20),
+                            SizedBox(width: 5),
+                            Text("${diary['formattedDate'] ?? 'No date'}"),
+                          ],
+                        ),
+                        SizedBox(height: 20),
 
-                      // Image
-                      Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: 300,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            height: 300,
-                            color: Colors.grey[300],
-                            child: Icon(Icons.image_not_supported, size: 80),
-                          );
-                        },
-                      ),
-
-                      // Text area
-                      Padding(
-                        padding: EdgeInsets.all(16),
-                        child:
-                        Center(
-                          child: Text(
-                            '${userLookbook[0]['alias'] ?? "No description"}',
-                            style: TextStyle(fontSize: 14),
+                        // Image
+                        Image.network(
+                          diaryImg,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: 300,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: 300,
+                              color: Colors.grey[300],
+                              child: Icon(Icons.image_not_supported, size: 80),
+                            );
+                          },
+                        ),
+                        // Comment
+                        Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(
+                            child: Text(
+                              '${diary['comment'] ?? "No comment"}',
+                              style: TextStyle(fontSize: 14),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                        SizedBox(height: 20 ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             Positioned(
-              top: 8,
+              bottom: 3,
               right: 8,
-              child: IconButton(
-                icon: Icon(Icons.edit),
-                onPressed: (){},
+              child: Row(
+                children: [
+                  IconButton(
+                    iconSize: 20.0,
+                    icon: Icon(Icons.edit),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      final date = diary['date'] as Timestamp?;
+                      context.go('/userDiaryAdd', extra: {
+                        'lookbookId': diary['lookbookId'],
+                        'date': date,
+                        'selectedDay': date?.toDate(),
+                      });
+                    },
+                  ),
+                  IconButton(
+                      iconSize: 20.0,
+                      onPressed: () async {
+                        await _deleteDiary(
+                            diaryId); // wait for the function to complete
+                        // await Future.delayed(Duration(milliseconds: 300));
+                        if (mounted && Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        }
+                      },
+                      icon: Icon(Icons.delete)
+                  )
+                ],
               ),
             ),
           ],
@@ -266,11 +411,74 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
     );
   }
 
+  // Function to select a profile picture
+
+  // 이미지 확대/이동 컨트롤러
+  final TransformationController _transformController =
+  TransformationController();
+
+  Future<void> _pickImage() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      _showSnack('로그인 상태가 아닙니다');
+      return;
+    }
+
+    final picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,  // Optimize image size
+      maxHeight: 800,
+      imageQuality: 85,
+    );
+
+    if (image == null) return;
+
+    setState(() => isProcessingImage = true);
+
+    try {
+      final File imageFile = File(image.path);
+
+      // Create a reference to Firebase Storage
+      final String fileName = 'profile_$uid.jpg';
+      final Reference storageRef = storage
+          .ref('user_profile_pictures/${fileName}');
+
+      // Upload the file
+      final UploadTask uploadTask = storageRef.putFile(imageFile);
+
+      // Wait for upload to complete
+      final TaskSnapshot snapshot = await uploadTask;
+
+      // Get download URL
+      final String downloadUrl = await snapshot.ref.getDownloadURL();
+
+      // Update Firestore with the new profile image URL
+      await fs.collection('users').doc(uid).update({
+        'profileImageUrl': downloadUrl,
+      });
+
+      setState(() {
+        selectedImage = imageFile;
+        profileImageUrl = downloadUrl;
+      });
+
+      _showSnack('프로필 사진이 업데이트되었습니다');
+
+    } catch (e) {
+      print('Error uploading profile image: $e');
+      _showSnack('프로필 사진 업로드 실패: $e');
+    } finally {
+      setState(() => isProcessingImage = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           // Custom AppBar
@@ -280,37 +488,87 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
             color: Colors.black,
             child: Stack(
               children: [
-                const Positioned(
+                Positioned(
                   left: 15,
                   top: 40,
-                  child: CircleAvatar(radius: 40),
+                  child: GestureDetector(
+                    onTap: isProcessingImage ? null : _pickImage,
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 40,
+                          backgroundColor: Colors.grey[300],
+                          backgroundImage: profileImageUrl != null
+                              ? NetworkImage(profileImageUrl!)
+                              : null,
+                          child: profileImageUrl == null
+                              ? Icon(
+                            Icons.person,
+                            size: 40,
+                            color: Colors.grey[600],
+                          )
+                              : null,
+                        ),
+                        if (isProcessingImage)
+                          Positioned.fill(
+                            child: CircleAvatar(
+                              radius: 40,
+                              backgroundColor: Colors.black54,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.black, width: 1),
+                            ),
+                            child: Icon(
+                              Icons.camera_alt,
+                              size: 16,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 Positioned(
-                  top: 20,
+                  top: 25,
                   left: 130,
+                  right: 70,
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        "${userInfo['userId'] ?? 'UID'} \n@${userInfo['nickname'] ?? 'nickname'}",
+                        "${userInfo['nickname'] ?? 'UID'} \n@${userInfo['loginId'] ?? 'user ID'}",
                         style: const TextStyle(color: Colors.white),
                       ),
-                      const SizedBox(height: 15),
+                      const SizedBox(height: 10),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
-                            "0 \nitems",
+                          Text(
+                            "$itemCnt \nitems",
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.white),
+                            style: const TextStyle(color: Colors.white),
                           ),
-                          const SizedBox(width: 20),
+                          const SizedBox(width: 15),
                           Text(
                             "$lookbookCnt \nlookbook",
                             textAlign: TextAlign.center,
                             style: const TextStyle(color: Colors.white),
                           ),
-                          const SizedBox(width: 20),
+                          const SizedBox(width: 15),
                           const Text(
                             "0 \nAI lookbook",
                             textAlign: TextAlign.center,
@@ -321,21 +579,22 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                       const SizedBox(height: 10),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(150, 35),
+                          minimumSize: const Size(140, 32),
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         ),
-                        onPressed: () => context.go('/followList'),
+                        onPressed: () => context.go('/'),
                         child: const Text(
                           "follow",
                           style: TextStyle(
                             color: Colors.black,
                             fontWeight: FontWeight.bold,
+                            fontSize: 14,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-
                 Positioned(
                   top: topPad + 2,
                   right: 8,
@@ -343,12 +602,7 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                     width: 56,
                     height: 56,
                     child: IconButton(
-                      onPressed: () {
-                        // 디버그용
-                        // ignore: avoid_print
-                        print('MORE PRESSED');
-                        _openMoreMenu();
-                      },
+                      onPressed: _openMoreMenu,
                       icon: const Icon(
                         Icons.more_horiz,
                         color: Colors.white,
@@ -373,7 +627,7 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                     child: ElevatedButton(
                       onPressed: () => context.go('/publicWardrobe'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
+                        backgroundColor: const Color(0xFFCAD83B),
                         foregroundColor: Colors.black,
                         elevation: 0,
                         padding: EdgeInsets.zero,
@@ -399,7 +653,7 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                     child: ElevatedButton(
                       onPressed: () => context.go('/publicLookBook'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFCAD83B),
+                        backgroundColor: Colors.white,
                         foregroundColor: Colors.black,
                         elevation: 0,
                         padding: EdgeInsets.zero,
@@ -412,7 +666,7 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                         'lookbook',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 20,
+                          fontSize: 18,
                         ),
                       ),
                     ),
@@ -425,7 +679,11 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
           const SizedBox(height: 20),
 
           Expanded(
-            child: GridView.builder(
+            child: userDiaries.isEmpty
+                ? Center(
+              child: Text('아직 다이어리가 없습니다'),
+            )
+                : GridView.builder(
               padding: const EdgeInsets.all(16),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
@@ -433,16 +691,31 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                 mainAxisSpacing: 10,
                 childAspectRatio: 0.8,
               ),
-              itemCount: 9,
-              // itemCount: userLookbook.length, 나중에 구현 다되면 하드코딩에서 이걸로 바꿀거임
+              itemCount: userDiaries.length,
               itemBuilder: (context, index) {
+                final diary = userDiaries[index];
+
                 return GestureDetector(
-                  onTap: () => _lookbookDialog(context, index),
-                  child: const Card(
+                  onTap: () => _diaryDialog(context, index),
+                  child: Card(
                     child: Column(
                       children: [
                         Expanded(
-                          child: Center(child: Text("Click me !")),
+                          child: Center(
+                            child: Image.network(
+                              diary['imageUrl'],
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: 300,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  height: 300,
+                                  color: Colors.grey[300],
+                                  child: Icon(Icons.image_not_supported, size: 80),
+                                );
+                              },
+                            ),
+                          ),
                         ),
                       ],
                     ),

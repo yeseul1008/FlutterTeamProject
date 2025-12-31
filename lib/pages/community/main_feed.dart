@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class CommunityMainFeed extends StatefulWidget {
   const CommunityMainFeed({super.key});
@@ -11,392 +15,229 @@ class CommunityMainFeed extends StatefulWidget {
 
 class _CommunityMainFeedState extends State<CommunityMainFeed> {
   final FirebaseFirestore fs = FirebaseFirestore.instance;
+  final FirebaseAuth auth = FirebaseAuth.instance;
 
-  // 하드코딩
-  String userId = 'TEST1';
-  String nickname = '정전기';
+  late String userId;
+  late String nickname;
 
-  Map<String, dynamic> qnaPost = {};
-  bool isLiked = false;
-  int likeCount = 0;
-  List<String> likedUserNicknames = [];
-  String qnaPostId = '';
-  // 로딩 상태 관리
+  List<Map<String, dynamic>> lookbooks = [];
+
   bool isLoading = true;
   String errorMessage = '';
 
-  Future<void> _getQnaPost() async {
+  /// 로그인 유저 정보
+  Future<void> _loadUserInfo() async {
+    final user = auth.currentUser;
+    if (user == null) return;
+
+    userId = user.uid;
+
+    final userDoc = await fs.collection('users').doc(userId).get();
+    nickname = userDoc.data()?['nickname'] ?? 'Unknown';
+  }
+
+  /// Lookbooks 로드
+  Future<void> _getLookbooks() async {
     setState(() {
       isLoading = true;
       errorMessage = '';
     });
 
     try {
-      // where 조건 제거하고 모든 문서 가져오기 (테스트용)
-      final qnaPostSnapshot = await fs
-          .collection('qna_posts')
-          .limit(1) // 첫 번째 문서만 가져오기
+      await _loadUserInfo();
+
+      final snapshot = await fs
+          .collection('lookbooks')
+          .where('publishToCommunity', isEqualTo: true)
           .get();
 
-      if (qnaPostSnapshot.docs.isNotEmpty) {
-        setState(() {
-          qnaPost = qnaPostSnapshot.docs.first.data();
-          qnaPostId = qnaPostSnapshot.docs.first.id;
+      lookbooks = await Future.wait(snapshot.docs.map((doc) async {
+        final data = doc.data();
+        final docId = doc.id;
+        final String authorId = data['userId'] ?? '';
 
-          likeCount = qnaPost['likeCount'] ?? 0;
-          List<dynamic> likedUsers = qnaPost['likedUsers'] ?? [];
-          isLiked = likedUsers.any((user) => user['userId'] == userId);
-          likedUserNicknames = likedUsers.map((user) => user['nickname'].toString()).toList();
+        String authorNickname = 'Unknown';
+        String profileImageUrl = '';
 
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          isLoading = false;
-          errorMessage = '게시글이 없습니다';
-        });
-      }
+        if (authorId.isNotEmpty) {
+          final userDoc =
+          await fs.collection('users').doc(authorId).get();
+          authorNickname = userDoc.data()?['nickname'] ?? 'Unknown';
+          profileImageUrl =
+              userDoc.data()?['profileImageUrl'] ?? '';
+        }
+
+        final likesSnapshot = await fs
+            .collection('lookbooks')
+            .doc(docId)
+            .collection('likes')
+            .get();
+
+        final bool isLiked =
+        likesSnapshot.docs.any((doc) => doc.id == userId);
+
+        return {
+          'docId': docId,
+          'authorId': authorId,
+          'authorNickname': authorNickname,
+          'authorProfileImageUrl': profileImageUrl,
+          'resultImageUrl': data['resultImageUrl'],
+          'likeCount': likesSnapshot.size,
+          'isLiked': isLiked,
+        };
+      }).toList());
+
+      setState(() => isLoading = false);
     } catch (e) {
       setState(() {
         isLoading = false;
-        errorMessage = '데이터를 불러오는 중 오류가 발생했습니다: $e';
+        errorMessage = '데이터를 불러오는 중 오류 발생';
       });
     }
-  }
-
-  Future<void> _toggleLike() async {
-    if (qnaPostId.isEmpty) return;
-
-    final docRef = fs.collection('qna_posts').doc(qnaPostId);
-
-    try {
-      await fs.runTransaction((transaction) async {
-        final snapshot = await transaction.get(docRef);
-
-        if (!snapshot.exists) return;
-
-        List<dynamic> likedUsers = List.from(snapshot.data()?['likedUsers'] ?? []);
-        int currentLikeCount = snapshot.data()?['likeCount'] ?? 0;
-
-        final userIndex = likedUsers.indexWhere((user) => user['userId'] == userId);
-
-        if (userIndex >= 0) {
-          likedUsers.removeAt(userIndex);
-          currentLikeCount = (currentLikeCount - 1).clamp(0, double.infinity).toInt();
-        } else {
-          likedUsers.add({
-            'userId': userId,
-            'nickname': nickname,
-          });
-          currentLikeCount++;
-        }
-
-        transaction.update(docRef, {
-          'likedUsers': likedUsers,
-          'likeCount': currentLikeCount,
-        });
-      });
-
-      await _getQnaPost();
-    } catch (e) {
-      print('Error toggling like: $e');
-    }
-  }
-
-  void _showLikedUsersDialog() {
-    if (likedUserNicknames.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('아직 좋아요를 누른 사람이 없습니다')),
-      );
-      return;
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('좋아요를 누른 사람'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: likedUserNicknames.length,
-            itemBuilder: (context, index) {
-              return ListTile(
-                leading: const Icon(Icons.person),
-                title: Text(likedUserNicknames[index]),
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('닫기'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPostOptionsMenu(String postAuthorId) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Edit 버튼
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _editPost();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFCAD83B),
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                      child: const Text(
-                        'edit',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Delete 버튼
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _deletePost();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFB19FFF),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                      child: const Text(
-                        'delete',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _editPost() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        final contentController = TextEditingController(text: qnaPost['content']);
-
-        return AlertDialog(
-          title: const Text('게시글 수정'),
-          content: TextField(
-            controller: contentController,
-            decoration: const InputDecoration(
-              hintText: '내용을 입력하세요',
-              border: OutlineInputBorder(),
-            ),
-            maxLines: 5,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('취소'),
-            ),
-            TextButton(
-              onPressed: () async {
-                if (contentController.text.trim().isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('내용을 입력해주세요')),
-                  );
-                  return;
-                }
-
-                try {
-                  await fs.collection('qna_posts').doc(qnaPostId).update({
-                    'content': contentController.text.trim(),
-                    'updatedAt': FieldValue.serverTimestamp(),
-                  });
-
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('게시글이 수정되었습니다')),
-                  );
-                  await _getQnaPost();
-                } catch (e) {
-                  print('Error updating post: $e');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('수정 중 오류가 발생했습니다')),
-                  );
-                }
-              },
-              child: const Text('수정'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _deletePost() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('게시글 삭제'),
-        content: const Text('정말로 이 게시글을 삭제하시겠습니까?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () async {
-              try {
-                await fs.collection('qna_posts').doc(qnaPostId).delete();
-
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('게시글이 삭제되었습니다')),
-                );
-
-                setState(() {
-                  qnaPost = {};
-                  qnaPostId = '';
-                });
-
-                await _getQnaPost();
-              } catch (e) {
-                print('Error deleting post: $e');
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('삭제 중 오류가 발생했습니다')),
-                );
-              }
-            },
-            child: const Text('삭제', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
   void initState() {
     super.initState();
-    _getQnaPost();
+    _getLookbooks();
   }
 
   @override
   Widget build(BuildContext context) {
     final String currentPath = GoRouterState.of(context).uri.path;
 
-    return SafeArea(
-      child: Column(
-        children: [
-          /// ===== 상단 UI =====
-          Padding(
-            padding: EdgeInsets.all(16),
-            child: Row(
-              children: [
-                _topButton(
-                  text: 'Feed',
-                  active: currentPath == '/communityMainFeed',
-                  onTap: () => context.go('/communityMainFeed'),
-                ),
-                SizedBox(width: 8),
-                _topButton(
-                  text: 'QnA',
-                  active: currentPath == '/questionFeed',
-                  onTap: () => context.go('/questionFeed'),
-                ),
-                SizedBox(width: 8),
-                _topButton(
-                  text: 'Follow',
-                  active: currentPath == '/followList',
-                  onTap: () => context.go('/followList'),
-                ),
-              ],
+    return Container(
+      color: Colors.white, // ⭐ 전체 백그라운드 흰색
+      child: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  _topButton(
+                    text: 'Feed',
+                    active: currentPath == '/communityMainFeed',
+                    onTap: () => context.go('/communityMainFeed'),
+                  ),
+                  const SizedBox(width: 8),
+                  _topButton(
+                    text: 'QnA',
+                    active: currentPath == '/questionFeed',
+                    onTap: () => context.go('/questionFeed'),
+                  ),
+                  const SizedBox(width: 8),
+                  _topButton(
+                    text: 'Follow',
+                    active: currentPath == '/followList',
+                    onTap: () => context.go('/followList'),
+                  ),
+                ],
+              ),
             ),
+
+            Expanded(
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : errorMessage.isNotEmpty
+                  ? Center(child: Text(errorMessage))
+                  : lookbooks.isEmpty
+                  ? const Center(child: Text('게시글이 없습니다'))
+                  : ListView.builder(
+                padding:
+                const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                itemCount: lookbooks.length,
+                itemBuilder: (context, index) {
+                  return _lookbookItem(lookbooks[index]);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Lookbook Item
+  Widget _lookbookItem(Map<String, dynamic> item) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          /// 프로필 클릭 페이지이동
+          ListTile(
+            onTap: () {
+              context.go('/publicWardrobe');
+            },
+            leading: CircleAvatar(
+              backgroundImage:
+              item['authorProfileImageUrl'].isNotEmpty
+                  ? NetworkImage(item['authorProfileImageUrl'])
+                  : null,
+              child: item['authorProfileImageUrl'].isEmpty
+                  ? const Icon(Icons.person)
+                  : null,
+            ),
+            title: Text(
+              item['authorNickname'],
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text('@${item['authorId']}'),
           ),
 
-          /// ===== Feed Body =====
-          Expanded(
-            child: Stack(
+          if (item['resultImageUrl'] != null &&
+              item['resultImageUrl'].isNotEmpty)
+            Image.network(
+              item['resultImageUrl'],
+              height: 280,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const SizedBox(
+                height: 280,
+                child: Center(child: Icon(Icons.broken_image)),
+              ),
+            ),
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Row(
               children: [
-                isLoading
-                    ? Center(child: CircularProgressIndicator())
-                    : errorMessage.isNotEmpty
-                    ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                InkWell(
+                  onTap: () => _toggleLike(item),
+                  child: Row(
                     children: [
-                      Icon(Icons.error_outline, size: 60, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text(
-                        errorMessage,
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                        textAlign: TextAlign.center,
+                      Icon(
+                        item['isLiked']
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        color: item['isLiked']
+                            ? Colors.red
+                            : Colors.black,
                       ),
-                      SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _getQnaPost,
-                        child: Text('다시 시도'),
-                      ),
+                      const SizedBox(width: 6),
+                      Text(item['likeCount'].toString()),
                     ],
                   ),
-                )
-                    : qnaPost.isEmpty
-                    ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.article_outlined, size: 60, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text(
-                        '게시글이 없습니다',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                    ],
+                ),
+                const Spacer(),
+                InkWell(
+                  onTap: () => _showShareOptions(
+                    context,
+                    item['authorNickname'],
+                    item['resultImageUrl'],
                   ),
-                )
-                    : ListView(
-                  padding: EdgeInsets.fromLTRB(16, 0, 16, 100),
-                  children: [
-                    _qnaItem(
-                      nickname: qnaPost['nickname'] ?? nickname,
-                      authorId: qnaPost['authorId'] ?? userId,
-                      imageUrl: qnaPost['imageUrl'] ?? '',
-                      commentCount: qnaPost['commentCount'] ?? 0,
-                    ),
-                  ],
+                  child: const Icon(Icons.share_outlined),
                 ),
               ],
             ),
@@ -404,6 +245,126 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
         ],
       ),
     );
+  }
+
+  /// ❤️ 좋아요 토글
+  Future<void> _toggleLike(Map<String, dynamic> item) async {
+    final docId = item['docId'];
+
+    final likeRef = fs
+        .collection('lookbooks')
+        .doc(docId)
+        .collection('likes')
+        .doc(userId);
+
+    setState(() {
+      if (item['isLiked']) {
+        item['isLiked'] = false;
+        item['likeCount']--;
+      } else {
+        item['isLiked'] = true;
+        item['likeCount']++;
+      }
+    });
+
+    try {
+      if (item['isLiked']) {
+        await likeRef.set({'likedAt': FieldValue.serverTimestamp()});
+      } else {
+        await likeRef.delete();
+      }
+    } catch (e) {
+      setState(() {
+        if (item['isLiked']) {
+          item['isLiked'] = false;
+          item['likeCount']--;
+        } else {
+          item['isLiked'] = true;
+          item['likeCount']++;
+        }
+      });
+    }
+  }
+
+  /// 공유 관련
+  void _showShareOptions(
+      BuildContext context, String content, String imageUrl) {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.chat),
+                title: const Text('카카오톡'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _shareToKakao(content, imageUrl);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('인스타그램'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _shareToInstagram(imageUrl);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.facebook),
+                title: const Text('페이스북'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _shareToFacebook(imageUrl);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.share),
+                title: const Text('기타'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Share.share('$content\n\n$imageUrl');
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _shareToKakao(String content, String imageUrl) async {
+    final template = FeedTemplate(
+      content: Content(
+        title: 'Lookbook',
+        description: content,
+        imageUrl: Uri.parse(imageUrl),
+        link: Link(
+          webUrl: Uri.parse('https://www.example.com'),
+          mobileWebUrl: Uri.parse('https://www.example.com'),
+        ),
+      ),
+    );
+
+    final url =
+    await WebSharerClient.instance.makeDefaultUrl(template: template);
+    await launchUrl(url);
+  }
+
+  Future<void> _shareToInstagram(String imageUrl) async {
+    final uri = Uri.parse('instagram://library?AssetPath=$imageUrl');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  Future<void> _shareToFacebook(String imageUrl) async {
+    final uri = Uri.parse(
+        'https://www.facebook.com/sharer/sharer.php?u=$imageUrl');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
   }
 
   Widget _topButton({
@@ -417,172 +378,21 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
         child: ElevatedButton(
           onPressed: onTap,
           style: ElevatedButton.styleFrom(
-            backgroundColor: active ? Color(0xFFCAD83B) : Colors.white,
+            backgroundColor:
+            active ? const Color(0xFFCAD83B) : Colors.white,
             foregroundColor: Colors.black,
             elevation: 0,
-            padding: EdgeInsets.zero,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(30),
-              side: BorderSide(color: Colors.black),
+              side: const BorderSide(color: Colors.black),
             ),
           ),
           child: Text(
             text,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
+            style: const TextStyle(
+                fontWeight: FontWeight.bold, fontSize: 18),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _qnaItem({
-    required String nickname,
-    required String authorId,
-    required String imageUrl,
-    required int commentCount,
-  }) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: EdgeInsets.all(16),
-            child: Row(
-              children: [
-                InkWell(
-                  onTap: () {
-                    context.push('/publicWardrobe', extra: {
-                      'userId': authorId,
-                      'nickname': nickname,
-                    });
-                  },
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: Icon(Icons.person, color: Colors.grey),
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      InkWell(
-                        onTap: () {
-                          context.push('/publicLookBook', extra: {
-                            'userId': authorId,
-                            'nickname': nickname,
-                          });
-                        },
-                        child: Text(
-                          nickname,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        '@$authorId',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.more_horiz),
-                  onPressed: () => _showPostOptionsMenu(authorId),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
-            ),
-          ),
-          if (qnaPost['content'] != null && qnaPost['content'].toString().isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                qnaPost['content'],
-                style: TextStyle(fontSize: 14),
-              ),
-            ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            height: 280,
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.grey[200],
-                    child: const Center(
-                      child: Icon(Icons.image_not_supported,
-                          size: 50, color: Colors.grey),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Row(
-              children: [
-                InkWell(
-                  onTap: _toggleLike,
-                  child: Icon(
-                    isLiked ? Icons.favorite : Icons.favorite_border,
-                    size: 20,
-                    color: isLiked ? Colors.red : Colors.grey.shade700,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                InkWell(
-                  onTap: _showLikedUsersDialog,
-                  child: Text(
-                    likeCount.toString(),
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade700,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
