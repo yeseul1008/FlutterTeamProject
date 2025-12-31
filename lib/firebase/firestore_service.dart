@@ -17,6 +17,7 @@ class FirestoreService {
     required String provider,
     required String nickname,
     required String loginId,
+    // required String gender,
     String? profileImageUrl,
   }) async {
     await _db.collection('users').doc(userId).set({
@@ -29,6 +30,7 @@ class FirestoreService {
       'profileImageUrl': profileImageUrl,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
+      // 'gender' : gender
     }, SetOptions(merge: true));
 
     final defaultCategories = [

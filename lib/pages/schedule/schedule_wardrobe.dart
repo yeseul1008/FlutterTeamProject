@@ -7,8 +7,6 @@ import '../wardrobe/user_wardrobe_category.dart';
 
 /// =============================
 /// ScheduleWardrobe.dart
-/// ✅ 역할: 옷 선택만 하고 -> 선택값을 UserScheduleAdd로 pop 전달
-/// ❌ 여기서 /scheduleCombine 절대 push 하지 않음 (중복 Combine 방지)
 /// =============================
 class ScheduleWardrobe extends StatefulWidget {
   const ScheduleWardrobe({super.key});

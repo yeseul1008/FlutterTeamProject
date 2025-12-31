@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../widgets/common/weatherWidget.dart';
 import '../../service/kakao/kakao_models.dart';
@@ -31,6 +32,9 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
   double _lon = 126.9780;
   String? _scheduleText;
 
+  // ===== preview (edit에서는 URL로) =====
+  String? _previewImageUrl; // ✅ edit 진입 시 calendar.imageURL로 세팅
+
   // ===== combine draft =====
   Uint8List? _canvasPngBytes;
   List<String> _clothesIds = [];
@@ -41,9 +45,59 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
 
   DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
+  String _dateKey(DateTime d) {
+    final day = _dateOnly(d);
+    return '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+  }
+
   String _fmtDate(DateTime d) {
     final w = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d.weekday - 1];
     return '${d.year}.${d.month}.${d.day} $w';
+  }
+
+  Future<void> _loadCalendarPreviewIfEdit() async {
+    if (_mode != 'edit') return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final key = _dateKey(_selectedDate);
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('calendar')
+          .doc(key)
+          .get();
+
+      if (!doc.exists) return;
+
+      final data = doc.data();
+      if (data == null) return;
+
+      // ✅ 프리뷰 URL
+      final url = (data['imageURL'] ?? '').toString().trim();
+
+      // ✅ edit 자동채움(혹시 extra가 비어도 calendar 기준으로 복원)
+      final dest = (data['destinationName'] ?? '').toString();
+      final plan = (data['planText'] ?? '').toString();
+      final geo = data['destination'];
+
+      if (!mounted) return;
+      setState(() {
+        if (url.isNotEmpty) _previewImageUrl = url;
+        if ((_placeName == null || _placeName!.isEmpty) && dest.isNotEmpty) _placeName = dest;
+        if ((_scheduleText == null || _scheduleText!.isEmpty) && plan.isNotEmpty) _scheduleText = plan;
+
+        if (geo is GeoPoint) {
+          _lat = geo.latitude;
+          _lon = geo.longitude;
+        }
+      });
+    } catch (_) {
+      // 조용히 실패 처리 (UI/흐름 유지)
+    }
   }
 
   @override
@@ -89,6 +143,11 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
     }
 
     _selectedDate = _dateOnly(_selectedDate);
+
+    // ✅ edit 진입 시: calendar.imageURL로 프리뷰 채우기
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadCalendarPreviewIfEdit();
+    });
   }
 
   Future<void> _onPickPlace() async {
@@ -136,7 +195,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
     setState(() => _scheduleText = result);
   }
 
-  // ✅ create에서만: 옷장 -> combine -> (결과 state 저장만)
+  // ✅ 옷장 -> combine -> (결과 state 저장만)
   Future<void> _onPickWardrobeAndCombine() async {
     if (_isSaving) return;
 
@@ -171,7 +230,6 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
 
     debugPrint('ADD combineResult = $combineResult');
 
-
     if (combineResult == null) return;
     if (combineResult['action'] != 'registerToSchedule') return;
 
@@ -181,9 +239,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
     final Uint8List? canvasPngBytes =
     combineResult['canvasPngBytes'] as Uint8List?;
 
-    if (finalClothesIds.isEmpty ||
-        canvasPngBytes == null ||
-        canvasPngBytes.isEmpty) {
+    if (finalClothesIds.isEmpty || canvasPngBytes == null || canvasPngBytes.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('조합 결과가 없습니다.')),
@@ -191,7 +247,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
       return;
     }
 
-    // ✅ 여기서 프리뷰 띄울 준비 완료
+    // ✅ 여기서 프리뷰 띄울 준비 완료 (edit도 동일)
     setState(() {
       _clothesIds = finalClothesIds;
       _canvasPngBytes = canvasPngBytes;
@@ -218,9 +274,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
 
       if (_mode == 'create') {
         // create는 반드시 combine 결과가 있어야 함
-        if (_canvasPngBytes == null ||
-            _canvasPngBytes!.isEmpty ||
-            _clothesIds.isEmpty) {
+        if (_canvasPngBytes == null || _canvasPngBytes!.isEmpty || _clothesIds.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('코디 조합(프리뷰)이 필요합니다.')),
           );
@@ -263,15 +317,44 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
           return;
         }
 
-        await _firestoreService.updateScheduleAndCalendar(
-          userId: user.uid,
-          date: _selectedDate,
-          scheduleId: _scheduleId!,
-          destinationName: destinationName,
-          lat: _lat,
-          lon: _lon,
-          planText: planText,
-        );
+        // ✅ edit: 코디를 새로 조합한 경우에만 imageURL/lookbookId까지 갱신
+        if (_canvasPngBytes != null && _canvasPngBytes!.isNotEmpty && _clothesIds.isNotEmpty) {
+          final resultImageUrl = await _firestoreService.uploadLookbookCanvasPng(
+            userId: user.uid,
+            pngBytes: _canvasPngBytes!,
+          );
+
+          final newLookbookId = await _firestoreService.createLookbookWithFlag(
+            userId: user.uid,
+            alias: (planText.trim().isNotEmpty) ? planText.trim() : '일정 코디(수정)',
+            resultImageUrl: resultImageUrl,
+            clothesIds: _clothesIds,
+            inLookbook: true,
+            publishToCommunity: false,
+          );
+
+          await _firestoreService.updateScheduleAndCalendar(
+            userId: user.uid,
+            date: _selectedDate,
+            scheduleId: _scheduleId!,
+            destinationName: destinationName,
+            lat: _lat,
+            lon: _lon,
+            planText: planText,
+            imageURL: resultImageUrl,
+            lookbookId: newLookbookId,
+          );
+        } else {
+          await _firestoreService.updateScheduleAndCalendar(
+            userId: user.uid,
+            date: _selectedDate,
+            scheduleId: _scheduleId!,
+            destinationName: destinationName,
+            lat: _lat,
+            lon: _lon,
+            planText: planText,
+          );
+        }
       }
 
       if (!mounted) return;
@@ -382,6 +465,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
     required String label,
     required String value,
     required VoidCallback onAdd,
+    required String actionText, // ✅ create/edit 텍스트 분기
   }) {
     return Row(
       children: [
@@ -409,17 +493,31 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
             ],
           ),
         ),
-        _pillButton(text: '추가', onTap: onAdd),
+        _pillButton(text: actionText, onTap: onAdd),
       ],
     );
   }
 
-  // ✅ 보라색 버튼 자리 = 프리뷰 박스
-  Widget _previewBoxFromBytes() {
+  Widget _previewBox() {
     final bytes = _canvasPngBytes;
+    final url = (_previewImageUrl ?? '').trim();
+
+    Widget child;
+    if (bytes != null && bytes.isNotEmpty) {
+      child = Image.memory(bytes, fit: BoxFit.cover);
+    } else if (url.isNotEmpty) {
+      child = Image.network(url, fit: BoxFit.cover);
+    } else {
+      child = const Center(
+        child: Text(
+          '프리뷰 없음',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+      );
+    }
 
     return Container(
-      height: 190,
+      height: 300,
       width: double.infinity,
       decoration: BoxDecoration(
         color: const Color(0xFFEDEDED),
@@ -427,17 +525,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
         border: Border.all(color: Colors.black, width: 1),
       ),
       clipBehavior: Clip.hardEdge,
-      child: (bytes == null || bytes.isEmpty)
-          ? const Center(
-        child: Text(
-          '프리뷰 없음',
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
-      )
-          : Image.memory(
-        bytes,
-        fit: BoxFit.cover,
-      ),
+      child: child,
     );
   }
 
@@ -446,7 +534,11 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
     const titleStyle = TextStyle(fontSize: 18, fontWeight: FontWeight.w800);
 
     final bool isCreate = _mode == 'create';
-    final bool hasPreview = _canvasPngBytes != null && _canvasPngBytes!.isNotEmpty;
+    final bool isEdit = _mode == 'edit';
+
+    final bool hasBytes = _canvasPngBytes != null && _canvasPngBytes!.isNotEmpty;
+    final bool hasUrl = (_previewImageUrl ?? '').trim().isNotEmpty;
+    final bool hasAnyPreview = hasBytes || hasUrl;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -498,14 +590,14 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
                       label: '목적지',
                       value: _placeName == null ? '없음' : _placeName!,
                       onAdd: _onPickPlace,
+                      actionText: isEdit ? '수정' : '추가',
                     ),
                     const SizedBox(height: 12),
                     _labelValueRow(
                       label: '일정',
-                      value: (_scheduleText == null || _scheduleText!.isEmpty)
-                          ? '없음'
-                          : _scheduleText!,
+                      value: (_scheduleText == null || _scheduleText!.isEmpty) ? '없음' : _scheduleText!,
                       onAdd: _onAddScheduleText,
+                      actionText: isEdit ? '수정' : '추가',
                     ),
                   ],
                 ),
@@ -513,10 +605,8 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
 
               const SizedBox(height: 22),
 
-              // ✅ 핵심: create 모드에서
-              // - 프리뷰 없으면: 보라색 버튼 2개
-              // - 프리뷰 있으면: 그 자리에 프리뷰 박스 + 다시 조합하기(선택)
-              if (isCreate && !hasPreview)
+              // ✅ create: 기존 그대로 유지
+              if (isCreate && !hasBytes)
                 Row(
                   children: [
                     Expanded(
@@ -536,37 +626,58 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
                     ),
                   ],
                 )
-              else if (isCreate && hasPreview)
+              else
                 Column(
                   children: [
-                    _previewBoxFromBytes(),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 44,
-                      child: OutlinedButton(
-                        onPressed: _isSaving ? null : _onPickWardrobeAndCombine,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.black,
-                          side: const BorderSide(color: Colors.black),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                    // ✅ edit에서도 프리뷰 박스 항상 노출(빈화면 방지)
+                    if (isEdit || hasAnyPreview) _previewBox(),
+                    if (isEdit || hasAnyPreview) const SizedBox(height: 10),
+
+                    // ✅ edit: 코디 수정하기 버튼
+                    if (isEdit)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: OutlinedButton(
+                          onPressed: _isSaving ? null : _onPickWardrobeAndCombine,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.black,
+                            side: const BorderSide(color: Colors.black),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: const Text(
+                            '코디 수정하기',
+                            style: TextStyle(fontWeight: FontWeight.w900),
                           ),
                         ),
-                        child: const Text(
-                          '코디 다시 조합하기',
-                          style: TextStyle(fontWeight: FontWeight.w900),
+                      )
+                    // ✅ create: 코디 다시 조합하기 버튼(기존)
+                    else if (isCreate && hasBytes)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: OutlinedButton(
+                          onPressed: _isSaving ? null : _onPickWardrobeAndCombine,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.black,
+                            side: const BorderSide(color: Colors.black),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: const Text(
+                            '코디 다시 조합하기',
+                            style: TextStyle(fontWeight: FontWeight.w900),
+                          ),
                         ),
                       ),
-                    ),
                   ],
-                )
-              else
-                const SizedBox.shrink(),
+                ),
 
               const Spacer(),
 
-              // ✅ 원래 있던 완료 버튼 유지
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -581,9 +692,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
                     ),
                   ),
                   child: Text(
-                    _isSaving
-                        ? '저장 중...'
-                        : (_mode == 'edit' ? '일정 수정 완료하기' : '일정 등록 완료하기'),
+                    _isSaving ? '저장 중...' : (_mode == 'edit' ? '일정 수정 완료하기' : '일정 등록 완료하기'),
                     style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
                   ),
                 ),

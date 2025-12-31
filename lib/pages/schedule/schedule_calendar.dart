@@ -89,13 +89,49 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
     });
   }
 
+  String _safeText(dynamic v) {
+    final s = (v ?? '').toString().trim();
+    return s.isEmpty ? '없음' : s;
+  }
+
+  Widget _infoText({required String label, required String value}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: Colors.black54,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+            color: Colors.black,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cal = _getCalendar(_selectedDay);
     final selectedThumb = _getThumb(_selectedDay);
 
-    final hasSchedule = cal != null; // ✅ 7번: 문서 존재 여부로 판단
+    final hasSchedule = cal != null; // ✅ 문서 존재 여부
     final btnText = hasSchedule ? '일정 수정' : '일정 추가';
+
+    // ✅ 목적지/일정(없으면 '없음')
+    final destinationText = _safeText(cal?['destinationName']);
+    final planText = _safeText(cal?['planText']);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -256,7 +292,7 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
                         } else {
                           final scheduleId = (cal?['scheduleId'] ?? '').toString();
                           final destinationName = (cal?['destinationName'] ?? '').toString();
-                          final planText = (cal?['planText'] ?? '').toString();
+                          final planText2 = (cal?['planText'] ?? '').toString();
                           final imageURL = (cal?['imageURL'] ?? '').toString();
                           final dest = cal?['destination'];
 
@@ -272,7 +308,7 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
                             'selectedDate': _normalize(_selectedDay),
                             'scheduleId': scheduleId,
                             'destinationName': destinationName,
-                            'planText': planText,
+                            'planText': planText2,
                             'previewImageUrl': imageURL,
                             'lat': lat,
                             'lon': lon,
@@ -298,6 +334,19 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
                       ),
                     ),
                   ),
+                ],
+              ),
+            ),
+
+            // ✅ 목적지 / 일정 표시
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: Row(
+                children: [
+                  Expanded(child: _infoText(label: '목적지', value: destinationText)),
+                  // const SizedBox(width: 5),
+                  Expanded(child: _infoText(label: '일정', value: planText)),
                 ],
               ),
             ),
@@ -349,7 +398,7 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
     final past = _isPast(day);
 
     final Color pastBg = const Color(0xFFF3F4F6);
-    final Color todayRing = const Color(0xFFCBD5E1);
+    final Color todayRing = const Color(0xFFE11D70);
     final Color selectedRing = const Color(0xFFA88AF7);
 
     final textColor = past ? const Color(0xFF6B7280) : Colors.black87;
