@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:team_project_flutter/pages/schedule/schedule_add_Lookbook.dart';
 import 'package:team_project_flutter/pages/schedule/schedule_lookbook.dart';
 import 'package:team_project_flutter/pages/wardrobe/user_wardrobe_edit.dart';
 
@@ -41,6 +42,7 @@ import '../pages/schedule/schedule_add.dart';
 import '../pages/map/PlaceSearchPage.dart';
 import '../pages/schedule/schedule_wardrobe.dart';
 import '../pages/schedule/schedule_combine.dart';
+// import '../pages/schedule/schedule_add_Lookbook.dart';
 
 final GlobalKey<NavigatorState> _shellNavigatorKey =
 GlobalKey<NavigatorState>();
@@ -108,20 +110,12 @@ final GoRouter router = GoRouter(
         ),
 
 
-        // profile 폴더 속 파일이름
-
-
         //Schedule전용 라우터
         //일정 추가
         GoRoute(
           path: '/AddSchedule',
           builder: (context, state) => const UserScheduleAdd(),
         ),
-        // 일정 수정
-        // GoRoute(
-        //   path: '/EditSchedule',
-        //   builder: (context, state) => const UserScheduleEdit(),
-        // ),
         //스케줄 옷 리스트 호출
         GoRoute(
           path: '/scheduleWardrobe',
@@ -138,6 +132,11 @@ final GoRouter router = GoRouter(
           builder: (context, state) =>
               ScheduleCombine(extra: state.extra),
         ),
+        //조합하기에서 룩북에 저장하기
+        // GoRoute(
+        //     path: '/scheduleAddLookbook',
+        //   builder: (context,state) => const ScheduleAddLookbook()
+        // ),
 
 
         GoRoute(
@@ -335,7 +334,9 @@ class RootLayout extends StatelessWidget {
     bool hideBottom = false;
     if(
     state.uri.path.startsWith('/page2')
-    // || state.uri.path.startsWith('/page1')
+    || state.uri.path.startsWith('/userLogin')
+    || state.uri.path.startsWith('/findId') || state.uri.path.startsWith('/findPwd')
+    || state.uri.path.startsWith('/googleLogin') || state.uri.path.startsWith('/userJoin')
 
     ){
       hideBottom = true;

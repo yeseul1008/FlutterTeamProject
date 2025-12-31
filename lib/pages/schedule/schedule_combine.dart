@@ -20,8 +20,17 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
   late final List<String> clothesIds;
   late final Map<String, String> imageUrls;
 
+  // ✅ Add로 넘길 선택 날짜
+  DateTime? _selectedDate;
+
   // id -> {offset, scale}
   final Map<String, _CanvasItemState> _canvasItems = {};
+
+  // ✅ 이미지 로딩 완료 플래그 (캡처 시 회색 방지)
+  bool _imagesReady = false;
+
+  // ✅ 캡처 순간에만 편집 UI 숨김(테두리/삭제 버튼/리사이즈 핸들)
+  bool _isCapturing = false;
 
   @override
   void initState() {
@@ -35,7 +44,13 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
     (data?['imageUrls'] as Map<String, dynamic>? ?? {});
     imageUrls = imageUrlsRaw.map((k, v) => MapEntry(k, v.toString()));
 
-    // ✅ 전부 캔버스에 자동 배치 (처음부터 올라가 있는 상태)
+    // ✅ Calendar/이전 화면에서 선택한 날짜를 같이 넘겨받는 구조
+    final dt = data?['selectedDate'];
+    if (dt is DateTime) {
+      _selectedDate = DateTime(dt.year, dt.month, dt.day);
+    }
+
+    // ✅ 전부 캔버스에 자동 배치
     for (int i = 0; i < clothesIds.length; i++) {
       final id = clothesIds[i];
       _canvasItems[id] = _CanvasItemState(
@@ -43,19 +58,57 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
         scale: 1.0,
       );
     }
+
+    // ✅ context 안전 + 첫 paint 이후에 precache
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _precacheAll();
+    });
+  }
+
+  Future<void> _precacheAll() async {
+    final urls = clothesIds
+        .map((id) => imageUrls[id])
+        .where((u) => u != null && u!.isNotEmpty)
+        .cast<String>()
+        .toList();
+
+    try {
+      for (final u in urls) {
+        await precacheImage(NetworkImage(u), context);
+      }
+    } catch (_) {
+      // 일부 실패해도 진행
+    }
+
+    if (!mounted) return;
+    setState(() => _imagesReady = true);
   }
 
   Future<Uint8List?> _captureCanvasPng() async {
     try {
+      // ✅ 캡처 순간에만 편집 UI 숨김
+      setState(() => _isCapturing = true);
+
+      // ✅ paint 완료 보장 (모바일에서 회색 방지 핵심)
+      await WidgetsBinding.instance.endOfFrame;
+      await WidgetsBinding.instance.endOfFrame;
+
       final boundary =
       _canvasKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) return null;
+
+      if (boundary.debugNeedsPaint) {
+        await WidgetsBinding.instance.endOfFrame;
+        await WidgetsBinding.instance.endOfFrame;
+      }
 
       final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       return byteData?.buffer.asUint8List();
     } catch (_) {
       return null;
+    } finally {
+      if (mounted) setState(() => _isCapturing = false);
     }
   }
 
@@ -78,17 +131,33 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
     );
   }
 
-  Future<void> _registerToSchedule() async {
-    // X로 제거되고 남아있는 것만 등록
+  Future<void> _goToAddSchedule() async {
     final selected = _canvasItems.keys.toList();
 
-    // (선택) 캔버스 PNG도 같이 넘겨두면 나중에 resultImageUrl 만들 때 활용 가능
+    if (selected.isEmpty) {
+      _showTempSnack('캔버스에 남은 옷이 없습니다.');
+      return;
+    }
+
+    if (!_imagesReady) {
+      _showTempSnack('이미지 로딩 중입니다.');
+      return;
+    }
+
     final pngBytes = await _captureCanvasPng();
+    if (pngBytes == null || pngBytes.isEmpty) {
+      _showTempSnack('캡처 실패(빈 이미지)');
+      return;
+    }
+
+    debugPrint('COMBINE pngBytes length = ${pngBytes.length}');
 
     context.pop({
       'action': 'registerToSchedule',
+      'selectedDate': _selectedDate ?? DateTime.now(),
+      'canvasPngBytes': pngBytes,
       'clothesIds': selected,
-      'canvasPngBytes': pngBytes, // 필요 없으면 AddSchedule에서 무시
+      'imageUrls': imageUrls,
     });
   }
 
@@ -121,7 +190,6 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
           ? const Center(child: Text('선택된 옷이 없습니다.'))
           : Column(
         children: [
-          // ✅ 캔버스 영역 (처음부터 전부 올라감 / X로만 삭제)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
             child: RepaintBoundary(
@@ -130,7 +198,8 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
                 height: 320,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F7),
+                  // ✅ 저장 이미지 배경도 깔끔하게 흰색
+                  color: Colors.white,
                   border: Border.all(color: Colors.black),
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -149,12 +218,32 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
                             ),
                           ),
                         ),
-
+                      if (!_imagesReady)
+                        const Positioned(
+                          left: 12,
+                          top: 12,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Colors.black,
+                              borderRadius: BorderRadius.all(Radius.circular(10)),
+                            ),
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              child: Text(
+                                '이미지 불러오는 중...',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ..._canvasItems.entries.map((e) {
                         final id = e.key;
                         final state = e.value;
                         final url = imageUrls[id] ?? '';
-
                         if (url.isEmpty) return const SizedBox.shrink();
 
                         return Positioned(
@@ -164,12 +253,14 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
                             id: id,
                             imageUrl: url,
                             scale: state.scale,
+                            hideControls: _isCapturing, // ✅ 캡처 시 숨김
                             onMove: (delta) {
                               setState(() {
                                 final cur = _canvasItems[id];
                                 if (cur == null) return;
-                                _canvasItems[id] =
-                                    cur.copyWith(offset: cur.offset + delta);
+                                _canvasItems[id] = cur.copyWith(
+                                  offset: cur.offset + delta,
+                                );
                               });
                             },
                             onScale: (nextScale) {
@@ -193,9 +284,6 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
               ),
             ),
           ),
-
-
-          // 버튼 3개
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Row(
@@ -231,18 +319,18 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: const Text(
-                      '코디로 저장하기',
+                      '룩북에 저장하기',
                       style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
                       textAlign: TextAlign.center,
                     ),
                   ),
                 ),
-
-
                 const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _canvasItems.isEmpty ? null : _registerToSchedule,
+                    onPressed: (_canvasItems.isEmpty || !_imagesReady)
+                        ? null
+                        : _goToAddSchedule,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFCAD83B),
                       foregroundColor: Colors.black,
@@ -253,9 +341,9 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
                       elevation: 2,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text(
-                      '일정에 등록하기',
-                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
+                    child: Text(
+                      !_imagesReady ? '이미지 로딩중...' : '코디 생성 완료',
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -291,6 +379,7 @@ class _DraggableCanvasItem extends StatefulWidget {
     required this.id,
     required this.imageUrl,
     required this.scale,
+    required this.hideControls,
     required this.onMove,
     required this.onScale,
     required this.onRemove,
@@ -299,6 +388,10 @@ class _DraggableCanvasItem extends StatefulWidget {
   final String id;
   final String imageUrl;
   final double scale;
+
+  // ✅ 캡처 중이면 테두리/삭제 버튼/리사이즈 핸들 숨김
+  final bool hideControls;
+
   final void Function(Offset delta) onMove;
   final void Function(double nextScale) onScale;
   final VoidCallback onRemove;
@@ -310,9 +403,15 @@ class _DraggableCanvasItem extends StatefulWidget {
 class _DraggableCanvasItemState extends State<_DraggableCanvasItem> {
   double? _startScale;
 
+  // ✅ 모서리 드래그로 스케일 조절(최소 변경, 비율 고정)
+  void _onResizeDrag(DragUpdateDetails d) {
+    final delta = d.delta.dx - d.delta.dy; // 대각선 느낌
+    final next = (widget.scale + delta * 0.006).clamp(0.6, 1.8);
+    widget.onScale(next);
+  }
+
   @override
   Widget build(BuildContext context) {
-    // ✅ onScale 하나로 드래그(1손) + 확대/축소(2손)
     return GestureDetector(
       onScaleStart: (_) => _startScale = widget.scale,
       onScaleUpdate: (details) {
@@ -333,32 +432,63 @@ class _DraggableCanvasItemState extends State<_DraggableCanvasItem> {
               width: 92,
               height: 120,
               decoration: BoxDecoration(
-                border: Border.all(color: const Color(0xFF7B5CFF), width: 2),
+                border: widget.hideControls
+                    ? null
+                    : Border.all(color: const Color(0xFF7B5CFF), width: 2),
                 borderRadius: BorderRadius.circular(10),
                 color: Colors.white,
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.network(widget.imageUrl, fit: BoxFit.cover),
-              ),
-            ),
-          ),
-          Positioned(
-            right: -8,
-            top: -8,
-            child: InkWell(
-              onTap: widget.onRemove,
-              child: Container(
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.circular(11),
+                child: Image.network(
+                  widget.imageUrl,
+                  fit: BoxFit.cover,
                 ),
-                child: const Icon(Icons.close, size: 14, color: Colors.white),
               ),
             ),
           ),
+
+          // ✅ 삭제 버튼 (캡처 시 숨김)
+          if (!widget.hideControls)
+            Positioned(
+              right: -8,
+              top: -8,
+              child: InkWell(
+                onTap: widget.onRemove,
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: const Icon(Icons.close, size: 14, color: Colors.white),
+                ),
+              ),
+            ),
+
+          // ✅ 우하단 리사이즈 핸들 (캡처 시 숨김)
+          if (!widget.hideControls)
+            Positioned(
+              right: -6,
+              bottom: -6,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onPanUpdate: _onResizeDrag,
+                child: Container(
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.black),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.open_in_full, size: 10, color: Colors.black),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
