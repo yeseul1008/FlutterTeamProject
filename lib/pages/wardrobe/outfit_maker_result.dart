@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class AiOutfitMakerScreen extends StatefulWidget {
   final List<String> selectedImageUrls;
@@ -12,68 +18,336 @@ class AiOutfitMakerScreen extends StatefulWidget {
 }
 
 class _AiOutfitMakerScreenState extends State<AiOutfitMakerScreen> {
+  final FirebaseFirestore fs = FirebaseFirestore.instance;
   bool _isLoading = true;
   String? _generatedImageUrl;
+  String? _errorMessage;
+  String _currentStep = "이미지 분석 중...";
+  Map<String, dynamic> userInfo = {};
+  String? gender;
+
+  Future <void> _getUserInfo () async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final userSnapshot = await fs.collection('users').doc(uid).get();
+
+    setState(() {
+      userInfo = userSnapshot.data() ?? {'userId': uid};
+      gender = userInfo['gender'];
+    });
+
+    print("User's gender is : $gender");
+  }
 
   @override
   void initState() {
     super.initState();
     _generateCombinedImage();
+    _getUserInfo();
   }
 
   Future<void> _generateCombinedImage() async {
     try {
-      // 1. 제미나이에게 이미지 분석 및 프롬프트 작성 요청
+      setState(() => _currentStep = "AI가 옷을 분석하고 있습니다...");
       String geminiPrompt = await _fetchPromptFromGemini();
 
-      // 2. Pollinations URL 생성
+      print("Generated prompt: $geminiPrompt");
+
+      setState(() => _currentStep = "AI 룩북 이미지를 생성하고 있습니다...");
+
+      // STRONGER white background emphasis with negative prompts
+      final enhancedPrompt = "$geminiPrompt, Korean e-commerce fashion photography style, ${gender} model standing straight with relaxed arms, pure white seamless background, no floor visible, professional clean product photo, full body from head to toe, sharp focus, even lighting, isolated on white --no shadows --no studio --no props --no floor line --no background gradient";
+
+      final generatedUrl = "https://image.pollinations.ai/prompt/${Uri.encodeComponent(enhancedPrompt)}?width=600&height=900&model=flux-realism&nologo=true&seed=${DateTime.now().millisecondsSinceEpoch}";
+
+      await _preloadImage(generatedUrl);
+
       setState(() {
-        _generatedImageUrl = "https://image.pollinations.ai/prompt/${Uri.encodeComponent(geminiPrompt)}?width=800&height=1000&model=flux&nologo=true&seed=${DateTime.now().millisecondsSinceEpoch}";
+        _generatedImageUrl = generatedUrl;
         _isLoading = false;
+        _currentStep = "완료!";
       });
     } catch (e) {
       print("Error: $e");
+      setState(() {
+        _isLoading = false;
+        _errorMessage = "AI 룩북 생성에 실패했습니다. 다시 시도해주세요.\n\n오류: $e";
+      });
     }
   }
 
-  // 이 함수는 이전의 제미나이 API 호출 코드를 활용하여 '텍스트 응답'만 받으면 됩니다.
-  Future<String> _fetchPromptFromGemini() async {
-    final String apiKey = dotenv.env['AI_IMG_API'] ?? '';
-    final url = Uri.parse("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey");
+  // 이미지가 실제로 로드될 때까지 대기하는 함수
+  Future<void> _preloadImage(String url) async {
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load image');
+    }
+  }
 
-    // 이미지들을 base64로 변환하여 parts 구성 (이전 코드 활용)
-    List<Map<String, dynamic>> imageParts = [];
-    for (var imageUrl in widget.selectedImageUrls) {
-      final res = await http.get(Uri.parse(imageUrl));
-      imageParts.add({
-        "inline_data": {"mime_type": "image/jpeg", "data": base64Encode(res.bodyBytes)}
-      });
+  Future<String> _fetchPromptFromGemini() async {
+    final apiKey = dotenv.env['AI_IMG_API'] ?? '';
+
+    if (apiKey.isEmpty) {
+      throw Exception('API key not found');
     }
 
-    final response = await http.post(url, headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          "contents": [{
-            "parts": [
-              {"text": "Analyze these clothes and write a detailed English image prompt for a model wearing all of them. Only return the prompt text."},
-              ...imageParts
-            ]
-          }]
-        })
+    print("Creating Gemini model...");
+
+    final model = GenerativeModel(
+      model: 'gemini-2.5-flash',
+      apiKey: apiKey,
     );
 
-    final data = jsonDecode(response.body);
-    return data['candidates'][0]['content']['parts'][0]['text'];
+    print("Converting ${widget.selectedImageUrls.length} images...");
+    final imageParts = <DataPart>[];
+
+    for (int i = 0; i < widget.selectedImageUrls.length; i++) {
+      print("Downloading image ${i + 1}...");
+      final res = await http.get(Uri.parse(widget.selectedImageUrls[i]));
+
+      if (res.statusCode == 200) {
+        imageParts.add(DataPart('image/jpeg', res.bodyBytes));
+        print("Image ${i + 1} added successfully");
+      }
+    }
+
+    if (imageParts.isEmpty) {
+      throw Exception('No valid images to analyze');
+    }
+
+    // STRONGER emphasis on white background
+    final textPrompt = TextPart(
+        'Analyze these clothing items. Create an image generation prompt for: A Korean ${gender} fashion model standing perfectly straight with arms relaxed at sides, neutral facial expression, front-facing view, full body shot showing head to toe including shoes. The model should wear ALL these clothing items together. Style: Clean Korean fashion e-commerce product photo with PURE WHITE seamless background (like StyleNanda, Ader Error, or W Concept product photos). No floor line visible, no shadows on background, model should appear to float on white. Professional lighting, sharp focus on clothing details.'
+    );
+
+    print("Sending request to Gemini...");
+
+    try {
+      final response = await model.generateContent([
+        Content.multi([textPrompt, ...imageParts])
+      ]);
+
+      if (response.text == null || response.text!.isEmpty) {
+        throw Exception('Empty response from Gemini');
+      }
+
+      print("Generated prompt: ${response.text}");
+      return response.text!;
+    } catch (e) {
+      print("Gemini API Error: $e");
+      throw Exception('Failed to generate prompt: $e');
+    }
+  }
+
+  // Save AI outfit to Firebase
+  Future<void> _saveOutfitToFirebase() async {
+    if (_generatedImageUrl == null) return;
+
+    setState(() => _currentStep = "저장 중...");
+
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) {
+        _showSnack('로그인이 필요합니다');
+        return;
+      }
+
+      // Download the generated image
+      final response = await http.get(Uri.parse(_generatedImageUrl!));
+
+      // Save to temporary file
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/ai_outfit_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      await file.writeAsBytes(response.bodyBytes);
+
+      // Upload to Firebase Storage
+      final fileName = 'ai_outfit_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final storageRef = FirebaseStorage.instance
+          .ref('ai_outfits/$uid/$fileName');
+
+      await storageRef.putFile(file);
+      final downloadUrl = await storageRef.getDownloadURL();
+
+      // Save to Firestore
+      await FirebaseFirestore.instance
+          .collection('lookbooks')
+          .add({
+        'userId': uid,
+        'imageUrl': downloadUrl,
+        'type': 'ai_generated',
+        'sourceImages': widget.selectedImageUrls,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      _showSnack('AI 룩북이 저장되었습니다!');
+
+    } catch (e) {
+      print('Error saving outfit: $e');
+      _showSnack('저장에 실패했습니다: $e');
+    }
+  }
+
+  void _showSnack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("AI 코디네이터")),
-      body: Center(
-        child: _isLoading
-            ? const CircularProgressIndicator()
-            : Image.network(_generatedImageUrl!, fit: BoxFit.contain),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text("AI generated look"),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+        centerTitle: true,
+        actions: [
+          if (_generatedImageUrl != null)
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () {
+                setState(() {
+                  _isLoading = true;
+                  _generatedImageUrl = null;
+                  _errorMessage = null;
+                });
+                _generateCombinedImage();
+              },
+              tooltip: '다시 생성',
+            ),
+        ],
       ),
+      body: _isLoading
+          ? Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 20),
+            Text(
+              _currentStep,
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 40),
+            const Text(
+              '잠시만 기다려주세요...',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      )
+          : _errorMessage != null
+          ? Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 20),
+              Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _isLoading = true;
+                    _errorMessage = null;
+                  });
+                  _generateCombinedImage();
+                },
+                child: const Text('다시 시도'),
+              ),
+            ],
+          ),
+        ),
+      )
+          : SingleChildScrollView(
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
+
+            // Generated Image (no border)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Image.network(
+                _generatedImageUrl!,
+                fit: BoxFit.contain,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    height: 500,
+                    alignment: Alignment.center,
+                    child: CircularProgressIndicator(
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                          loadingProgress.expectedTotalBytes!
+                          : null,
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 500,
+                    alignment: Alignment.center,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error, size: 64, color: Colors.red),
+                        const SizedBox(height: 20),
+                        const Text('이미지 로드 실패'),
+                        ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              _isLoading = true;
+                              _generatedImageUrl = null;
+                            });
+                            _generateCombinedImage();
+                          },
+                          child: const Text('다시 시도'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // "Outfit complete!" text
+            const Text(
+              'Outfit complete!',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Download icon button
+            IconButton(
+              onPressed: _saveOutfitToFirebase,
+              icon: const Icon(Icons.download),
+              iconSize: 48,
+              color: Colors.black,
+              tooltip: '저장하기',
+            ),
+
+            const SizedBox(height: 40),
+          ],
+        ),
+      ),
+
+      // Keep the purple floating action button (if you have it elsewhere in your code)
+      floatingActionButton: _generatedImageUrl != null
+          ? null // You can add your purple button here if needed
+          : null,
     );
   }
 }
