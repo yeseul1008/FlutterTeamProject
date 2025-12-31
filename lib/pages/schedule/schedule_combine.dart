@@ -29,6 +29,9 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
   // ✅ 이미지 로딩 완료 플래그 (캡처 시 회색 방지)
   bool _imagesReady = false;
 
+  // ✅ 캡처 순간에만 편집 UI 숨김(테두리/삭제 버튼/리사이즈 핸들)
+  bool _isCapturing = false;
+
   @override
   void initState() {
     super.initState();
@@ -83,6 +86,9 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
 
   Future<Uint8List?> _captureCanvasPng() async {
     try {
+      // ✅ 캡처 순간에만 편집 UI 숨김
+      setState(() => _isCapturing = true);
+
       // ✅ paint 완료 보장 (모바일에서 회색 방지 핵심)
       await WidgetsBinding.instance.endOfFrame;
       await WidgetsBinding.instance.endOfFrame;
@@ -101,6 +107,8 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
       return byteData?.buffer.asUint8List();
     } catch (_) {
       return null;
+    } finally {
+      if (mounted) setState(() => _isCapturing = false);
     }
   }
 
@@ -153,7 +161,6 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
     });
   }
 
-
   @override
   Widget build(BuildContext context) {
     final bool hasAny = clothesIds.isNotEmpty;
@@ -191,7 +198,8 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
                 height: 320,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F7),
+                  // ✅ 저장 이미지 배경도 깔끔하게 흰색
+                  color: Colors.white,
                   border: Border.all(color: Colors.black),
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -245,6 +253,7 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
                             id: id,
                             imageUrl: url,
                             scale: state.scale,
+                            hideControls: _isCapturing, // ✅ 캡처 시 숨김
                             onMove: (delta) {
                               setState(() {
                                 final cur = _canvasItems[id];
@@ -310,7 +319,7 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: const Text(
-                      '코디로 저장하기',
+                      '룩북에 저장하기',
                       style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
                       textAlign: TextAlign.center,
                     ),
@@ -333,7 +342,7 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: Text(
-                      !_imagesReady ? '이미지 로딩중...' : '일정 등록하러 가기',
+                      !_imagesReady ? '이미지 로딩중...' : '코디 생성 완료',
                       style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
                       textAlign: TextAlign.center,
                     ),
@@ -370,6 +379,7 @@ class _DraggableCanvasItem extends StatefulWidget {
     required this.id,
     required this.imageUrl,
     required this.scale,
+    required this.hideControls,
     required this.onMove,
     required this.onScale,
     required this.onRemove,
@@ -378,6 +388,10 @@ class _DraggableCanvasItem extends StatefulWidget {
   final String id;
   final String imageUrl;
   final double scale;
+
+  // ✅ 캡처 중이면 테두리/삭제 버튼/리사이즈 핸들 숨김
+  final bool hideControls;
+
   final void Function(Offset delta) onMove;
   final void Function(double nextScale) onScale;
   final VoidCallback onRemove;
@@ -388,6 +402,13 @@ class _DraggableCanvasItem extends StatefulWidget {
 
 class _DraggableCanvasItemState extends State<_DraggableCanvasItem> {
   double? _startScale;
+
+  // ✅ 모서리 드래그로 스케일 조절(최소 변경, 비율 고정)
+  void _onResizeDrag(DragUpdateDetails d) {
+    final delta = d.delta.dx - d.delta.dy; // 대각선 느낌
+    final next = (widget.scale + delta * 0.006).clamp(0.6, 1.8);
+    widget.onScale(next);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -411,7 +432,9 @@ class _DraggableCanvasItemState extends State<_DraggableCanvasItem> {
               width: 92,
               height: 120,
               decoration: BoxDecoration(
-                border: Border.all(color: const Color(0xFF7B5CFF), width: 2),
+                border: widget.hideControls
+                    ? null
+                    : Border.all(color: const Color(0xFF7B5CFF), width: 2),
                 borderRadius: BorderRadius.circular(10),
                 color: Colors.white,
               ),
@@ -424,22 +447,48 @@ class _DraggableCanvasItemState extends State<_DraggableCanvasItem> {
               ),
             ),
           ),
-          Positioned(
-            right: -8,
-            top: -8,
-            child: InkWell(
-              onTap: widget.onRemove,
-              child: Container(
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.circular(11),
+
+          // ✅ 삭제 버튼 (캡처 시 숨김)
+          if (!widget.hideControls)
+            Positioned(
+              right: -8,
+              top: -8,
+              child: InkWell(
+                onTap: widget.onRemove,
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: const Icon(Icons.close, size: 14, color: Colors.white),
                 ),
-                child: const Icon(Icons.close, size: 14, color: Colors.white),
               ),
             ),
-          ),
+
+          // ✅ 우하단 리사이즈 핸들 (캡처 시 숨김)
+          if (!widget.hideControls)
+            Positioned(
+              right: -6,
+              bottom: -6,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onPanUpdate: _onResizeDrag,
+                child: Container(
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.black),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.open_in_full, size: 10, color: Colors.black),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
