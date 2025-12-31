@@ -18,6 +18,8 @@ class _UserJoinState extends State<UserJoin> {
   final _phone = TextEditingController();
   final _nickname = TextEditingController();
 
+  String _gender = 'M';
+
   bool _loading = false;
   final _fs = FirestoreService();
 
@@ -85,6 +87,7 @@ class _UserJoinState extends State<UserJoin> {
         provider: 'email',
         nickname: nickname,
         profileImageUrl: null,
+        gender: _gender
       );
 
       // follows 문서 초기화
@@ -138,6 +141,39 @@ class _UserJoinState extends State<UserJoin> {
                   ),
                 ),
                 const SizedBox(height: 28),
+                const Text(
+                  '성별',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: _GenderSelectItem(
+                        label: '여성',
+                        value: 'female',
+                        groupValue: _gender,
+                        onChanged: (v) => setState(() => _gender = v),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _GenderSelectItem(
+                        label: '남성',
+                        value: 'male',
+                        groupValue: _gender,
+                        onChanged: (v) => setState(() => _gender = v),
+                      ),
+                    ),
+                  ],
+                ),
+
+
+                const SizedBox(height: 16),
 
                 const Text('이메일', style: TextStyle(color: Colors.black, fontSize: 12)),
                 const SizedBox(height: 8),
@@ -325,7 +361,7 @@ class _InputField extends StatelessWidget {
         decoration: InputDecoration(
           isDense: true,
           filled: true,
-          fillColor: Colors.white,
+          fillColor: const Color(0xFFF2F2F2),
 
           hintText: hintText,
           hintStyle: const TextStyle(
@@ -340,18 +376,60 @@ class _InputField extends StatelessWidget {
           ),
 
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(999),
-            borderSide: const BorderSide(
-              color: Colors.black,
-              width: 1.2,
-            ),
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(999),
-            borderSide: const BorderSide(
-              color: Colors.black,
-              width: 1.6,
-            ),
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GenderSelectItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final String groupValue;
+  final ValueChanged<String> onChanged;
+
+  const _GenderSelectItem({
+    required this.label,
+    required this.value,
+    required this.groupValue,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bool selected = value == groupValue;
+
+    return GestureDetector(
+      onTap: () => onChanged(value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: 44,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFEDE7FF) : const Color(0xFFF2F2F2),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected
+                ? const Color(0xFF7B64D6)
+                : Colors.transparent,
+            width: 1.4,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: selected
+                ? const Color(0xFF7B64D6)
+                : Colors.black87,
           ),
         ),
       ),
