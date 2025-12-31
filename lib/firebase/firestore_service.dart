@@ -231,7 +231,7 @@ class FirestoreService {
   }
 
   // ======================================================
-  // ✅ NEW) canvas png -> Firebase Storage 업로드 -> URL 반환
+  //  canvas png -> Firebase Storage 업로드 -> URL 반환
   // - ScheduleCombine에서 받은 canvasPngBytes를 여기로 넘기면
   //   resultImageUrl로 저장 가능한 "진짜 사진 URL"이 만들어집니다.
   // ======================================================
@@ -251,7 +251,7 @@ class FirestoreService {
   }
 
   // ======================================================
-  // 12) schedules + calendar (users/{uid}/...)
+  // ** schedules + calendar (users/{uid}/...)
   // ======================================================
   Future<String> createLookbookWithFlag({
     required String userId,
@@ -284,6 +284,9 @@ class FirestoreService {
     required String planText,
     required String lookbookId,
   }) async {
+    final dateKey =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
     final scheduleDoc =
     await _db.collection('users').doc(userId).collection('schedules').add({
       'date': Timestamp.fromDate(date),
@@ -296,10 +299,16 @@ class FirestoreService {
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
-    await _db.collection('users').doc(userId).collection('calendar').add({
+    // ✅ 날짜별 단일 문서
+    await _db
+        .collection('users')
+        .doc(userId)
+        .collection('calendar')
+        .doc(dateKey)
+        .set({
       'date': Timestamp.fromDate(date),
       'lookbookId': lookbookId,
-      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
     });
 
     return scheduleDoc.id;

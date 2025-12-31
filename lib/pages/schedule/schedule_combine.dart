@@ -23,6 +23,9 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
   // id -> {offset, scale}
   final Map<String, _CanvasItemState> _canvasItems = {};
 
+  // ✅ 이미지 로딩 완료 플래그 (캡처 시 회색 방지)
+  bool _imagesReady = false;
+
   @override
   void initState() {
     super.initState();
@@ -35,7 +38,7 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
     (data?['imageUrls'] as Map<String, dynamic>? ?? {});
     imageUrls = imageUrlsRaw.map((k, v) => MapEntry(k, v.toString()));
 
-    // ✅ 전부 캔버스에 자동 배치 (처음부터 올라가 있는 상태)
+    // ✅ 전부 캔버스에 자동 배치
     for (int i = 0; i < clothesIds.length; i++) {
       final id = clothesIds[i];
       _canvasItems[id] = _CanvasItemState(
@@ -43,13 +46,46 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
         scale: 1.0,
       );
     }
+
+    // ✅ context 안전 + 첫 paint 이후에 precache
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _precacheAll();
+    });
+  }
+
+  Future<void> _precacheAll() async {
+    final urls = clothesIds
+        .map((id) => imageUrls[id])
+        .where((u) => u != null && u!.isNotEmpty)
+        .cast<String>()
+        .toList();
+
+    try {
+      for (final u in urls) {
+        await precacheImage(NetworkImage(u), context);
+      }
+    } catch (_) {
+      // 일부 실패해도 진행
+    }
+
+    if (!mounted) return;
+    setState(() => _imagesReady = true);
   }
 
   Future<Uint8List?> _captureCanvasPng() async {
     try {
+      // ✅ paint 완료 보장 (모바일에서 회색 방지 핵심)
+      await WidgetsBinding.instance.endOfFrame;
+      await WidgetsBinding.instance.endOfFrame;
+
       final boundary =
       _canvasKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) return null;
+
+      if (boundary.debugNeedsPaint) {
+        await WidgetsBinding.instance.endOfFrame;
+        await WidgetsBinding.instance.endOfFrame;
+      }
 
       final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -79,16 +115,18 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
   }
 
   Future<void> _registerToSchedule() async {
-    // X로 제거되고 남아있는 것만 등록
     final selected = _canvasItems.keys.toList();
 
-    // (선택) 캔버스 PNG도 같이 넘겨두면 나중에 resultImageUrl 만들 때 활용 가능
     final pngBytes = await _captureCanvasPng();
+    if (pngBytes == null || pngBytes.isEmpty) {
+      _showTempSnack('캡처 실패(빈 이미지)');
+      return;
+    }
 
     context.pop({
       'action': 'registerToSchedule',
       'clothesIds': selected,
-      'canvasPngBytes': pngBytes, // 필요 없으면 AddSchedule에서 무시
+      'canvasPngBytes': pngBytes,
     });
   }
 
@@ -121,7 +159,6 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
           ? const Center(child: Text('선택된 옷이 없습니다.'))
           : Column(
         children: [
-          // ✅ 캔버스 영역 (처음부터 전부 올라감 / X로만 삭제)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
             child: RepaintBoundary(
@@ -149,12 +186,32 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
                             ),
                           ),
                         ),
-
+                      if (!_imagesReady)
+                        const Positioned(
+                          left: 12,
+                          top: 12,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Colors.black,
+                              borderRadius: BorderRadius.all(Radius.circular(10)),
+                            ),
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              child: Text(
+                                '이미지 불러오는 중...',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ..._canvasItems.entries.map((e) {
                         final id = e.key;
                         final state = e.value;
                         final url = imageUrls[id] ?? '';
-
                         if (url.isEmpty) return const SizedBox.shrink();
 
                         return Positioned(
@@ -168,8 +225,9 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
                               setState(() {
                                 final cur = _canvasItems[id];
                                 if (cur == null) return;
-                                _canvasItems[id] =
-                                    cur.copyWith(offset: cur.offset + delta);
+                                _canvasItems[id] = cur.copyWith(
+                                  offset: cur.offset + delta,
+                                );
                               });
                             },
                             onScale: (nextScale) {
@@ -194,8 +252,6 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
             ),
           ),
 
-
-          // 버튼 3개
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Row(
@@ -237,12 +293,12 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
                     ),
                   ),
                 ),
-
-
                 const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _canvasItems.isEmpty ? null : _registerToSchedule,
+                    onPressed: (_canvasItems.isEmpty || !_imagesReady)
+                        ? null
+                        : _registerToSchedule,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFCAD83B),
                       foregroundColor: Colors.black,
@@ -253,9 +309,9 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
                       elevation: 2,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text(
-                      '일정에 등록하기',
-                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
+                    child: Text(
+                      !_imagesReady ? '이미지 로딩중...' : '일정에 등록하기',
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -312,7 +368,6 @@ class _DraggableCanvasItemState extends State<_DraggableCanvasItem> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ onScale 하나로 드래그(1손) + 확대/축소(2손)
     return GestureDetector(
       onScaleStart: (_) => _startScale = widget.scale,
       onScaleUpdate: (details) {
@@ -339,7 +394,10 @@ class _DraggableCanvasItemState extends State<_DraggableCanvasItem> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.network(widget.imageUrl, fit: BoxFit.cover),
+                child: Image.network(
+                  widget.imageUrl,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
           ),

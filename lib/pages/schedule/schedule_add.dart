@@ -20,12 +20,10 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
 
   final FirestoreService _firestoreService = FirestoreService();
 
-  // 목적지(좌표) 상태값: 기본 서울
   String? _placeName;
   double _lat = 37.5665;
   double _lon = 126.9780;
 
-  // 일정 텍스트
   String? _scheduleText;
 
   // TODO: 캘린더에서 선택한 날짜를 이 페이지로 넘겨서 여기에 넣으세요.
@@ -50,7 +48,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
     );
   }
 
-  // ✅ 옷장 -> 조합 -> (캔버스 PNG 업로드) -> 룩북 생성 -> schedules + calendar 저장
+  // ✅ 옷장(선택만) -> 조합(캡처) -> 업로드 -> 룩북 -> schedules+calendar 저장
   Future<void> _onPickWardrobeAndRegister() async {
     if (_isSaving) return;
 
@@ -65,7 +63,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
     try {
       setState(() => _isSaving = true);
 
-      // 1) 옷장 이동 (ScheduleWardrobe가 pop(result)로 돌아오게 되어있어야 함)
+      // 1) 옷장 이동: ✅ wardrobe는 "선택값만" pop으로 돌려줘야 함 (combine 호출 X)
       final wardrobeResult =
       await context.push<Map<String, dynamic>>('/scheduleWardrobe');
       if (wardrobeResult == null) return;
@@ -85,7 +83,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
         return;
       }
 
-      // 2) 조합하기 이동
+      // 2) 조합하기 이동: ✅ combine은 여기(Add)에서만 호출
       final combineResult = await context.push<Map<String, dynamic>>(
         '/scheduleCombine',
         extra: {
@@ -107,9 +105,10 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
         return;
       }
 
-      // 3) ✅ 캔버스 PNG bytes (있으면 업로드해서 resultImageUrl 만들기)
+      // 3) 캔버스 PNG 업로드
       String resultImageUrl = '';
-      final Uint8List? canvasPngBytes = combineResult['canvasPngBytes'] as Uint8List?;
+      final Uint8List? canvasPngBytes =
+      combineResult['canvasPngBytes'] as Uint8List?;
       if (canvasPngBytes != null && canvasPngBytes.isNotEmpty) {
         resultImageUrl = await _firestoreService.uploadLookbookCanvasPng(
           userId: user.uid,
@@ -117,13 +116,15 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
         );
       }
 
-      // 4) 룩북 생성 (resultImageUrl 채워짐)
+      debugPrint('resultImageUrl=$resultImageUrl');
+
+      // 4) 룩북 생성
       final String lookbookId = await _firestoreService.createLookbookWithFlag(
         userId: user.uid,
         alias: (_scheduleText != null && _scheduleText!.trim().isNotEmpty)
             ? _scheduleText!.trim()
             : '일정 코디',
-        resultImageUrl: resultImageUrl, // ✅ 캔버스 이미지 URL
+        resultImageUrl: resultImageUrl,
         clothesIds: finalClothesIds,
         inLookbook: true,
         publishToCommunity: false,
@@ -146,7 +147,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
         const SnackBar(content: Text('일정에 등록되었습니다.')),
       );
 
-      // 필요하면 캘린더로 이동
+      // 필요하면 자동 뒤로가기/캘린더 이동
       // context.go('/userScheduleCalendar');
     } catch (e) {
       if (!mounted) return;
@@ -292,7 +293,6 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
           child: Column(
             children: [
               const SizedBox(height: 10),
-
               Row(
                 children: [
                   IconButton(
@@ -305,9 +305,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
                   const SizedBox(width: 48),
                 ],
               ),
-
               const SizedBox(height: 18),
-
               _infoCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -317,24 +315,19 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
                     ),
                     const SizedBox(height: 8),
-
                     WeatherWidget(
                       date: _selectedDate,
                       lat: _lat,
                       lon: _lon,
                       apiKey: _openWeatherApiKey,
                     ),
-
                     const SizedBox(height: 14),
-
                     _labelValueRow(
                       label: '목적지',
                       value: _placeName == null ? '없음' : _placeName!,
                       onAdd: _onPickPlace,
                     ),
-
                     const SizedBox(height: 12),
-
                     _labelValueRow(
                       label: '일정',
                       value: _scheduleText == null ? '없음' : _scheduleText!,
@@ -343,9 +336,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 22),
-
               Row(
                 children: [
                   Expanded(
@@ -365,7 +356,6 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
                   ),
                 ],
               ),
-
               const Spacer(),
             ],
           ),
