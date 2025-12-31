@@ -115,7 +115,7 @@ class _UserJoinState extends State<UserJoin> {
 
   @override
   Widget build(BuildContext context) {
-    const bg = Color(0xFF0B0B0F);
+    const bg = Color(0xFFFFFFFF);
     const purple = Color(0xFFA88AF7);
     const border = Color(0xFF7B64D6);
     const textGrey = Color(0xFFB8B8C2);
@@ -130,51 +130,16 @@ class _UserJoinState extends State<UserJoin> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 28),
-
                 Center(
-                  child: Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFFB248C6), Color(0xFF6E62FF)],
-                      ),
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.35),
-                          blurRadius: 14,
-                          offset: const Offset(0, 6),
-                        )
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.checkroom_outlined,
-                      color: Colors.white,
-                      size: 34,
-                    ),
+                  child: Image.asset(
+                    'assets/applogo.png',
+                    width: 220,
+                    fit: BoxFit.contain,
                   ),
                 ),
+                const SizedBox(height: 28),
 
-                const SizedBox(height: 10),
-
-                const Center(
-                  child: Text(
-                    'What you wear?',
-                    style: TextStyle(
-                      color: textGrey,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 22),
-
-                const Text('이메일', style: TextStyle(color: textGrey, fontSize: 12)),
+                const Text('이메일', style: TextStyle(color: Colors.black, fontSize: 12)),
                 const SizedBox(height: 8),
                 _InputField(
                   controller: _email,
@@ -188,7 +153,7 @@ class _UserJoinState extends State<UserJoin> {
 
                 const SizedBox(height: 16),
 
-                const Text('전화번호', style: TextStyle(color: textGrey, fontSize: 12)),
+                const Text('전화번호', style: TextStyle(color: Colors.black, fontSize: 12)),
                 const SizedBox(height: 8),
                 _InputField(
                   controller: _phone,
@@ -202,7 +167,7 @@ class _UserJoinState extends State<UserJoin> {
 
                 const SizedBox(height: 16),
 
-                const Text('닉네임', style: TextStyle(color: textGrey, fontSize: 12)),
+                const Text('닉네임', style: TextStyle(color: Colors.black, fontSize: 12)),
                 const SizedBox(height: 8),
                 _InputField(
                   controller: _nickname,
@@ -215,7 +180,7 @@ class _UserJoinState extends State<UserJoin> {
 
                 const SizedBox(height: 16),
 
-                const Text('아이디', style: TextStyle(color: textGrey, fontSize: 12)),
+                const Text('아이디', style: TextStyle(color: Colors.black, fontSize: 12)),
                 const SizedBox(height: 8),
                 _InputField(
                   controller: _loginId,
@@ -228,7 +193,7 @@ class _UserJoinState extends State<UserJoin> {
 
                 const SizedBox(height: 16),
 
-                const Text('비밀번호', style: TextStyle(color: textGrey, fontSize: 12)),
+                const Text('비밀번호', style: TextStyle(color: Colors.black, fontSize: 12)),
                 const SizedBox(height: 8),
                 _InputField(
                   controller: _pw,
@@ -243,7 +208,7 @@ class _UserJoinState extends State<UserJoin> {
                 const SizedBox(height: 16),
 
                 const Text('비밀번호 재입력',
-                    style: TextStyle(color: textGrey, fontSize: 12)),
+                    style: TextStyle(color: Colors.black, fontSize: 12)),
                 const SizedBox(height: 8),
                 _InputField(
                   controller: _pw2,
@@ -293,8 +258,9 @@ class _UserJoinState extends State<UserJoin> {
                     Text(
                       '이미 계정이 있으신가요? ',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.65),
+                        color: Colors.black.withOpacity(0.65),
                         fontSize: 12,
+                        fontWeight: FontWeight.bold
                       ),
                     ),
                     GestureDetector(
@@ -311,7 +277,7 @@ class _UserJoinState extends State<UserJoin> {
                   ],
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 100),
               ],
             ),
           ),
@@ -350,27 +316,42 @@ class _InputField extends StatelessWidget {
         controller: controller,
         obscureText: obscureText,
         keyboardType: keyboardType,
-        style: TextStyle(color: textColor, fontSize: 14),
-        cursorColor: borderColor,
+        style: const TextStyle(
+          color: Colors.black,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        cursorColor: Colors.black,
         decoration: InputDecoration(
           isDense: true,
+          filled: true,
+          fillColor: Colors.white,
+
           hintText: hintText,
-          hintStyle: TextStyle(
-            color: hintColor.withOpacity(0.7),
+          hintStyle: const TextStyle(
+            color: Colors.black45,
             fontSize: 13,
           ),
+
           prefixIcon: Icon(
             icon,
-            color: hintColor.withOpacity(0.9),
+            color: Colors.black54,
             size: 20,
           ),
+
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: borderColor, width: 1.2),
+            borderRadius: BorderRadius.circular(999),
+            borderSide: const BorderSide(
+              color: Colors.black,
+              width: 1.2,
+            ),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: borderColor, width: 1.6),
+            borderRadius: BorderRadius.circular(999),
+            borderSide: const BorderSide(
+              color: Colors.black,
+              width: 1.6,
+            ),
           ),
         ),
       ),
