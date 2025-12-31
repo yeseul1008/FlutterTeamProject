@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -15,14 +16,17 @@ class QuestionFeed extends StatefulWidget {
 class _QuestionFeedState extends State<QuestionFeed> {
   final FirebaseFirestore fs = FirebaseFirestore.instance;
 
+  // FirebaseAuth에서 현재 로그인한 사용자 ID 가져오기
+  String get currentUserId => FirebaseAuth.instance.currentUser?.uid ?? '';
+
   List<QueryDocumentSnapshot<Map<String, dynamic>>> qnaPosts = [];
   bool isLoading = true;
 
   Future<void> _getQnaPost() async {
     try {
+      // Firestore에서 질문들을 내림차순으로 가져옵니다.
       final snapshot = await fs
-          .collection('qna_posts')
-          .where('createdAt', isNull: false)
+          .collection('questions')
           .orderBy('createdAt', descending: true)
           .get();
 
@@ -38,10 +42,183 @@ class _QuestionFeedState extends State<QuestionFeed> {
     }
   }
 
+  // 수정/삭제 모달 표시
+  void _showPostOptionsMenu(String postId, String authorId, String currentContent) {
+    // 작성자가 아니면 모달을 표시하지 않음
+    if (authorId != currentUserId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('작성자만 수정/삭제할 수 있습니다')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Edit 버튼
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _editPost(postId, currentContent);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFCAD83B),
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: const Text(
+                        'edit',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Delete 버튼
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _deletePost(postId);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFB19FFF),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: const Text(
+                        'delete',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 게시글 수정
+  void _editPost(String postId, String currentContent) {
+    final TextEditingController contentController = TextEditingController(text: currentContent);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('질문 수정'),
+        content: TextField(
+          controller: contentController,
+          decoration: const InputDecoration(
+            hintText: '내용을 입력하세요',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 5,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (contentController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('내용을 입력해주세요')),
+                );
+                return;
+              }
+
+              try {
+                await fs.collection('questions').doc(postId).update({
+                  'text': contentController.text.trim(),
+                  'updatedAt': FieldValue.serverTimestamp(),
+                });
+
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('질문이 수정되었습니다')),
+                );
+                await _getQnaPost(); // 목록 새로고침
+              } catch (e) {
+                debugPrint('Error updating post: $e');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('수정 중 오류가 발생했습니다')),
+                );
+              }
+            },
+            child: const Text('수정'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  //  게시글 삭제
+  void _deletePost(String postId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('질문 삭제'),
+        content: const Text('정말로 이 질문을 삭제하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                await fs.collection('questions').doc(postId).delete();
+
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('질문이 삭제되었습니다')),
+                );
+                await _getQnaPost(); // 목록 새로고침
+              } catch (e) {
+                debugPrint('Error deleting post: $e');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('삭제 중 오류가 발생했습니다')),
+                );
+              }
+            },
+            child: const Text('삭제', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
-    _getQnaPost();
+    _getQnaPost(); // 데이터 불러오기
   }
 
   @override
@@ -205,6 +382,13 @@ class _QuestionFeedState extends State<QuestionFeed> {
                     ],
                   ),
                 ),
+                // ... 버튼 (수정/삭제)
+                IconButton(
+                  icon: const Icon(Icons.more_horiz),
+                  onPressed: () => _showPostOptionsMenu(postId, authorId, content),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
               ],
             ),
           ),
@@ -323,16 +507,13 @@ class _QuestionFeedState extends State<QuestionFeed> {
     await Share.share(shareContent, subject: '질문 공유');
   }
 
-  // ✅ 카카오톡 공유 - 디버그 버전
+  // 카카오톡 공유
   Future<void> _shareToKakao(String content, String imageUrl) async {
     try {
       debugPrint('=== 카카오 공유 시작 ===');
-      debugPrint('content: $content');
-      debugPrint('imageUrl: $imageUrl');
-
       final template = FeedTemplate(
         content: Content(
-          title: '외출 다이어리 질문',
+          title: '질문',
           description: content,
           imageUrl: Uri.parse(imageUrl),
           link: Link(
@@ -342,81 +523,31 @@ class _QuestionFeedState extends State<QuestionFeed> {
         ),
       );
 
-      debugPrint('템플릿 생성 완료');
-
-      // 에뮬레이터에서는 항상 웹 공유 사용
-      debugPrint('🌐 웹으로 공유 시도');
-      final sharerUrl = await WebSharerClient.instance
-          .makeDefaultUrl(template: template);
-      debugPrint('공유 URL: $sharerUrl');
-
-      final launched = await launchUrl(
-          sharerUrl,
-          mode: LaunchMode.externalApplication
-      );
-      debugPrint('브라우저 열림 여부: $launched');
-
-      if (!launched) {
-        debugPrint('❌ 브라우저 열기 실패');
-        // url_launcher 패키지로 강제 실행
-        final fallbackUrl = Uri.parse(sharerUrl.toString());
-        await launchUrl(fallbackUrl);
-      }
-
-      debugPrint('=== 카카오 공유 완료 ===');
-    } catch (e, stackTrace) {
-      debugPrint('=== ❌ 카카오 공유 에러 ===');
-      debugPrint('에러: $e');
-      debugPrint('스택트레이스: $stackTrace');
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('카카오톡 공유 실패: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 5),
-          ),
-        );
-      }
+      final sharerUrl = await WebSharerClient.instance.makeDefaultUrl(template: template);
+      await launchUrl(sharerUrl);
+      debugPrint('카카오 공유 완료');
+    } catch (e) {
+      debugPrint('카카오톡 공유 실패: $e');
     }
   }
 
   // 인스타그램 공유
   Future<void> _shareToInstagram(String imageUrl) async {
-    try {
-      final uri = Uri.parse('instagram://library?AssetPath=$imageUrl');
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('인스타그램 앱이 설치되어 있지 않습니다')),
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint('Instagram share error: $e');
+    final uri = Uri.parse('instagram://library?AssetPath=$imageUrl');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      debugPrint('인스타그램 앱이 설치되지 않았습니다.');
     }
   }
 
   // 페이스북 공유
   Future<void> _shareToFacebook(String content, String imageUrl) async {
-    try {
-      final encodedUrl = Uri.encodeComponent(imageUrl);
-      final uri = Uri.parse(
-          'https://www.facebook.com/sharer/sharer.php?u=$encodedUrl');
-
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('페이스북을 열 수 없습니다')),
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint('Facebook share error: $e');
+    final uri = Uri.parse('https://www.facebook.com/sharer/sharer.php?u=$imageUrl');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      debugPrint('페이스북을 열 수 없습니다.');
     }
   }
 }
