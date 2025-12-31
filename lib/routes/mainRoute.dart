@@ -299,14 +299,14 @@ final GoRouter router = GoRouter(
         GoRoute(
           path: '/aiOutfitMakerScreen',
           builder: (context, state) {
-            final extra = state.extra;
+            // state.extra를 List<String>으로 형변환
+            final List<String>? extra = state.extra as List<String>?;
 
-            if (extra is List<String>) {
-              // URL 리스트를 바로 전달
+            if (extra != null) {
               return AiOutfitMakerScreen(selectedImageUrls: extra);
             } else {
               return const Scaffold(
-                body: Center(child: Text('잘못된 데이터가 전달되었습니다.')),
+                body: Center(child: Text('선택된 옷이 없습니다.')),
               );
             }
           },

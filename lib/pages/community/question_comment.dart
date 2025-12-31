@@ -199,6 +199,13 @@ class _QuestionCommentState extends State<QuestionComment> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                IconButton(
+                  icon: Icon(Icons.arrow_back),
+                  onPressed: () {
+                    context.go('/questionFeed'); // 뒤로가기
+                  },
+                ),
+                const SizedBox(width: 8),
                 Icon(Icons.mark_unread_chat_alt_outlined, size: 24),
                 const SizedBox(width: 8),
                 Text(

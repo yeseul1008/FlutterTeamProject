@@ -119,27 +119,24 @@ class _AiOutfitMakerState extends State<AiOutfitMaker> {
                         onTap: () {
                           if (selectedWardrobeIds.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('하나 이상의 옷을 선택해주세요.'),
-                              ),
+                              const SnackBar(content: Text('하나 이상의 옷을 선택해주세요.')),
                             );
                             return;
                           }
 
-                          // 선택된 옷 이미지 URL 리스트 추출
-                          final selectedUrls = snapshot.data!.docs
+                          // 1. 타입을 List<String>으로 명확히 지정하여 추출
+                          final List<String> selectedUrls = snapshot.data!.docs
                               .where((doc) => selectedWardrobeIds.contains(doc.id))
-                              .map((doc) => (doc.data()['imageUrl'] ?? '') as String)
-                              .where((url) => url.isNotEmpty) // 빈 문자열 제거
+                              .map((doc) => doc.data()['imageUrl']?.toString() ?? '') // 안전하게 String으로 변환
+                              .where((url) => url.isNotEmpty)
                               .toList();
 
-                          // 콘솔에 출력
                           print('선택된 옷 URL: $selectedUrls');
 
-                          // AI 생성 화면으로 이동 (빈 리스트도 전달)
+                          // 2. extra에 전달할 때 List<String>임을 확실히 함
                           context.push(
                             '/aiOutfitMakerScreen',
-                            extra: selectedUrls.isNotEmpty ? selectedUrls : <String>[],
+                            extra: selectedUrls,
                           );
                         },
 
