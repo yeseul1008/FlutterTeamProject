@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../widgets/common/weatherWidget.dart';
 
 class UserScheduleCalendar extends StatefulWidget {
@@ -11,29 +14,77 @@ class UserScheduleCalendar extends StatefulWidget {
 }
 
 class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
+  final FirebaseFirestore fs = FirebaseFirestore.instance;
+  final String? userId = FirebaseAuth.instance.currentUser?.uid;
+
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedDay = DateTime.now();
 
-  // UI용 더미 썸네일
-  final Map<DateTime, String> _outfitImages = {
-    DateTime(2025, 12, 23):
-    'https://images.unsplash.com/photo-1520975958225-5f61fdd7b13a?w=600',
-    DateTime(2025, 12, 24):
-    'https://images.unsplash.com/photo-1520975682031-a3d3ad9c0b3a?w=600',
-    DateTime(2025, 12, 25):
-    'https://images.unsplash.com/photo-1520975900602-1f81b190e0b8?w=600',
-    DateTime(2025, 12, 26):
-    'https://images.unsplash.com/photo-1520975910938-2dba43f8e812?w=600',
-    DateTime(2025, 12, 27):
-    'https://images.unsplash.com/photo-1520975923003-56a5d7a6d5d1?w=600',
-  };
+  // ✅ 날짜별 썸네일 캐시 (캘린더 셀/프리뷰 공용)
+  final Map<DateTime, String?> _thumbCache = {};
 
   DateTime _normalize(DateTime d) => DateTime(d.year, d.month, d.day);
-  String? _getThumb(DateTime day) => _outfitImages[_normalize(day)];
+
+  String? _getThumb(DateTime day) => _thumbCache[_normalize(day)];
 
   bool _isPast(DateTime day) {
     final today = _normalize(DateTime.now());
     return _normalize(day).isBefore(today);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadThumbForDay(_selectedDay); // 첫 진입 시 오늘 프리뷰도 로드
+  }
+
+  Future<void> _loadThumbForDay(DateTime day) async {
+    if (userId == null) return;
+
+    final key = _normalize(day);
+
+    // 이미 캐시가 있으면 또 조회 안함(원하면 제거 가능)
+    if (_thumbCache.containsKey(key)) return;
+
+    final url = await _fetchResultImageUrlForDay(day);
+    if (!mounted) return;
+
+    setState(() {
+      _thumbCache[key] = url; // url이 null이면 "등록 없음"으로 캐싱됨
+    });
+  }
+
+  Future<String?> _fetchResultImageUrlForDay(DateTime day) async {
+    if (userId == null) return null;
+
+    final start = DateTime(day.year, day.month, day.day);
+    final end = start.add(const Duration(days: 1));
+
+    // 1) schedules에서 해당 날짜 일정 1개 찾기
+    final scheduleSnap = await fs
+        .collection('users')
+        .doc(userId)
+        .collection('schedules')
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('date', isLessThan: Timestamp.fromDate(end))
+        .limit(1)
+        .get();
+
+    if (scheduleSnap.docs.isEmpty) return null;
+
+    final scheduleData = scheduleSnap.docs.first.data();
+    final lookbookId = (scheduleData['lookbookId'] ?? '').toString();
+    if (lookbookId.isEmpty) return null;
+
+    // 2) lookbooks에서 resultImageUrl 가져오기
+    final lookbookDoc = await fs.collection('lookbooks').doc(lookbookId).get();
+    if (!lookbookDoc.exists) return null;
+
+    final lookbookData = lookbookDoc.data() as Map<String, dynamic>?;
+    final resultImageUrl = (lookbookData?['resultImageUrl'] ?? '').toString();
+
+    if (resultImageUrl.trim().isEmpty) return null;
+    return resultImageUrl;
   }
 
   @override
@@ -47,13 +98,10 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
     final bool hasLookbook = selectedThumb != null;
 
     // 목적지 / 목적 (아직 미구현 → 임시 false)
-    final bool hasDestination = false; // TODO: 목적지 값 연결
-    final bool hasPurpose = false; // TODO: 목적 값 연결
+    final bool hasDestination = false; // TODO
+    final bool hasPurpose = false; // TODO
 
-    // 셋 중 하나라도 비어 있으면 일정 추가
     final bool needAdd = !(hasLookbook && hasDestination && hasPurpose);
-
-    // 버튼 텍스트
     final String btnText = needAdd ? '일정 추가' : '일정 수정';
 
     return Scaffold(
@@ -74,23 +122,11 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _NavItem(
-                    label: 'closet',
-                    icon: Icons.checkroom_outlined,
-                    onTap: () {}),
-                _NavItem(
-                    label: 'calendar',
-                    icon: Icons.calendar_month_outlined,
-                    onTap: () {}),
+                _NavItem(label: 'closet', icon: Icons.checkroom_outlined, onTap: () {}),
+                _NavItem(label: 'calendar', icon: Icons.calendar_month_outlined, onTap: () {}),
                 const SizedBox(width: 70),
-                _NavItem(
-                    label: 'diary',
-                    icon: Icons.menu_book_outlined,
-                    onTap: () {}),
-                _NavItem(
-                    label: 'community',
-                    icon: Icons.groups_outlined,
-                    onTap: () {}),
+                _NavItem(label: 'diary', icon: Icons.menu_book_outlined, onTap: () {}),
+                _NavItem(label: 'community', icon: Icons.groups_outlined, onTap: () {}),
               ],
             ),
           ),
@@ -110,8 +146,7 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
                   IconButton(
                     onPressed: () {
                       setState(() {
-                        _focusedDay =
-                            DateTime(_focusedDay.year, _focusedDay.month - 1, 1);
+                        _focusedDay = DateTime(_focusedDay.year, _focusedDay.month - 1, 1);
                       });
                     },
                     icon: const Icon(Icons.chevron_left),
@@ -142,8 +177,7 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
                   IconButton(
                     onPressed: () {
                       setState(() {
-                        _focusedDay =
-                            DateTime(_focusedDay.year, _focusedDay.month + 1, 1);
+                        _focusedDay = DateTime(_focusedDay.year, _focusedDay.month + 1, 1);
                       });
                     },
                     icon: const Icon(Icons.chevron_right),
@@ -184,17 +218,17 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
                 focusedDay: _focusedDay,
                 selectedDayPredicate: (day) => isSameDay(day, _selectedDay),
                 rowHeight: 52,
-                onDaySelected: (selectedDay, focusedDay) {
+                onDaySelected: (selectedDay, focusedDay) async {
                   setState(() {
                     _selectedDay = selectedDay;
                     _focusedDay = focusedDay;
                   });
+                  // ✅ 선택한 날짜의 프리뷰 이미지 로드
+                  await _loadThumbForDay(selectedDay);
                 },
                 calendarBuilders: CalendarBuilders(
-                  defaultBuilder: (context, day, _) =>
-                      _buildDayCell(day, isSelected: false),
-                  selectedBuilder: (context, day, _) =>
-                      _buildDayCell(day, isSelected: true),
+                  defaultBuilder: (context, day, _) => _buildDayCell(day, isSelected: false),
+                  selectedBuilder: (context, day, _) => _buildDayCell(day, isSelected: true),
                   todayBuilder: (context, day, _) => _buildDayCell(
                     day,
                     isSelected: isSameDay(day, _selectedDay),
@@ -272,7 +306,7 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
 
             const SizedBox(height: 10),
 
-            // 프리뷰가 남은 높이 전부 차지
+            // ✅ 프리뷰 영역: 선택한 날짜의 lookbook.resultImageUrl 표시
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -329,9 +363,7 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
       decoration: BoxDecoration(
         color: past ? pastBg : Colors.transparent,
         border: Border.all(
-          color: isSelected
-              ? selectedRing
-              : (forceToday ? todayRing : Colors.transparent),
+          color: isSelected ? selectedRing : (forceToday ? todayRing : Colors.transparent),
           width: isSelected ? 2 : (forceToday ? 1.5 : 0),
         ),
       ),
@@ -344,8 +376,7 @@ class _UserScheduleCalendarState extends State<UserScheduleCalendar> {
                 child: Image.network(
                   thumb,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) =>
-                      Container(color: Colors.grey[200]),
+                  errorBuilder: (_, __, ___) => Container(color: Colors.grey[200]),
                 ),
               ),
             ),

@@ -19,7 +19,9 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
   String? imageUrl;
   String? locationText;
   GeoPoint? selectedLocation;
-  bool isDiaryAlreadyExists = false;  // ADD THIS
+  bool isDiaryAlreadyExists = false;  // This serves as our edit mode flag
+  bool _hasShownDialog = false;
+  String? existingDiaryId;
 
   final FirebaseFirestore fs = FirebaseFirestore.instance;
   final TextEditingController _commentController = TextEditingController();
@@ -40,11 +42,10 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
       print('Received selectedDay: $selectedDay');
 
       _loadImage();
-      _checkIfDiaryExists();  // ADD THIS
+      _checkIfDiaryExists();
     }
   }
 
-  // ADD THIS FUNCTION
   Future<void> _checkIfDiaryExists() async {
     if (selectedDay == null) return;
 
@@ -67,51 +68,34 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
       if (calendarQuery.docs.isNotEmpty) {
         final calendarData = calendarQuery.docs.first.data();
         final inDiary = calendarData['inDiary'] ?? false;
+        final diaryId = calendarData['diaryId'] as String?;
+        final imageUrl = calendarData['imageUrl'] as String?;
 
-        if (inDiary == true) {
-          setState(() {
-            isDiaryAlreadyExists = true;
-          });
+        // If inDiary is true, we're in edit mode
+        if (inDiary == true && diaryId != null) {
+          // Load the existing diary data
+          final diaryDoc = await fs
+              .collection('users')
+              .doc(uid)
+              .collection('diaries')
+              .doc(diaryId)
+              .get();
 
-          // Show dialog warning
-          if (!mounted) return;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.orange),
-                    SizedBox(width: 8),
-                    Text('이미 작성된 일기'),
-                  ],
-                ),
-                content: Text('이 룩북에 대한 일기를 이미 작성하셨습니다.\n수정하시겠습니까?'),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      context.go('/calendarPage');
-                    },
-                    child: Text('취소'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      setState(() {
-                        isDiaryAlreadyExists = false;
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFCAD83B),
-                      foregroundColor: Colors.black,
-                    ),
-                    child: Text('수정하기'),
-                  ),
-                ],
-              ),
-            );
-          });
+          if (diaryDoc.exists) {
+            final diaryData = diaryDoc.data()!;
+
+            setState(() {
+              isDiaryAlreadyExists = true;  // This means we're in edit mode
+              existingDiaryId = diaryId;
+
+              // Load existing data into the form
+              _commentController.text = diaryData['comment'] ?? '';
+              locationText = diaryData['locationText'];
+              selectedLocation = diaryData['location'] as GeoPoint?;
+            });
+
+            print('Edit mode: Loading existing diary');
+          }
         }
       }
     } catch (e) {
@@ -159,6 +143,7 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
     print('locationText: $locationText');
     print('lookbookId: $lookbookId');
     print('date: $date');
+    print('isDiaryAlreadyExists (edit mode): $isDiaryAlreadyExists');
 
     if (comment.isEmpty) {
       print('Comment is empty!');
@@ -199,50 +184,89 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
     try {
       print('Attempting to save to Firestore...');
 
-      // Save diary to Firestore
-      await fs
-          .collection('users')
-          .doc(uid)
-          .collection('diaries')
-          .add({
-        'lookbookId': lookbookId,
-        'date': date,
-        'location': selectedLocation,
-        'locationText': locationText,
-        'comment': comment,
-        'createdAt': Timestamp.now(),
-      });
+      // Use isDiaryAlreadyExists to determine if we're updating or creating
+      if (isDiaryAlreadyExists && existingDiaryId != null) {
+        // UPDATE EXISTING DIARY
+        print('Updating existing diary: $existingDiaryId');
 
-      // UPDATE CALENDAR ENTRY - Mark as having a diary
-      if (selectedDay != null) {
-        final startOfDay = DateTime(selectedDay!.year, selectedDay!.month, selectedDay!.day, 0, 0, 0);
-        final endOfDay = DateTime(selectedDay!.year, selectedDay!.month, selectedDay!.day, 23, 59, 59);
-
-        final calendarQuery = await fs
+        await fs
             .collection('users')
             .doc(uid)
-            .collection('calendar')
-            .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-            .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
-            .limit(1)
-            .get();
+            .collection('diaries')
+            .doc(existingDiaryId)
+            .update({
+          'location': selectedLocation,
+          'locationText': locationText,
+          'comment': comment,
+          'updatedAt': Timestamp.now(),
+        });
 
-        if (calendarQuery.docs.isNotEmpty) {
-          await calendarQuery.docs.first.reference.update({'inDiary': true});
-          print('Calendar entry marked as having diary');
+        print('Diary updated successfully');
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('일기가 수정되었습니다!'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+      } else {
+        // CREATE NEW DIARY
+        final diaryDocRef = fs
+            .collection('users')
+            .doc(uid)
+            .collection('diaries')
+            .doc();
+
+        final diaryId = diaryDocRef.id;
+        print('Generated diary ID: $diaryId');
+
+        await diaryDocRef.set({
+          'lookbookId': lookbookId,
+          'date': date,
+          'location': selectedLocation,
+          'locationText': locationText,
+          'comment': comment,
+          'createdAt': Timestamp.now(),
+          'imageUrl': imageUrl
+        });
+
+        print('Diary saved with ID: $diaryId');
+
+        // UPDATE CALENDAR ENTRY
+        if (selectedDay != null) {
+          final startOfDay = DateTime(selectedDay!.year, selectedDay!.month, selectedDay!.day, 0, 0, 0);
+          final endOfDay = DateTime(selectedDay!.year, selectedDay!.month, selectedDay!.day, 23, 59, 59);
+
+          final calendarQuery = await fs
+              .collection('users')
+              .doc(uid)
+              .collection('calendar')
+              .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+              .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+              .limit(1)
+              .get();
+
+          if (calendarQuery.docs.isNotEmpty) {
+            await calendarQuery.docs.first.reference.update({
+              'inDiary': true,
+              'diaryId': diaryId,
+            });
+            print('Calendar entry marked as having diary with ID: $diaryId');
+          }
         }
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('일기가 저장되었습니다!'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
-
-      print('Successfully saved!');
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('일기가 저장되었습니다!'),
-          duration: Duration(seconds: 2),
-          backgroundColor: Colors.green,
-        ),
-      );
 
       await Future.delayed(const Duration(milliseconds: 500));
 
@@ -320,21 +344,10 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Row(
-          children: [
-            Text('Write an entry'),
-            // Show icon if diary already exists
-            if (isDiaryAlreadyExists) ...[
-              SizedBox(width: 8),
-              Icon(
-                Icons.edit_note,
-                color: Colors.orange,
-                size: 24,
-              ),
-            ],
-          ],
-        ),
+        backgroundColor: Colors.white,
+        title: Text(isDiaryAlreadyExists ? 'Edit entry' : 'Write an entry'),
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () => context.go('/calendarPage'),
@@ -346,30 +359,6 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Warning banner if diary exists
-              if (isDiaryAlreadyExists)
-                Container(
-                  padding: EdgeInsets.all(12),
-                  margin: EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    border: Border.all(color: Colors.orange),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline, color: Colors.orange),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '이 룩북에 대한 일기가 이미 작성되어 있습니다',
-                          style: TextStyle(color: Colors.orange.shade900),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
               // Image section
               Container(
                 width: double.infinity,
