@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../firebase/firestore_service.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../firebase/google_auth_service.dart';
 
 class UserLogin extends StatefulWidget {
   const UserLogin({super.key});
@@ -255,9 +256,21 @@ class _UserLoginState extends State<UserLogin> {
                 SizedBox(
                   height: 46,
                   child: ElevatedButton(
-                    onPressed: () {
-                      context.go('/googleLogin');
+                    onPressed: () async {
+                      try {
+                        final result = await GoogleAuthService.signInWithGoogle();
+                        if (result == null) return;
+
+                        if (!context.mounted) return;
+                        context.go('/userDiaryCards');
+                      } catch (e) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('구글 로그인에 실패했습니다.')),
+                        );
+                      }
                     },
+
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: Colors.black87,
@@ -368,7 +381,7 @@ class _InputField extends StatelessWidget {
         decoration: InputDecoration(
           isDense: true,
           filled: true,
-          fillColor: Colors.white,
+          fillColor: const Color(0xFFF2F2F2), // 연한 회색 배경
 
           hintText: hintText,
           hintStyle: const TextStyle(
@@ -382,23 +395,17 @@ class _InputField extends StatelessWidget {
             size: 20,
           ),
 
+          // 테두리 완전 제거
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(999),
-            borderSide: const BorderSide(
-              color: Colors.black,
-              width: 1.2,
-            ),
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(999),
-            borderSide: const BorderSide(
-              color: Colors.black,
-              width: 1.6,
-            ),
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
           ),
         ),
       ),
     );
   }
 }
-
