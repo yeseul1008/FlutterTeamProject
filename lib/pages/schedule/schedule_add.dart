@@ -199,8 +199,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
   Future<void> _onPickWardrobeAndCombine() async {
     if (_isSaving) return;
 
-    final wardrobeResult =
-    await context.push<Map<String, dynamic>>('/scheduleWardrobe');
+    final wardrobeResult = await context.push<Map<String, dynamic>>('/scheduleWardrobe');
     if (wardrobeResult == null) return;
 
     final List<String> clothesIds =
@@ -236,8 +235,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
     final List<String> finalClothesIds =
     (combineResult['clothesIds'] as List<dynamic>? ?? []).cast<String>();
 
-    final Uint8List? canvasPngBytes =
-    combineResult['canvasPngBytes'] as Uint8List?;
+    final Uint8List? canvasPngBytes = combineResult['canvasPngBytes'] as Uint8List?;
 
     if (finalClothesIds.isEmpty || canvasPngBytes == null || canvasPngBytes.isEmpty) {
       if (!mounted) return;
@@ -290,7 +288,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
         // 2) 룩북 생성 -> lookbookId
         final lookbookId = await _firestoreService.createLookbookWithFlag(
           userId: user.uid,
-          alias: (planText.trim().isNotEmpty) ? planText.trim() : '일정 코디',
+          alias: (planText.trim().isNotEmpty) ? planText.trim() : '일회성 코디',
           resultImageUrl: resultImageUrl,
           clothesIds: _clothesIds,
           inLookbook: true,
