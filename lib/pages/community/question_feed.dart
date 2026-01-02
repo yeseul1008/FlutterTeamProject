@@ -274,6 +274,34 @@ class _QuestionFeedState extends State<QuestionFeed> {
               ),
             ),
 
+          //  이미지 - 탭하면 전체 화면으로
+          if (item['resultImageUrl'] != null &&
+              item['resultImageUrl'].isNotEmpty)
+            GestureDetector(
+              onTap: () => _showFullScreenImage(context, item['resultImageUrl']),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: Colors.grey.shade300, width: 1),
+                    bottom: BorderSide(color: Colors.grey.shade300, width: 1),
+                  ),
+                ),
+                child: Hero(
+                  tag: item['resultImageUrl'],
+                  child: Image.network(
+                    item['resultImageUrl'],
+                    height: 280,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const SizedBox(
+                      height: 280,
+                      child: Center(child: Icon(Icons.broken_image)),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: Row(
@@ -322,6 +350,42 @@ class _QuestionFeedState extends State<QuestionFeed> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// 전체 화면 이미지 보기
+  void _showFullScreenImage(BuildContext context, String imageUrl) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          body: GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Center(
+              child: Hero(
+                tag: imageUrl,
+                child: InteractiveViewer(
+                  panEnabled: true,
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+        ),
       ),
     );
   }
