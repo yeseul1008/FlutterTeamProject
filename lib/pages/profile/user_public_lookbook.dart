@@ -10,15 +10,15 @@ class PublicLookBook extends StatefulWidget {
   const PublicLookBook({super.key});
 
   @override
-  State<PublicLookBook> createState() => _UserDiaryCardsState();
+  State<PublicLookBook> createState() => _PublicLookBookState();
 }
 
-class _UserDiaryCardsState extends State<PublicLookBook> {
+class _PublicLookBookState extends State<PublicLookBook> {
   final FirebaseFirestore fs = FirebaseFirestore.instance;
   final FirebaseStorage storage = FirebaseStorage.instance;
 
   Map<String, dynamic> userInfo = {};
-  List<Map<String, dynamic>> userDiaries = [];
+  List<Map<String, dynamic>> userLookbooks = [];  // CHANGED: renamed from userDiaries
   int lookbookCnt = 0;
   int itemCnt = 0;
   int followerCnt = 0;
@@ -27,9 +27,7 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
   bool isProcessingImage = false;
   String? profileImageUrl;
 
-  // 현재 보고 있는 사용자의 ID (URL 파라미터로 받음)
   String? targetUserId;
-  //  로그인한 사용자의 ID
   String? currentUserId;
 
   String formatKoreanDate(Timestamp? timestamp) {
@@ -38,29 +36,27 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
     return '${dt.year}년 ${dt.month}월 ${dt.day}일';
   }
 
-  // URL 쿼리 파라미터에서 userId 추출
+  @override
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    // 로그인한 사용자 ID 저장
     currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
-    // URL에서 userId 파라미터 가져오기
     final uri = GoRouterState.of(context).uri;
     final queryUserId = uri.queryParameters['userId'];
 
-    // targetUserId가 변경되었을 때만 데이터 로드
+    // IMPORTANT: Only reload if targetUserId actually changed
     if (queryUserId != targetUserId) {
       targetUserId = queryUserId ?? currentUserId;
-      _getUserInfo();
+      print('Target user changed to: $targetUserId');
+      _getUserInfo();  // This should trigger everything
     }
   }
 
-  // Check if current user is following target user
   Future<void> _checkFollowingStatus() async {
     if (currentUserId == null || targetUserId == null) return;
-    if (currentUserId == targetUserId) return; // Can't follow yourself
+    if (currentUserId == targetUserId) return;
 
     try {
       final doc = await fs
@@ -78,7 +74,6 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
     }
   }
 
-  // Get follower count
   Future<int> _getFollowerCount(String userId) async {
     try {
       final snapshot = await fs
@@ -94,7 +89,6 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
     }
   }
 
-  // UPDATED: Follow/Unfollow functionality with bidirectional relationship
   Future<void> _toggleFollow() async {
     if (currentUserId == null || targetUserId == null) {
       _showSnack('로그인이 필요합니다');
@@ -107,7 +101,6 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
     }
 
     try {
-      // Get both users' info
       final currentUserDoc = await fs.collection('users').doc(currentUserId).get();
       final currentUserData = currentUserDoc.data();
 
@@ -115,9 +108,6 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
       final targetUserData = targetUserDoc.data();
 
       if (isFollowing) {
-        // Unfollow - Remove from both subcollections
-
-        // 1. Remove from target user's followers
         await fs
             .collection('users')
             .doc(targetUserId)
@@ -125,7 +115,6 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
             .doc(currentUserId)
             .delete();
 
-        // 2. Remove from current user's following
         await fs
             .collection('users')
             .doc(currentUserId)
@@ -140,9 +129,6 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
 
         _showSnack('팔로우 취소');
       } else {
-        // Follow - Add to both subcollections
-
-        // 1. Add to target user's followers subcollection
         await fs
             .collection('users')
             .doc(targetUserId)
@@ -156,7 +142,6 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
           'followedAt': FieldValue.serverTimestamp(),
         });
 
-        // 2. Add to current user's following subcollection
         await fs
             .collection('users')
             .doc(currentUserId)
@@ -183,8 +168,43 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
     }
   }
 
+  // NEW: Get user lookbooks
+  Future<void> _getUserLookbook() async {
+    final uid = targetUserId ?? currentUserId;
+
+    if (uid == null) {
+      print('ERROR: uid is null!');
+      return;
+    }
+
+    print('Fetching lookbooks for userId: $uid');
+
+    try {
+      final querySnapshot = await fs
+          .collection('lookbooks')
+          .where('userId', isEqualTo: uid)
+          .where('inLookbook', isEqualTo: true)
+          .get();
+
+      print('Query completed. Found ${querySnapshot.docs.length} lookbooks');
+
+      final dataList = querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        data['docId'] = doc.id;
+        return data;
+      }).toList();
+
+      setState(() {
+        userLookbooks = dataList;
+      });
+
+      print('Number of lookbooks loaded: ${userLookbooks.length}');
+    } catch (e) {
+      print('Error fetching user lookbooks: $e');
+    }
+  }
+
   Future<void> _getUserInfo() async {
-    // targetUserId가 있으면 해당 사용자의 정보를, 없으면 로그인한 사용자의 정보를 가져옴
     final uid = targetUserId ?? currentUserId;
 
     if (uid == null) {
@@ -193,18 +213,11 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
       return;
     }
 
-    // Get diaries from subcollection
-    final diariesSnapshot = await fs
-        .collection('users')
-        .doc(uid)
-        .collection('diaries')
-        .orderBy('createdAt', descending: true)
-        .get();
-
     // Get lookbook count
     final lookbookSnapshot = await fs
         .collection('lookbooks')
         .where('userId', isEqualTo: uid)
+        .where('inLookbook', isEqualTo: true)
         .get();
 
     // Get items count
@@ -216,7 +229,6 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
 
     final userSnapshot = await fs.collection('users').doc(uid).get();
 
-    // Get follower count
     final followerCount = await _getFollowerCount(uid);
 
     if (!mounted) return;
@@ -225,28 +237,29 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
       lookbookCnt = lookbookSnapshot.docs.length;
       itemCnt = wardrobeSnapshot.docs.length;
       followerCnt = followerCount;
-      userDiaries = diariesSnapshot.docs.map((doc) {
-        final data = doc.data();
-        data['diaryId'] = doc.id;
-        data['formattedDate'] = formatKoreanDate(data['date']);
-        return data;
-      }).toList();
       profileImageUrl = userInfo['profileImageUrl'];
     });
+
+    // Load lookbooks
+    await _getUserLookbook();
 
     // Check following status
     await _checkFollowingStatus();
 
-    print('Number of diary entries: ${userDiaries.length}');
-    print('Number of lookbooks : ${lookbookCnt}');
-    print('Number of items in the wardrobe : ${itemCnt}');
+    print('Number of lookbooks: ${lookbookCnt}');
+    print('Number of items in the wardrobe: ${itemCnt}');
     print('Number of followers: $followerCnt');
   }
 
   @override
   void initState() {
     super.initState();
-    // didChangeDependencies에서 처리하므로 여기서는 호출하지 않음
+    // This ensures data loads even if didChangeDependencies doesn't trigger
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (userLookbooks.isEmpty) {
+        _getUserInfo();
+      }
+    });
   }
 
   void _showSnack(String msg) {
@@ -374,206 +387,53 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
     );
   }
 
-  Future<void> _deleteDiary(String diaryId) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+  // CHANGED: Lookbook dialog
+  void _lookbookDialog(BuildContext context, int index) {
+    if (userLookbooks.isEmpty || index >= userLookbooks.length) return;
 
-    if (uid == null) {
-      _showSnack('로그인 상태가 아닙니다');
-      return;
-    }
-
-    // Show confirmation dialog
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: const Text('다이어리 삭제'),
-        content: const Text('정말 이 다이어리를 삭제하시겠습니까?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('삭제'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    try {
-      // Delete the diary from Firestore
-      await fs
-          .collection('users')
-          .doc(uid)
-          .collection('diaries')
-          .doc(diaryId)
-          .delete();
-
-      // Find and update the calendar entry with matching diaryId
-      final calendarQuery = await fs
-          .collection('users')
-          .doc(uid)
-          .collection('calendar')
-          .where('diaryId', isEqualTo: diaryId)
-          .limit(1)
-          .get();
-
-      // Update the calendar entry if found
-      if (calendarQuery.docs.isNotEmpty) {
-        final calendarDocId = calendarQuery.docs.first.id;
-        await fs
-            .collection('users')
-            .doc(uid)
-            .collection('calendar')
-            .doc(calendarDocId)
-            .update({'inDiary': false});
-
-        print('Calendar entry updated: inDiary set to false');
-      }
-
-      _showSnack('다이어리가 삭제되었습니다');
-
-      // Refresh the diaries list
-      await _getUserInfo();
-
-    } catch (e) {
-      _showSnack('삭제 실패: $e');
-      print('Error deleting diary: $e');
-    }
-  }
-
-  void _diaryDialog(BuildContext context, int index) {
-    if (userDiaries.isEmpty || index >= userDiaries.length) return;
-
-    final diary = userDiaries[index];
-    final diaryId = diary['diaryId'];
-    final diaryImg = diary['imageUrl'];
-    // 자신의 다이어리인지 확인
-    final isOwnDiary = targetUserId == currentUserId;
+    final lookbook = userLookbooks[index];
+    final lookbookImg = lookbook['resultImageUrl'];
 
     showDialog(
       context: context,
       builder: (context) => Dialog(
         backgroundColor: Colors.white,
-        child: Stack(
-          children: [
-            SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(height: 5),
-                        // Location
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(Icons.location_on, size: 20),
-                            SizedBox(width: 5),
-                            Expanded(
-                              child: Text(
-                                "${diary['locationText'] ?? '위치 없음'}",
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 10),
-                        // Date
-                        Row(
-                          children: [
-                            Icon(Icons.calendar_today, size: 20),
-                            SizedBox(width: 5),
-                            Text("${diary['formattedDate'] ?? 'No date'}"),
-                          ],
-                        ),
-                        SizedBox(height: 20),
-
-                        // Image
-                        Image.network(
-                          diaryImg,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: 300,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              height: 300,
-                              color: Colors.grey[300],
-                              child: Icon(Icons.image_not_supported, size: 80),
-                            );
-                          },
-                        ),
-                        // Comment
-                        Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Center(
-                            child: Text(
-                              '${diary['comment'] ?? "No comment"}',
-                              style: TextStyle(fontSize: 14),
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 20),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // 자신의 다이어리일 때만 편집/삭제 버튼 표시
-            if (isOwnDiary)
-              Positioned(
-                bottom: 3,
-                right: 8,
-                child: Row(
-                  children: [
-                    IconButton(
-                      iconSize: 20.0,
-                      icon: Icon(Icons.edit),
-                      onPressed: () {
-                        Navigator.pop(context);
-                        final date = diary['date'] as Timestamp?;
-                        context.go('/userDiaryAdd', extra: {
-                          'lookbookId': diary['lookbookId'],
-                          'date': date,
-                          'selectedDay': date?.toDate(),
-                        });
-                      },
-                    ),
-                    IconButton(
-                      iconSize: 20.0,
-                      onPressed: () async {
-                        await _deleteDiary(diaryId);
-                        if (mounted && Navigator.canPop(context)) {
-                          Navigator.pop(context);
-                        }
-                      },
-                      icon: Icon(Icons.delete),
-                    )
-                  ],
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 5),
+                Image.network(
+                  lookbookImg,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 300,
+                      color: Colors.grey[300],
+                      child: const Icon(Icons.image_not_supported, size: 80),
+                    );
+                  },
                 ),
-              ),
-          ],
+                const SizedBox(height: 16),
+                if (lookbook['alias'] != null && lookbook['alias'].toString().isNotEmpty)
+                  Text(
+                    lookbook['alias'],
+                    style: const TextStyle(
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
-
-  // 이미지 확대/이동 컨트롤러
-  final TransformationController _transformController =
-  TransformationController();
 
   Future<void> _pickImage() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -599,7 +459,7 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
 
       final String fileName = 'profile_$uid.jpg';
       final Reference storageRef = storage
-          .ref('user_profile_pictures/${fileName}');
+          .ref('user_profile_pictures/$fileName');
 
       final UploadTask uploadTask = storageRef.putFile(imageFile);
       final TaskSnapshot snapshot = await uploadTask;
@@ -627,14 +487,13 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
-    // 자신의 프로필인지 확인
     final isOwnProfile = targetUserId == currentUserId;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // Custom AppBar
+          // Header
           Container(
             width: double.infinity,
             height: 180,
@@ -645,7 +504,6 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                   left: 15,
                   top: 40,
                   child: GestureDetector(
-                    // 자신의 프로필일 때만 이미지 변경 가능
                     onTap: isOwnProfile && !isProcessingImage ? _pickImage : null,
                     child: Stack(
                       children: [
@@ -674,7 +532,6 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                               ),
                             ),
                           ),
-                        // 자신의 프로필일 때만 카메라 아이콘 표시
                         if (isOwnProfile)
                           Positioned(
                             bottom: 0,
@@ -708,6 +565,7 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                       Text(
                         "${userInfo['nickname'] ?? 'UID'} \n@${userInfo['loginId'] ?? 'user ID'}",
                         style: const TextStyle(color: Colors.white),
+                        textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 10),
                       Row(
@@ -726,7 +584,7 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                           ),
                           const SizedBox(width: 15),
                           GestureDetector(
-                            // onTap: () => context.go('/followList'),
+                            onTap: () => context.go('/followList${targetUserId != null ? '?userId=$targetUserId' : ''}'),
                             child: Text(
                               "$followerCnt \nfollowers",
                               textAlign: TextAlign.center,
@@ -736,7 +594,6 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      // Follow button with dynamic state
                       if (!isOwnProfile)
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
@@ -757,7 +614,6 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                     ],
                   ),
                 ),
-                // 자신의 프로필일 때만 메뉴 버튼 표시
                 if (isOwnProfile)
                   Positioned(
                     top: topPad + 2,
@@ -790,7 +646,6 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                     height: 50,
                     child: ElevatedButton(
                       onPressed: () {
-                        // targetUserId를 쿼리 파라미터로 전달
                         if (targetUserId != null) {
                           context.go('/publicWardrobe?userId=$targetUserId');
                         } else {
@@ -823,7 +678,6 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                     height: 50,
                     child: ElevatedButton(
                       onPressed: () {
-                        // targetUserId를 쿼리 파라미터로 전달
                         if (targetUserId != null) {
                           context.go('/publicLookBook?userId=$targetUserId');
                         } else {
@@ -856,46 +710,50 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
 
           const SizedBox(height: 20),
 
+          // CHANGED: Lookbooks grid
           Expanded(
-            child: userDiaries.isEmpty
+            child: userLookbooks.isEmpty
                 ? Center(
-              child: Text('아직 다이어리가 없습니다'),
+              child: Text('아직 룩북이 없습니다'),
             )
                 : GridView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                bottom: MediaQuery.of(context).padding.bottom + 80,
+              ),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
                 childAspectRatio: 0.8,
               ),
-              itemCount: userDiaries.length,
+              itemCount: userLookbooks.length,
               itemBuilder: (context, index) {
-                final diary = userDiaries[index];
+                final lookbook = userLookbooks[index];
 
                 return GestureDetector(
-                  onTap: () => _diaryDialog(context, index),
-                  child: Card(
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: Center(
-                            child: Image.network(
-                              diary['imageUrl'],
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: 300,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  height: 300,
-                                  color: Colors.grey[300],
-                                  child: Icon(Icons.image_not_supported, size: 80),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
+                  onTap: () => _lookbookDialog(context, index),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Colors.grey[300]!,
+                        width: 1,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        lookbook['resultImageUrl'],
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey[300],
+                            child: Icon(Icons.image_not_supported, size: 40),
+                          );
+                        },
+                      ),
                     ),
                   ),
                 );
