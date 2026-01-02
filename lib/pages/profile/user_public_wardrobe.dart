@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:team_project_flutter/pages/profile/user_public_wardrobe_category.dart';
 
 class PublicWardrobe extends StatefulWidget {
   const PublicWardrobe({super.key});
@@ -20,6 +21,7 @@ class _UserDiaryCardsState extends State<PublicWardrobe> {
   Map<String, dynamic> userInfo = {};
   List<Map<String, dynamic>> userDiaries = [];
   List<Map<String, dynamic>> userWardrobe = [];
+  List<Map<String, dynamic>> filteredWardrobe = [];
   int lookbookCnt = 0;
   int itemCnt = 0;
   int followerCnt = 0;
@@ -30,6 +32,12 @@ class _UserDiaryCardsState extends State<PublicWardrobe> {
 
   String? targetUserId;
   String? currentUserId;
+
+  TextEditingController searchController = TextEditingController();
+  String searchText = '';
+
+  // Selected category NAME (not ID)
+  String? selectedCategoryName;
 
   String formatKoreanDate(Timestamp? timestamp) {
     if (timestamp == null) return '날짜 없음';
@@ -50,6 +58,62 @@ class _UserDiaryCardsState extends State<PublicWardrobe> {
       targetUserId = queryUserId ?? currentUserId;
       _getUserInfo();
     }
+  }
+
+  // Filter wardrobe based on search text AND selected category
+  void _filterWardrobe() {
+    List<Map<String, dynamic>> tempList = userWardrobe;
+
+    print('==== DETAILED FILTER DEBUG ====');
+    print('Total items in wardrobe: ${userWardrobe.length}');
+    print('Selected categoryName: "$selectedCategoryName"');
+    print('Search text: "$searchText"');
+
+    // Print all items for debugging
+    for (int i = 0; i < userWardrobe.length; i++) {
+      print('Item $i - categoryName: "${userWardrobe[i]['categoryName']}"');
+    }
+
+    // First, filter by category if one is selected
+    if (selectedCategoryName != null && selectedCategoryName!.isNotEmpty) {
+      print('Filtering by category...');
+
+      tempList = tempList.where((item) {
+        final categoryName = (item['categoryName'] ?? '').toString().toLowerCase();
+        final selectedLower = selectedCategoryName!.toLowerCase();
+
+        print('Comparing: "$categoryName" == "$selectedLower" ? ${categoryName == selectedLower}');
+
+        return categoryName == selectedLower;
+      }).toList();
+
+      print('After category filter: ${tempList.length} items');
+    }
+
+    // Then, filter by search text if there is any
+    if (searchText.isNotEmpty) {
+      print('Filtering by search text...');
+
+      final searchLower = searchText.toLowerCase();
+      tempList = tempList.where((item) {
+        final productName = (item['productName'] ?? '').toString().toLowerCase();
+        final categoryName = (item['categoryName'] ?? '').toString().toLowerCase();
+        final season = (item['season'] ?? '').toString().toLowerCase();
+
+        return productName.contains(searchLower) ||
+            categoryName.contains(searchLower) ||
+            season.contains(searchLower);
+      }).toList();
+
+      print('After search filter: ${tempList.length} items');
+    }
+
+    setState(() {
+      filteredWardrobe = tempList;
+    });
+
+    print('Final filtered count: ${filteredWardrobe.length}');
+    print('===============================');
   }
 
   Future<void> _checkFollowingStatus() async {
@@ -215,6 +279,7 @@ class _UserDiaryCardsState extends State<PublicWardrobe> {
         final data = doc.data();
         return data;
       }).toList();
+      filteredWardrobe = userWardrobe;
     });
 
     await _checkFollowingStatus();
@@ -355,10 +420,33 @@ class _UserDiaryCardsState extends State<PublicWardrobe> {
     );
   }
 
-  void _wardrobeDialog(BuildContext context, int index) {
-    if (userWardrobe.isEmpty || index >= userWardrobe.length) return;
+  _openCategoryModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) {
+        return UserPublicWardrobeCategory(
+          onSelect: (categoryName) {
+            print('==== CATEGORY SELECTED ====');
+            print('Received from UserWardrobeCategory: "$categoryName"');
+            print('Type: ${categoryName.runtimeType}');
+            print('===========================');
+            setState(() {
+              selectedCategoryName = categoryName;
+            });
+            Navigator.pop(context);
+            _filterWardrobe();
+          },
+        );
+      },
+    );
+  }
 
-    final wardrobe = userWardrobe[index];
+  void _wardrobeDialog(BuildContext context, int index) {
+    if (filteredWardrobe.isEmpty || index >= filteredWardrobe.length) return;
+
+    final wardrobe = filteredWardrobe[index];
     final wardrobeImg = wardrobe['imageUrl'];
 
     showDialog(
@@ -468,9 +556,8 @@ class _UserDiaryCardsState extends State<PublicWardrobe> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Column(  // CHANGED: Back to Column
+      body: Column(
         children: [
-          // Fixed Header
           Container(
             width: double.infinity,
             height: 180,
@@ -585,7 +672,6 @@ class _UserDiaryCardsState extends State<PublicWardrobe> {
 
           const SizedBox(height: 10),
 
-          // Fixed Navigation buttons
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
@@ -647,10 +733,71 @@ class _UserDiaryCardsState extends State<PublicWardrobe> {
 
           const SizedBox(height: 20),
 
-          // Scrollable Grid ONLY
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () => _openCategoryModal(context),
+                  child: Icon(
+                    Icons.menu,
+                    color: selectedCategoryName != null ? const Color(0xFFCAD83B) : Colors.black,
+                  ),
+                ),
+                if (selectedCategoryName != null)
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        selectedCategoryName = null;
+                      });
+                      _filterWardrobe();
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.only(left: 4),
+                      child: Icon(Icons.close, size: 20),
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.black),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: TextField(
+                      controller: searchController,
+                      onChanged: (value) {
+                        setState(() {
+                          searchText = value.trim();
+                        });
+                        _filterWardrobe();
+                      },
+                      decoration: const InputDecoration(
+                        hintText: 'search...',
+                        border: InputBorder.none,
+                        isDense: true,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
           Expanded(
-            child: userWardrobe.isEmpty
-                ? const Center(child: Text('아직 옷장이 비어있습니다'))
+            child: filteredWardrobe.isEmpty
+                ? Center(
+              child: Text(
+                searchText.isEmpty && selectedCategoryName == null
+                    ? '아직 옷장이 비어있습니다'
+                    : '검색 결과가 없습니다',
+              ),
+            )
                 : GridView.builder(
               padding: EdgeInsets.only(
                 left: 16,
@@ -663,16 +810,16 @@ class _UserDiaryCardsState extends State<PublicWardrobe> {
                 mainAxisSpacing: 10,
                 childAspectRatio: 0.8,
               ),
-              itemCount: userWardrobe.length,
+              itemCount: filteredWardrobe.length,
               itemBuilder: (context, index) {
-                final wardrobe = userWardrobe[index];
+                final wardrobe = filteredWardrobe[index];
                 return GestureDetector(
                   onTap: () => _wardrobeDialog(context, index),
                   child: Container(
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: Colors.grey[300]!,  // Border color
-                        width: 1,                   // Border width
+                        color: Colors.grey[300]!,
+                        width: 1,
                       ),
                       borderRadius: BorderRadius.circular(8),
                     ),

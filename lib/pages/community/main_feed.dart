@@ -37,6 +37,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
   }
 
   /// Lookbooks 로드
+  /// Lookbooks 로드
   Future<void> _getLookbooks() async {
     setState(() {
       isLoading = true;
@@ -57,12 +58,14 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
         final String authorId = data['userId'] ?? '';
 
         String authorNickname = 'Unknown';
+        String authorLoginId = '';  // NEW: Add loginId
         String profileImageUrl = '';
 
         if (authorId.isNotEmpty) {
           final userDoc =
           await fs.collection('users').doc(authorId).get();
           authorNickname = userDoc.data()?['nickname'] ?? 'Unknown';
+          authorLoginId = userDoc.data()?['loginId'] ?? '';  // NEW: Get loginId
           profileImageUrl =
               userDoc.data()?['profileImageUrl'] ?? '';
         }
@@ -80,6 +83,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
           'docId': docId,
           'authorId': authorId,
           'authorNickname': authorNickname,
+          'authorLoginId': authorLoginId,  // NEW: Add to map
           'authorProfileImageUrl': profileImageUrl,
           'resultImageUrl': data['resultImageUrl'],
           'likeCount': likesSnapshot.size,
@@ -194,7 +198,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
               item['authorNickname'],
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            subtitle: Text('@${item['authorId']}'),
+            subtitle: Text('@${item['authorLoginId']}'),
           ),
 
           //  이미지 - 양옆 테두리까지 꽉 차게
