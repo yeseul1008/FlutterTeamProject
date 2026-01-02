@@ -57,11 +57,13 @@ class _QuestionFeedState extends State<QuestionFeed> {
         final String authorId = data['authorId'] ?? '';
 
         String authorNickname = 'Unknown';
+        String authorLoginId = '';
         String profileImageUrl = '';
 
         if (authorId.isNotEmpty) {
           final userDoc = await fs.collection('users').doc(authorId).get();
           authorNickname = userDoc.data()?['nickname'] ?? 'Unknown';
+          authorLoginId = userDoc.data()?['loginId'] ?? ''; // loginId 가져오기
           profileImageUrl = userDoc.data()?['profileImageUrl'] ?? '';
         }
 
@@ -77,6 +79,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
           'docId': docId,
           'authorId': authorId,
           'authorNickname': authorNickname,
+          'authorLoginId': authorLoginId, // <- 추가
           'authorProfileImageUrl': profileImageUrl,
           'text': data['text'] ?? '',
           'imageUrl': data['imageUrl'] ?? '',
@@ -232,7 +235,8 @@ class _QuestionFeedState extends State<QuestionFeed> {
               item['authorNickname'],
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            subtitle: Text('@${item['authorId']}'),
+            // loginId로 변경
+            subtitle: Text('@${item['authorLoginId']}'),
             trailing: IconButton(
               icon: const Icon(Icons.more_horiz),
               onPressed: () => _showPostOptionsMenu(
