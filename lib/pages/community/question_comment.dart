@@ -534,14 +534,14 @@ class _QuestionCommentState extends State<QuestionComment> {
               ],
             ),
 
-          // 좋아요(따봉으로 교체) 버튼
+          // 좋아요(하트 => 따봉으로 교체) 버튼
           Column(
             children: [
               IconButton(
                 onPressed: () => _toggleLike(commentId, isLiked),
                 icon: Icon(
                   isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
-                  color: isLiked ? Colors.red : Colors.black,
+                  color: isLiked ? Colors.blue : Colors.black,
                 ),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
