@@ -25,11 +25,29 @@ class _DiaryMapState extends State<DiaryMap> {
   File? selectedImage;
   bool isProcessingImage = false;
   String? profileImageUrl;
+  int followerCnt = 0;
+
+  // Follower count
+  Future<int> _getFollowerCount(String userId) async {
+    try {
+      final snapshot = await fs
+          .collection('users')
+          .doc(userId)
+          .collection('followers')
+          .get();
+
+      return snapshot.docs.length;
+    } catch (e) {
+      print('Error getting follower count: $e');
+      return 0;
+    }
+  }
 
   // Google Maps variables
   GoogleMapController? _mapController;
   Set<Marker> _markers = {};
-  Map<String, Map<String, dynamic>> _diaryData = {};
+  // CHANGED: Now stores a LIST of diaries per location
+  Map<String, List<Map<String, dynamic>>> _diaryData = {};
   static const LatLng _defaultLocation = LatLng(37.4563, 126.7052); // Incheon
 
   // Search controller
@@ -62,6 +80,9 @@ class _DiaryMapState extends State<DiaryMap> {
         .collection('wardrobe')
         .get();
 
+    // Get followers count
+    final followerCount = await _getFollowerCount(uid);
+
     final userSnapshot = await fs.collection('users').doc(uid).get();
 
     if (!mounted) return;
@@ -70,6 +91,7 @@ class _DiaryMapState extends State<DiaryMap> {
       itemCnt = wardrobeSnapshot.docs.length;
       lookbookCnt = lookbookSnapshot.docs.length;
       profileImageUrl = userInfo['profileImageUrl'];
+      followerCnt = followerCount;
     });
   }
 
@@ -84,49 +106,63 @@ class _DiaryMapState extends State<DiaryMap> {
           .collection('diaries')
           .get();
 
-      Set<Marker> markers = {};
-      Map<String, Map<String, dynamic>> diaryDataMap = {};
+      // Group diaries by location coordinates
+      Map<String, List<Map<String, dynamic>>> groupedDiaries = {};
 
       for (var doc in diariesSnapshot.docs) {
         final data = doc.data();
         final location = data['location'] as GeoPoint?;
-        final locationText = data['locationText'] as String?;
-        final date = data['date'] as Timestamp?;
-        final lookbookId = data['lookbookId'] as String?;
-        final comment = data['comment'] as String?;
 
         if (location != null) {
-          final markerId = doc.id;
+          // Create a key based on coordinates (rounded to avoid floating point issues)
+          final locationKey = '${location.latitude.toStringAsFixed(6)}_${location.longitude.toStringAsFixed(6)}';
 
-          diaryDataMap[markerId] = {
-            'locationText': locationText,
-            'date': date,
-            'lookbookId': lookbookId,
-            'comment': comment,
+          final diaryEntry = {
+            'id': doc.id,
+            'locationText': data['locationText'] as String?,
+            'date': data['date'] as Timestamp?,
+            'lookbookId': data['lookbookId'] as String?,
+            'comment': data['comment'] as String?,
             'location': location,
           };
 
-          markers.add(
-            Marker(
-              markerId: MarkerId(markerId),
-              position: LatLng(location.latitude, location.longitude),
-              infoWindow: InfoWindow(
-                title: locationText ?? 'Unknown location',
-                snippet: date != null ? formatKoreanDate(date) : '',
-              ),
-              onTap: () => _showDiaryDialog(markerId),
-            ),
-          );
+          // Add to grouped list
+          if (groupedDiaries.containsKey(locationKey)) {
+            groupedDiaries[locationKey]!.add(diaryEntry);
+          } else {
+            groupedDiaries[locationKey] = [diaryEntry];
+          }
         }
       }
+
+      // Create markers for each unique location
+      Set<Marker> markers = {};
+
+      groupedDiaries.forEach((locationKey, diaries) {
+        final firstDiary = diaries.first;
+        final location = firstDiary['location'] as GeoPoint;
+        final count = diaries.length;
+
+        markers.add(
+          Marker(
+            markerId: MarkerId(locationKey),
+            position: LatLng(location.latitude, location.longitude),
+            infoWindow: InfoWindow(
+              title: firstDiary['locationText'] ?? 'Unknown location',
+              snippet: count > 1 ? '$count개의 일기' : formatKoreanDate(firstDiary['date']),
+            ),
+            onTap: () => _showDiaryDialog(locationKey),
+          ),
+        );
+      });
 
       if (!mounted) return;
       setState(() {
         _markers = markers;
-        _diaryData = diaryDataMap;
+        _diaryData = groupedDiaries;
       });
 
-      print('Loaded ${_markers.length} diary locations');
+      print('Loaded ${_markers.length} unique locations with ${diariesSnapshot.docs.length} total diaries');
     } catch (e) {
       print('Error loading diary locations: $e');
     }
@@ -168,36 +204,46 @@ class _DiaryMapState extends State<DiaryMap> {
     }
   }
 
-  Future<void> _showDiaryDialog(String diaryId) async {
-    final diary = _diaryData[diaryId];
-    if (diary == null) return;
+  Future<void> _showDiaryDialog(String locationKey) async {
+    final diaries = _diaryData[locationKey];
+    if (diaries == null || diaries.isEmpty) return;
 
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    String? imageUrl;
-    try {
-      final date = diary['date'] as Timestamp?;
-      if (date != null) {
-        final dt = date.toDate();
-        final startOfDay = DateTime(dt.year, dt.month, dt.day, 0, 0, 0);
-        final endOfDay = DateTime(dt.year, dt.month, dt.day, 23, 59, 59);
+    // Load images for all diaries at this location
+    List<Map<String, dynamic>> diariesWithImages = [];
 
-        final calendarQuery = await fs
-            .collection('users')
-            .doc(uid)
-            .collection('calendar')
-            .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-            .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
-            .limit(1)
-            .get();
+    for (var diary in diaries) {
+      String? imageUrl;
+      try {
+        final date = diary['date'] as Timestamp?;
+        if (date != null) {
+          final dt = date.toDate();
+          final startOfDay = DateTime(dt.year, dt.month, dt.day, 0, 0, 0);
+          final endOfDay = DateTime(dt.year, dt.month, dt.day, 23, 59, 59);
 
-        if (calendarQuery.docs.isNotEmpty) {
-          imageUrl = calendarQuery.docs.first.data()['imageURL'];
+          final calendarQuery = await fs
+              .collection('users')
+              .doc(uid)
+              .collection('calendar')
+              .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+              .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+              .limit(1)
+              .get();
+
+          if (calendarQuery.docs.isNotEmpty) {
+            imageUrl = calendarQuery.docs.first.data()['imageURL'];
+          }
         }
+      } catch (e) {
+        print('Error loading image: $e');
       }
-    } catch (e) {
-      print('Error loading image: $e');
+
+      diariesWithImages.add({
+        ...diary,
+        'imageUrl': imageUrl,
+      });
     }
 
     if (!mounted) return;
@@ -207,109 +253,148 @@ class _DiaryMapState extends State<DiaryMap> {
       builder: (context) => Dialog(
         backgroundColor: Colors.white,
         child: Container(
-          constraints: BoxConstraints(maxHeight: 600),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Align(
-                //   alignment: Alignment.topRight,
-                //   child: IconButton(
-                //     icon: Icon(Icons.close),
-                //     onPressed: () => Navigator.pop(context),
-                //   ),
-                // ),
-
-                Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.location_on, size: 20),
-                          SizedBox(width: 5),
-                          Expanded(
-                            child: Text(
-                              "${diary['locationText'] ?? '위치 없음'}",
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+          constraints: BoxConstraints(maxHeight: 600, maxWidth: 500),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: Colors.grey[300]!),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.location_on, size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "${diaries.first['locationText'] ?? '위치 없음'}",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
-                      SizedBox(height: 5),
-
-                      Row(
-                        children: [
-                          Icon(Icons.calendar_today, size: 20),
-                          SizedBox(width: 5),
-                          Text(formatKoreanDate(diary['date'])),
-                        ],
-                      ),
-                      SizedBox(height: 20),
-
-                      if (imageUrl != null)
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: 300,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Container(
-                                height: 300,
-                                child: Center(
-                                  child: CircularProgressIndicator(),
-                                ),
-                              );
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                height: 300,
-                                color: Colors.grey[300],
-                                child: Icon(Icons.image_not_supported, size: 80),
-                              );
-                            },
-                          ),
-                        )
-                      else
-                        Container(
-                          height: 300,
-                          color: Colors.grey[300],
-                          child: Center(
-                            child: Icon(Icons.image, size: 80, color: Colors.grey[600]),
+                    ),
+                    if (diaries.length > 1)
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Color(0xFFCAD83B),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${diaries.length}개',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
                           ),
                         ),
+                      ),
+                    SizedBox(width: 8),
+                    IconButton(
+                      icon: Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                      constraints: BoxConstraints(),
+                    ),
+                  ],
+                ),
+              ),
 
-                      SizedBox(height: 16),
+              // List of diaries
+              Expanded(
+                child: ListView.separated(
+                  padding: EdgeInsets.all(16),
+                  itemCount: diariesWithImages.length,
+                  separatorBuilder: (context, index) => Divider(height: 32),
+                  itemBuilder: (context, index) {
+                    final diary = diariesWithImages[index];
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Date
+                        Row(
+                          children: [
+                            Icon(Icons.calendar_today, size: 16),
+                            SizedBox(width: 5),
+                            Text(
+                              formatKoreanDate(diary['date']),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 12),
 
-                      if (diary['comment'] != null && diary['comment'].toString().isNotEmpty)
-                        Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Center(
+                        // Image
+                        if (diary['imageUrl'] != null)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              diary['imageUrl'],
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: 250,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  height: 250,
+                                  child: Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  height: 250,
+                                  color: Colors.grey[300],
+                                  child: Icon(Icons.image_not_supported, size: 60),
+                                );
+                              },
+                            ),
+                          )
+                        else
+                          Container(
+                            height: 250,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Center(
+                              child: Icon(
+                                Icons.image,
+                                size: 60,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ),
+
+                        // Comment
+                        if (diary['comment'] != null &&
+                            diary['comment'].toString().isNotEmpty)
+                          Padding(
+                            padding: EdgeInsets.only(top: 12),
                             child: Text(
-                              '${diary['comment'] ?? "No comment"}',
+                              diary['comment'],
                               style: TextStyle(fontSize: 14),
                             ),
                           ),
-                        ),
-                    ],
-                  ),
+                      ],
+                    );
+                  },
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
-
-  // Function to select a profile picture
 
   // 이미지 확대/이동 컨트롤러
   final TransformationController _transformController =
@@ -325,7 +410,7 @@ class _DiaryMapState extends State<DiaryMap> {
     final picker = ImagePicker();
     final XFile? image = await picker.pickImage(
       source: ImageSource.gallery,
-      maxWidth: 800,  // Optimize image size
+      maxWidth: 800, // Optimize image size
       maxHeight: 800,
       imageQuality: 85,
     );
@@ -339,8 +424,8 @@ class _DiaryMapState extends State<DiaryMap> {
 
       // Create a reference to Firebase Storage
       final String fileName = 'profile_$uid.jpg';
-      final Reference storageRef = storage
-          .ref('user_profile_pictures/${fileName}');
+      final Reference storageRef =
+      storage.ref('user_profile_pictures/${fileName}');
 
       // Upload the file
       final UploadTask uploadTask = storageRef.putFile(imageFile);
@@ -362,7 +447,6 @@ class _DiaryMapState extends State<DiaryMap> {
       });
 
       _showSnack('프로필 사진이 업데이트되었습니다');
-
     } catch (e) {
       print('Error uploading profile image: $e');
       _showSnack('프로필 사진 업로드 실패: $e');
@@ -603,10 +687,13 @@ class _DiaryMapState extends State<DiaryMap> {
                             style: const TextStyle(color: Colors.white),
                           ),
                           const SizedBox(width: 20),
-                          const Text(
-                            "0 \nAI lookbook",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.white),
+                          GestureDetector(
+                            onTap: () => context.go('/followList'),
+                            child: Text(
+                              "$followerCnt \nfollowers",
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.white),
+                            ),
                           ),
                         ],
                       ),
@@ -732,7 +819,8 @@ class _DiaryMapState extends State<DiaryMap> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Colors.black, width: 1.2),
+                        borderSide:
+                        const BorderSide(color: Colors.black, width: 1.2),
                       ),
                     ),
                   ),
