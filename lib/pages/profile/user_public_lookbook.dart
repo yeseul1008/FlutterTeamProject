@@ -18,7 +18,8 @@ class _PublicLookBookState extends State<PublicLookBook> {
   final FirebaseStorage storage = FirebaseStorage.instance;
 
   Map<String, dynamic> userInfo = {};
-  List<Map<String, dynamic>> userLookbooks = [];  // CHANGED: renamed from userDiaries
+  List<Map<String, dynamic>> userLookbooks = [];
+  List<Map<String, dynamic>> filteredLookbooks = [];  // NEW: for filtered results
   int lookbookCnt = 0;
   int itemCnt = 0;
   int followerCnt = 0;
@@ -30,13 +31,35 @@ class _PublicLookBookState extends State<PublicLookBook> {
   String? targetUserId;
   String? currentUserId;
 
+  TextEditingController searchController = TextEditingController();
+  String searchText = '';
+
   String formatKoreanDate(Timestamp? timestamp) {
     if (timestamp == null) return '날짜 없음';
     final dt = timestamp.toDate();
     return '${dt.year}년 ${dt.month}월 ${dt.day}일';
   }
 
-  @override
+  // NEW: Filter lookbooks based on search text
+  void _filterLookbooks() {
+    if (searchText.isEmpty) {
+      setState(() {
+        filteredLookbooks = userLookbooks;
+      });
+      return;
+    }
+
+    final searchLower = searchText.toLowerCase();
+    setState(() {
+      filteredLookbooks = userLookbooks.where((item) {
+        final alias = (item['alias'] ?? '').toString().toLowerCase();
+        return alias.contains(searchLower);
+      }).toList();
+    });
+
+    print('Search: "$searchText" - Found ${filteredLookbooks.length} lookbooks');
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -46,11 +69,10 @@ class _PublicLookBookState extends State<PublicLookBook> {
     final uri = GoRouterState.of(context).uri;
     final queryUserId = uri.queryParameters['userId'];
 
-    // IMPORTANT: Only reload if targetUserId actually changed
     if (queryUserId != targetUserId) {
       targetUserId = queryUserId ?? currentUserId;
       print('Target user changed to: $targetUserId');
-      _getUserInfo();  // This should trigger everything
+      _getUserInfo();
     }
   }
 
@@ -168,7 +190,6 @@ class _PublicLookBookState extends State<PublicLookBook> {
     }
   }
 
-  // NEW: Get user lookbooks
   Future<void> _getUserLookbook() async {
     final uid = targetUserId ?? currentUserId;
 
@@ -196,6 +217,7 @@ class _PublicLookBookState extends State<PublicLookBook> {
 
       setState(() {
         userLookbooks = dataList;
+        filteredLookbooks = dataList;  // NEW: Initialize filtered list
       });
 
       print('Number of lookbooks loaded: ${userLookbooks.length}');
@@ -213,14 +235,12 @@ class _PublicLookBookState extends State<PublicLookBook> {
       return;
     }
 
-    // Get lookbook count
     final lookbookSnapshot = await fs
         .collection('lookbooks')
         .where('userId', isEqualTo: uid)
         .where('inLookbook', isEqualTo: true)
         .get();
 
-    // Get items count
     final wardrobeSnapshot = await fs
         .collection('users')
         .doc(uid)
@@ -240,10 +260,7 @@ class _PublicLookBookState extends State<PublicLookBook> {
       profileImageUrl = userInfo['profileImageUrl'];
     });
 
-    // Load lookbooks
     await _getUserLookbook();
-
-    // Check following status
     await _checkFollowingStatus();
 
     print('Number of lookbooks: ${lookbookCnt}');
@@ -254,7 +271,6 @@ class _PublicLookBookState extends State<PublicLookBook> {
   @override
   void initState() {
     super.initState();
-    // This ensures data loads even if didChangeDependencies doesn't trigger
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (userLookbooks.isEmpty) {
         _getUserInfo();
@@ -387,11 +403,10 @@ class _PublicLookBookState extends State<PublicLookBook> {
     );
   }
 
-  // CHANGED: Lookbook dialog
   void _lookbookDialog(BuildContext context, int index) {
-    if (userLookbooks.isEmpty || index >= userLookbooks.length) return;
+    if (filteredLookbooks.isEmpty || index >= filteredLookbooks.length) return;  // CHANGED
 
-    final lookbook = userLookbooks[index];
+    final lookbook = filteredLookbooks[index];  // CHANGED
     final lookbookImg = lookbook['resultImageUrl'];
 
     showDialog(
@@ -493,7 +508,6 @@ class _PublicLookBookState extends State<PublicLookBook> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // Header
           Container(
             width: double.infinity,
             height: 180,
@@ -514,15 +528,11 @@ class _PublicLookBookState extends State<PublicLookBook> {
                               ? NetworkImage(profileImageUrl!)
                               : null,
                           child: profileImageUrl == null
-                              ? Icon(
-                            Icons.person,
-                            size: 40,
-                            color: Colors.grey[600],
-                          )
+                              ? Icon(Icons.person, size: 40, color: Colors.grey[600])
                               : null,
                         ),
                         if (isProcessingImage)
-                          Positioned.fill(
+                          const Positioned.fill(
                             child: CircleAvatar(
                               radius: 40,
                               backgroundColor: Colors.black54,
@@ -537,17 +547,13 @@ class _PublicLookBookState extends State<PublicLookBook> {
                             bottom: 0,
                             right: 0,
                             child: Container(
-                              padding: EdgeInsets.all(4),
+                              padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 shape: BoxShape.circle,
                                 border: Border.all(color: Colors.black, width: 1),
                               ),
-                              child: Icon(
-                                Icons.camera_alt,
-                                size: 16,
-                                color: Colors.black,
-                              ),
+                              child: const Icon(Icons.camera_alt, size: 16, color: Colors.black),
                             ),
                           ),
                       ],
@@ -560,7 +566,6 @@ class _PublicLookBookState extends State<PublicLookBook> {
                   right: 70,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         "${userInfo['nickname'] ?? 'UID'} \n@${userInfo['loginId'] ?? 'user ID'}",
@@ -571,25 +576,13 @@ class _PublicLookBookState extends State<PublicLookBook> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            "$itemCnt \nitems",
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.white),
-                          ),
+                          Text("$itemCnt \nitems", textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
                           const SizedBox(width: 15),
-                          Text(
-                            "$lookbookCnt \nlookbook",
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.white),
-                          ),
+                          Text("$lookbookCnt \nlookbook", textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
                           const SizedBox(width: 15),
                           GestureDetector(
                             onTap: () => context.go('/followList${targetUserId != null ? '?userId=$targetUserId' : ''}'),
-                            child: Text(
-                              "$followerCnt \nfollowers",
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.white),
-                            ),
+                            child: Text("$followerCnt \nfollowers", textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
                           ),
                         ],
                       ),
@@ -598,17 +591,13 @@ class _PublicLookBookState extends State<PublicLookBook> {
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             minimumSize: const Size(140, 32),
-                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             backgroundColor: isFollowing ? Colors.grey[300] : Colors.white,
                           ),
                           onPressed: _toggleFollow,
                           child: Text(
                             isFollowing ? "following" : "follow",
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
+                            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 14),
                           ),
                         ),
                     ],
@@ -623,11 +612,7 @@ class _PublicLookBookState extends State<PublicLookBook> {
                       height: 56,
                       child: IconButton(
                         onPressed: _openMoreMenu,
-                        icon: const Icon(
-                          Icons.more_horiz,
-                          color: Colors.white,
-                          size: 40,
-                        ),
+                        icon: const Icon(Icons.more_horiz, color: Colors.white, size: 40),
                       ),
                     ),
                   ),
@@ -662,13 +647,7 @@ class _PublicLookBookState extends State<PublicLookBook> {
                           side: const BorderSide(color: Colors.black),
                         ),
                       ),
-                      child: const Text(
-                        'wardrobe',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                        ),
-                      ),
+                      child: const Text('wardrobe', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
                     ),
                   ),
                 ),
@@ -694,13 +673,7 @@ class _PublicLookBookState extends State<PublicLookBook> {
                           side: const BorderSide(color: Colors.black),
                         ),
                       ),
-                      child: const Text(
-                        'lookbook',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
-                      ),
+                      child: const Text('lookbook', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                     ),
                   ),
                 ),
@@ -710,11 +683,51 @@ class _PublicLookBookState extends State<PublicLookBook> {
 
           const SizedBox(height: 20),
 
-          // CHANGED: Lookbooks grid
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.black),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: TextField(
+                      controller: searchController,
+                      onChanged: (value) {
+                        setState(() {
+                          searchText = value.trim();
+                        });
+                        _filterLookbooks();  // NEW: Filter on every change
+                      },
+                      decoration: const InputDecoration(
+                        hintText: 'search...',
+                        border: InputBorder.none,
+                        isDense: true,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
           Expanded(
-            child: userLookbooks.isEmpty
+            child: filteredLookbooks.isEmpty  // CHANGED
                 ? Center(
-              child: Text('아직 룩북이 없습니다'),
+              child: Text(
+                searchText.isEmpty
+                    ? '아직 룩북이 없습니다'
+                    : '검색 결과가 없습니다',  // NEW
+              ),
             )
                 : GridView.builder(
               padding: EdgeInsets.only(
@@ -728,9 +741,9 @@ class _PublicLookBookState extends State<PublicLookBook> {
                 mainAxisSpacing: 10,
                 childAspectRatio: 0.8,
               ),
-              itemCount: userLookbooks.length,
+              itemCount: filteredLookbooks.length,  // CHANGED
               itemBuilder: (context, index) {
-                final lookbook = userLookbooks[index];
+                final lookbook = filteredLookbooks[index];  // CHANGED
 
                 return GestureDetector(
                   onTap: () => _lookbookDialog(context, index),
@@ -750,7 +763,7 @@ class _PublicLookBookState extends State<PublicLookBook> {
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
                             color: Colors.grey[300],
-                            child: Icon(Icons.image_not_supported, size: 40),
+                            child: const Icon(Icons.image_not_supported, size: 40),
                           );
                         },
                       ),
