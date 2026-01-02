@@ -176,10 +176,10 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          /// 프로필 클릭 페이지이동
+          ///  프로필 클릭 시 해당 작성자의 userId를 쿼리 파라미터로 전달
           ListTile(
             onTap: () {
-              context.go('/publicWardrobe');
+              context.go('/publicLookBook?userId=${item['authorId']}');
             },
             leading: CircleAvatar(
               backgroundImage:
@@ -197,7 +197,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
             subtitle: Text('@${item['authorId']}'),
           ),
 
-          // ⭐ 이미지 - 양옆 테두리까지 꽉 차게
+          //  이미지 - 양옆 테두리까지 꽉 차게
           if (item['resultImageUrl'] != null &&
               item['resultImageUrl'].isNotEmpty)
             Container(
