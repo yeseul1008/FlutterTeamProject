@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../widgets/common/main_btn.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserScrap extends StatefulWidget {
   const UserScrap({super.key});
@@ -11,9 +13,28 @@ class UserScrap extends StatefulWidget {
 
 class _UserScrapState extends State<UserScrap> {
 
+  final FirebaseFirestore fs = FirebaseFirestore.instance;
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+
   // 검색
   TextEditingController searchController = TextEditingController();
   String searchText = '';
+
+  Future<void> deleteScrap(String feedId) async {
+    if (userId == null) return;
+
+    final snapshot = await fs
+        .collection('users')
+        .doc(userId)
+        .collection('scraps')
+        .where('feedId', isEqualTo: feedId)
+        .get();
+
+    for (var doc in snapshot.docs) {
+      await doc.reference.delete();
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -144,36 +165,100 @@ class _UserScrapState extends State<UserScrap> {
 
               // 옷 그리드 (빈 공간)
               Expanded(
-                child: GridView.builder(
-                  itemCount: 12,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1,
-                  ),
-                  itemBuilder: (context, index) {
-                    return Stack(
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey),
-                            color: Colors.white,
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: fs
+                      .collection('users')
+                      .doc(userId)
+                      .collection('scraps')
+                      .snapshots(),
+                  builder: (context, scrapSnapshot) {
+                    if (!scrapSnapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    // feedId 리스트 추출
+                    final feedIds = scrapSnapshot.data!.docs
+                        .map((doc) => doc['feedId'] as String)
+                        .toList();
+
+                    if (feedIds.isEmpty) {
+                      return const Center(child: Text('스크랩한 게시물이 없습니다.'));
+                    }
+
+                    return StreamBuilder<QuerySnapshot>(
+                      stream: fs
+                          .collection('lookbooks')
+                          .where(
+                        FieldPath.documentId,
+                        whereIn: feedIds,
+                      )
+                          .snapshots(),
+                      builder: (context, lookbookSnapshot) {
+                        if (!lookbookSnapshot.hasData) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+
+                        final lookbooks = lookbookSnapshot.data!.docs;
+
+                        return GridView.builder(
+                          itemCount: lookbooks.length,
+                          gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 1,
                           ),
-                        ),
-                        const Positioned(
-                          top: 4,
-                          right: 4,
-                          child: Icon(
-                            Icons.favorite_border,
-                            size: 18,
-                          ),
-                        ),
-                      ],
+                          itemBuilder: (context, index) {
+                            final doc = lookbooks[index];
+                            final data =
+                            lookbooks[index].data() as Map<String, dynamic>;
+
+                            return Stack(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.grey),
+                                    image: DecorationImage(
+                                      image: NetworkImage(data['resultImageUrl']),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 4,
+                                  right: 4,
+                                  child: IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    onPressed: () async {
+                                      // 👉 여기에 기존 스크랩 삭제 로직 그대로 두시면 됩니다
+                                      await deleteScrap(doc.id);
+                                    },
+                                    icon: Stack(
+                                      alignment: Alignment.center,
+                                      children: const [
+                                        Icon(
+                                          Icons.favorite,
+                                          color: Color(0xFFCAD83B), // 채움
+                                          size: 22,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+
+
+                              ],
+                            );
+                          },
+                        );
+                      },
                     );
                   },
                 ),
               ),
+
             ],
           ),
         ),
