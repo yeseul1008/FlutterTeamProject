@@ -568,7 +568,6 @@ class _DraggableCanvasItemState extends State<_DraggableCanvasItem> {
                         child: Center(
                           child: Transform.rotate(
                             angle: 1.6, // 45도(↘ 느낌)
-                            angle: 1.6, // 45도(↘ 느낌)
                             child: const Icon(
                               Icons.open_in_full,
                               size: 12,
