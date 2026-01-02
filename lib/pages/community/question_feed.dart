@@ -190,7 +190,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                         child: const Text(
                           'post a look',
                           style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 18),
+                              fontWeight: FontWeight.w900, fontSize: 18),
                         ),
                       ),
                     ),
