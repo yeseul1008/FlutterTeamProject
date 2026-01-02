@@ -63,7 +63,7 @@ class _FindIdState extends State<FindId> {
 
   @override
   Widget build(BuildContext context) {
-    const bg = Color(0xFF0B0B0F);
+    const bg = Color(0xFFFFFFFF);
     const purple = Color(0xFFA88AF7);
     const border = Color(0xFF7B64D6);
     const textGrey = Color(0xFFB8B8C2);
@@ -77,46 +77,11 @@ class _FindIdState extends State<FindId> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 28),
-
                 Center(
-                  child: Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFFB248C6), Color(0xFF6E62FF)],
-                      ),
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.35),
-                          blurRadius: 14,
-                          offset: const Offset(0, 6),
-                        )
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.checkroom_outlined,
-                      color: Colors.white,
-                      size: 34,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                Center(
-                  child: Text(
-                    'What you wear?',
-                    style: const TextStyle(
-                      color: textGrey,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Image.asset(
+                    'assets/applogo.png',
+                    width: 220,
+                    fit: BoxFit.contain,
                   ),
                 ),
 
@@ -173,7 +138,7 @@ class _FindIdState extends State<FindId> {
                     Text(
                       '기억이 나셨나요? ',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.75),
+                        color: Colors.black.withOpacity(0.75),
                         fontSize: 12,
                       ),
                     ),
@@ -225,32 +190,41 @@ class _InputField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 44,
+      height: 48,
       child: TextField(
         controller: controller,
-        keyboardType: keyboardType,
         obscureText: obscureText,
-        style: TextStyle(color: textColor, fontSize: 14),
-        cursorColor: borderColor,
+        style: const TextStyle(
+          color: Colors.black87,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        cursorColor: Colors.black,
         decoration: InputDecoration(
           isDense: true,
+          filled: true,
+          fillColor: const Color(0xFFF2F2F2), // 연한 회색 배경
+
           hintText: hintText,
-          hintStyle: TextStyle(
-            color: hintColor.withOpacity(0.7),
+          hintStyle: const TextStyle(
+            color: Colors.black45,
             fontSize: 13,
           ),
+
           prefixIcon: Icon(
             icon,
-            color: hintColor.withOpacity(0.9),
+            color: Colors.black54,
             size: 20,
           ),
+
+          // 테두리 완전 제거
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: borderColor, width: 1.2),
+            borderSide: BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: borderColor, width: 1.6),
+            borderSide: BorderSide.none,
           ),
         ),
       ),

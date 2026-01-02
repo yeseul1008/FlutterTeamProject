@@ -57,7 +57,7 @@ class _CalendarPageState extends State<CalendarPage> {
           final normalizedDate = DateTime(date.year, date.month, date.day);
 
           lookbooksMap[normalizedDate] = {
-            'imageUrl': data['imageUrl'],
+            'imageUrl': data['imageURL'],
             'lookbookId': data['lookbookId'],
             'date': dateTimestamp,
             'createdAt': data['createdAt'],

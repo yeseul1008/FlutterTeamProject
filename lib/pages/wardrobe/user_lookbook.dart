@@ -47,6 +47,184 @@ class _UserLookbookState extends State<UserLookbook> {
     }
   }
 
+// 클릭시 모달
+  Future<void> _showLookbookModal(Map<String, dynamic> item) async {
+    final docId = item['docId'] as String?;
+    final imageUrl = item['resultImageUrl'] as String? ?? '';
+    final alias = item['alias'] as String? ?? '';
+    final published = item['publishToCommunity'] == true;
+
+    if (docId == null || imageUrl.isEmpty) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(20),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  alias,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    /// ✅ feed 게시 버튼
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                        published ? Colors.grey[400] : const Color(0xFFCAD83B),
+                        foregroundColor: Colors.black,
+                      ),
+                      onPressed: published
+                          ? null
+                          : () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) {
+                            return AlertDialog(
+                              title: const Text('피드 게시'),
+                              content: const Text(
+                                '한 번 게시하면 취소할 수 없습니다.\n그래도 게시하시겠습니까?',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(false),
+                                  child: const Text('취소'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(true),
+                                  child: const Text(
+                                    '게시',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+
+                        if (confirm != true) return;
+
+                        try {
+                          await fs.collection('lookbooks').doc(docId).update({
+                            'publishToCommunity': true,
+                          });
+
+                          Navigator.of(ctx).pop(); // 룩북 모달 닫기
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('피드에 게시되었습니다.')),
+                          );
+                        } catch (e) {
+                          print('피드 게시 실패: $e');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('피드 게시 실패')),
+                          );
+                        }
+                      },
+
+                      child: Text(
+                        published ? '게시중' : 'community 게시',
+                      ),
+                    ),
+
+
+                    /// 🗑 삭제 버튼
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) {
+                            return AlertDialog(
+                              title: const Text('삭제 확인'),
+                              content: const Text('정말 삭제하시겠습니까?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(false),
+                                  child: const Text('취소'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(true),
+                                  child: const Text(
+                                    '삭제',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+
+                        if (confirm == true) {
+                          try {
+                            await fs.collection('lookbooks').doc(docId).delete();
+                            setState(() {
+                              lookbooks.removeWhere((e) => e['docId'] == docId);
+                            });
+                            Navigator.of(ctx).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('룩북이 삭제되었습니다.')),
+                            );
+                          } catch (e) {
+                            print('삭제 실패: $e');
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('삭제 실패')),
+                            );
+                          }
+                        }
+                      },
+                      child: const Text('삭제'),
+                    ),
+
+                    /// 닫기 버튼
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey[300],
+                        foregroundColor: Colors.black,
+                      ),
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                      },
+                      child: const Text('닫기'),
+                    ),
+                  ],
+                ),
+
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -232,11 +410,10 @@ class _UserLookbookState extends State<UserLookbook> {
                     final item = filteredLookbooks[index];
                     final imageUrl = item['resultImageUrl'] ?? '';
                     final alias = item['alias'] ?? '';
+                    final type = item['type'] ?? '';
 
                     return GestureDetector(
-                      onTap: () {
-                        // 상세보기 이동
-                      },
+                      onTap: () => _showLookbookModal(item),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -260,15 +437,30 @@ class _UserLookbookState extends State<UserLookbook> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            alias,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (type == 'ai_generated')
+                                const Icon(
+                                  Icons.auto_awesome,
+                                  size: 12,
+                                  color: Color(0xFFA88AEE), // Your purple color
+                                ),
+                              if (type == 'ai_generated')
+                                const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  alias,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

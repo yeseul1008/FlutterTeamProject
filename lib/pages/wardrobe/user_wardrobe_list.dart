@@ -111,7 +111,7 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
             ),
             icon: const Icon(Icons.auto_awesome, size: 18, color: Colors.white),
             label: const Text(
-              'ai착용샷',
+              'AI착용샷',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,

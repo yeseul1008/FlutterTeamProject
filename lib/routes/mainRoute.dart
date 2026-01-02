@@ -32,6 +32,7 @@ import '../pages/wardrobe/outfit_maker.dart';
 import '../pages/wardrobe/user_lookbook.dart';
 import '../pages/wardrobe/user_lookbook_add.dart';
 import '../pages/wardrobe/user_scrap.dart';
+import '../pages/wardrobe/user_lookbook_create.dart';
 import '../pages/wardrobe/user_scrap_view.dart';
 import '../pages/wardrobe/user_wardrobe_add.dart';
 import '../pages/wardrobe/outfit_maker_result.dart';
@@ -214,6 +215,13 @@ final GoRouter router = GoRouter(
           },
         ),
         GoRoute(
+          path: '/lookbookCombine',
+          builder: (context, state) {
+            return lookbookCombine(extra: state.extra);
+          },
+        ),
+
+        GoRoute(
           path: '/userScrapView',
           pageBuilder: (context, state) {
             return const NoTransitionPage(
@@ -334,7 +342,9 @@ class RootLayout extends StatelessWidget {
     bool hideBottom = false;
     if(
     state.uri.path.startsWith('/page2')
-    // || state.uri.path.startsWith('/page1')
+    || state.uri.path.startsWith('/userLogin')
+    || state.uri.path.startsWith('/findId') || state.uri.path.startsWith('/findPwd')
+    || state.uri.path.startsWith('/googleLogin') || state.uri.path.startsWith('/userJoin')
 
     ){
       hideBottom = true;
