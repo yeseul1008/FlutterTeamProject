@@ -14,11 +14,10 @@ class _UserScrapState extends State<UserScrap> {
   final FirebaseFirestore fs = FirebaseFirestore.instance;
   final FirebaseAuth auth = FirebaseAuth.instance;
 
-  late String userId;
+  // late String userId;
   List<Map<String, dynamic>> scraps = [];
   bool isLoading = true;
 
-  final FirebaseFirestore fs = FirebaseFirestore.instance;
   final userId = FirebaseAuth.instance.currentUser?.uid;
 
   // 검색
@@ -54,7 +53,7 @@ class _UserScrapState extends State<UserScrap> {
     try {
       final user = auth.currentUser;
       if (user == null) return;
-      userId = user.uid;
+      // userId = user.uid;
 
       // users/{userId}/scraps 에서 데이터 가져오기
       final scrapsSnapshot = await fs

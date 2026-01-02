@@ -202,10 +202,10 @@ class _QuestionFeedState extends State<QuestionFeed> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          /// 프로필 클릭 페이지이동
+          /// ⭐ 프로필 클릭 시 해당 작성자의 userId를 쿼리 파라미터로 전달
           ListTile(
             onTap: () {
-              context.go('/publicWardrobe');
+              context.go('/publicWardrobe?userId=${item['authorId']}');
             },
             leading: CircleAvatar(
               backgroundImage: item['authorProfileImageUrl'].isNotEmpty
@@ -351,36 +351,73 @@ class _QuestionFeedState extends State<QuestionFeed> {
 
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
       builder: (bottomSheetContext) {
-        return SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                title: const Text('수정'),
-                onTap: () {
-                  Navigator.pop(bottomSheetContext);
-                  _editPost(postId, content);
-                },
-              ),
-              ListTile(
-                title: const Text('삭제'),
-                onTap: () async {
-                  Navigator.pop(bottomSheetContext);
-                  try {
-                    await fs.collection('questions').doc(postId).delete();
-                    if (mounted) {
-                      _getQuestions();
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('삭제 중 오류가 발생했습니다')),
-                      );
-                    }
-                  }
-                },
-              ),
-            ],
+        return Container(
+          margin: const EdgeInsets.all(16),
+          child: SafeArea(
+            child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(bottomSheetContext);
+                      _editPost(postId, content);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFCAD83B),
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    child: const Text(
+                      'edit',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      Navigator.pop(bottomSheetContext);
+                      try {
+                        await fs.collection('questions').doc(postId).delete();
+                        if (mounted) {
+                          _getQuestions();
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('삭제 중 오류가 발생했습니다')),
+                          );
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFB39DDB),
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    child: const Text(
+                      'delete',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -403,7 +440,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
           TextButton(
             onPressed: () async {
               final newText = controller.text.trim();
-              Navigator.pop(dialogContext); // ⭐ 먼저 다이얼로그를 닫음
+              Navigator.pop(dialogContext);
 
               if (newText.isEmpty) {
                 if (mounted) {
@@ -421,7 +458,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                     .update({'text': newText});
 
                 if (mounted) {
-                  _getQuestions(); // ⭐ 그 다음 데이터 새로고침
+                  _getQuestions();
                 }
               } catch (e) {
                 if (mounted) {
