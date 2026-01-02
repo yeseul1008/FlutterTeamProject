@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class FollowList extends StatefulWidget {
   const FollowList({super.key});
@@ -9,37 +10,99 @@ class FollowList extends StatefulWidget {
   State<FollowList> createState() => _FollowListState();
 }
 
-class _FollowListState extends State<FollowList> {
+class _FollowListState extends State<FollowList> with SingleTickerProviderStateMixin {
   final FirebaseFirestore fs = FirebaseFirestore.instance;
 
-  final String userId = 'xfGlQhS2KxVCZwihVTKQpruR2CX2';
+  String? userId;
+  String? targetUserId; // For viewing other users' follow lists
 
-  List<String> followers = [];
-  List<String> following = [];
+  List<Map<String, dynamic>> followers = [];
+  List<Map<String, dynamic>> following = [];
 
   bool isLoading = true;
 
+  late TabController _tabController;
 
-  /// Follow 데이터 불러오기
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+
+    // Get current user ID
+    userId = FirebaseAuth.instance.currentUser?.uid;
+
+    _loadFollowData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Get targetUserId from URL if viewing another user's follows
+    final uri = GoRouterState.of(context).uri;
+    final queryUserId = uri.queryParameters['userId'];
+
+    if (queryUserId != null && queryUserId != targetUserId) {
+      targetUserId = queryUserId;
+      _loadFollowData();
+    }
+  }
+
+  /// Load follow data
   Future<void> _loadFollowData() async {
+    if (userId == null) return;
+
+    // Use targetUserId if viewing someone else's follows, otherwise use current user
+    final uid = targetUserId ?? userId!;
+
     try {
+      // Get followers with their info
       final followersSnap = await fs
-          .collection('follows')
-          .doc(userId)
+          .collection('users')
+          .doc(uid)
           .collection('followers')
+          .orderBy('followedAt', descending: true)
           .get();
 
+      // Get following with their info
       final followingSnap = await fs
-          .collection('follows')
-          .doc(userId)
+          .collection('users')
+          .doc(uid)
           .collection('following')
+          .orderBy('followedAt', descending: true)
           .get();
 
       setState(() {
-        followers = followersSnap.docs.map((e) => e.id).toList();
-        following = followingSnap.docs.map((e) => e.id).toList();
+        followers = followersSnap.docs.map((doc) {
+          final data = doc.data();
+          return {
+            'userId': data['userId'] ?? doc.id,
+            'loginId': data['loginId'] ?? 'Unknown',
+            'nickname': data['nickname'] ?? 'Unknown',
+            'profileImageUrl': data['profileImageUrl'],
+          };
+        }).toList();
+
+        following = followingSnap.docs.map((doc) {
+          final data = doc.data();
+          return {
+            'userId': data['userId'] ?? doc.id,
+            'loginId': data['loginId'] ?? 'Unknown',
+            'nickname': data['nickname'] ?? 'Unknown',
+            'profileImageUrl': data['profileImageUrl'],
+          };
+        }).toList();
+
         isLoading = false;
       });
+
+      print('Loaded ${followers.length} followers and ${following.length} following');
     } catch (e) {
       debugPrint('Follow load error: $e');
       setState(() => isLoading = false);
@@ -47,71 +110,112 @@ class _FollowListState extends State<FollowList> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    _loadFollowData();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final String currentPath = GoRouterState.of(context).uri.path;
 
-    return SafeArea(
-      child: Column(
-        children: [
-          /// ===== 상단 UI (변경 없음) =====
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                _topButton(
-                  text: 'Feed',
-                  active: currentPath == '/communityMainFeed',
-                  onTap: () => context.go('/communityMainFeed'),
-                ),
-                const SizedBox(width: 8),
-                _topButton(
-                  text: 'QnA',
-                  active: currentPath == '/questionFeed',
-                  onTap: () => context.go('/questionFeed'),
-                ),
-                const SizedBox(width: 8),
-                _topButton(
-                  text: 'Follow',
-                  active: currentPath == '/followList',
-                  onTap: () {},
-                ),
-              ],
-            ),
-          ),
-
-          /// ===== Follow 리스트 =====
-          Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : ListView(
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            /// Top navigation buttons
+            Padding(
               padding: const EdgeInsets.all(16),
-              children: [
-                _sectionTitle('Followers'),
-                ...followers.map(
-                      (id) => _userTile(id),
-                ),
-
-                const SizedBox(height: 24),
-
-                _sectionTitle('Following'),
-                ...following.map(
-                      (id) => _userTile(id),
-                ),
-              ],
+              child: Row(
+                children: [
+                  _topButton(
+                    text: 'Feed',
+                    active: currentPath == '/communityMainFeed',
+                    onTap: () => context.go('/communityMainFeed'),
+                  ),
+                  const SizedBox(width: 8),
+                  _topButton(
+                    text: 'QnA',
+                    active: currentPath == '/questionFeed',
+                    onTap: () => context.go('/questionFeed'),
+                  ),
+                  const SizedBox(width: 8),
+                  _topButton(
+                    text: 'Follow',
+                    active: currentPath == '/followList',
+                    onTap: () {},
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+
+            /// TabBar for Followers/Following
+            Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey[300]!, width: 1),
+                ),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                labelColor: Colors.black,
+                unselectedLabelColor: Colors.grey,
+                indicatorColor: const Color(0xFFCAD83B),
+                indicatorWeight: 3,
+                labelStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+                tabs: [
+                  Tab(text: 'Followers (${followers.length})'),
+                  Tab(text: 'Following (${following.length})'),
+                ],
+              ),
+            ),
+
+            /// TabBarView for sliding content
+            Expanded(
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : TabBarView(
+                controller: _tabController,
+                children: [
+                  // Followers Tab
+                  followers.isEmpty
+                      ? const Center(
+                    child: Text(
+                      'No followers yet',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
+                      : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: followers.length,
+                    itemBuilder: (context, index) {
+                      return _userTile(followers[index]);
+                    },
+                  ),
+
+                  // Following Tab
+                  following.isEmpty
+                      ? const Center(
+                    child: Text(
+                      'Not following anyone yet',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
+                      : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: following.length,
+                    itemBuilder: (context, index) {
+                      return _userTile(following[index]);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  /// ===== 상단 버튼 =====
+  /// Top button widget
   Widget _topButton({
     required String text,
     required bool active,
@@ -123,8 +227,7 @@ class _FollowListState extends State<FollowList> {
         child: ElevatedButton(
           onPressed: onTap,
           style: ElevatedButton.styleFrom(
-            backgroundColor:
-            active ? const Color(0xFFCAD83B) : Colors.white,
+            backgroundColor: active ? const Color(0xFFCAD83B) : Colors.white,
             foregroundColor: Colors.black,
             elevation: 0,
             shape: RoundedRectangleBorder(
@@ -144,25 +247,41 @@ class _FollowListState extends State<FollowList> {
     );
   }
 
-  ///  섹션 타이틀
-  Widget _sectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-        ),
+  /// User list tile
+  Widget _userTile(Map<String, dynamic> user) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey[300]!),
       ),
-    );
-  }
-
-  /// 유저 리스트 타일
-  Widget _userTile(String userId) {
-    return ListTile(
-      leading: const CircleAvatar(child: Icon(Icons.person)),
-      title: Text(userId),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: CircleAvatar(
+          radius: 25,
+          backgroundColor: Colors.grey[300],
+          backgroundImage: user['profileImageUrl'] != null
+              ? NetworkImage(user['profileImageUrl'])
+              : null,
+          child: user['profileImageUrl'] == null
+              ? const Icon(Icons.person, color: Colors.grey)
+              : null,
+        ),
+        title: Text(
+          user['nickname'] ?? 'Unknown',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          '@${user['loginId'] ?? 'unknown'}',
+          style: TextStyle(color: Colors.grey[600], fontSize: 14),
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () {
+          // Navigate to user's profile
+          context.go('/publicLookBook?userId=${user['userId']}');
+        },
+      ),
     );
   }
 }

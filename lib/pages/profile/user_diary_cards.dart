@@ -21,6 +21,7 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
   List<Map<String, dynamic>> userDiaries = [];
   int lookbookCnt = 0;
   int itemCnt = 0;
+  int followerCnt = 0;  // NEW: follower count
   File? selectedImage;
   bool isProcessingImage = false;
   String? profileImageUrl;
@@ -29,6 +30,22 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
     if (timestamp == null) return '날짜 없음';
     final dt = timestamp.toDate();
     return '${dt.year}년 ${dt.month}월 ${dt.day}일';
+  }
+
+  // NEW: Get follower count
+  Future<int> _getFollowerCount(String userId) async {
+    try {
+      final snapshot = await fs
+          .collection('users')
+          .doc(userId)
+          .collection('followers')
+          .get();
+
+      return snapshot.docs.length;
+    } catch (e) {
+      print('Error getting follower count: $e');
+      return 0;
+    }
   }
 
   Future<void> _getUserInfo() async {
@@ -56,18 +73,22 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
 
     // Get items count
     final wardrobeSnapshot = await fs
-      .collection('users')
-      .doc(uid)
-      .collection('wardrobe')
-      .get();
+        .collection('users')
+        .doc(uid)
+        .collection('wardrobe')
+        .get();
 
     final userSnapshot = await fs.collection('users').doc(uid).get();
+
+    // NEW: Get follower count
+    final followerCount = await _getFollowerCount(uid);
 
     if (!mounted) return;
     setState(() {
       userInfo = userSnapshot.data() ?? {'userId': uid};
       lookbookCnt = lookbookSnapshot.docs.length;
       itemCnt = wardrobeSnapshot.docs.length;
+      followerCnt = followerCount;  // NEW
       userDiaries = diariesSnapshot.docs.map((doc) {
         final data = doc.data();
         data['diaryId'] = doc.id;
@@ -80,6 +101,7 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
     print('Number of diary entries: ${userDiaries.length}');
     print('Number of lookbooks : ${lookbookCnt}');
     print('Number of items in the wardrobe : ${itemCnt}');
+    print('Number of followers: $followerCnt');  // NEW
   }
 
   @override
@@ -297,7 +319,6 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
     final diary = userDiaries[index];
     final diaryId = diary['diaryId'];
     final diaryImg = diary['imageUrl'];
-    // const imageUrl = 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600';
 
     showDialog(
       context: context,
@@ -305,7 +326,7 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
         backgroundColor: Colors.white,
         child: Stack(
           children: [
-            SingleChildScrollView(  // ADD THIS to make dialog scrollable
+            SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -315,17 +336,17 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         SizedBox(height: 5),
-                        // Location - UPDATED TO HANDLE LONG TEXT
+                        // Location
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,  // Align to top
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Icon(Icons.location_on, size: 20),
                             SizedBox(width: 5),
-                            Expanded(  // ADD THIS to allow text wrapping
+                            Expanded(
                               child: Text(
                                 "${diary['locationText'] ?? '위치 없음'}",
-                                maxLines: 2,  // Limit to 2 lines
-                                overflow: TextOverflow.ellipsis,  // Show ... if too long
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -365,7 +386,7 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
                             ),
                           ),
                         ),
-                        SizedBox(height: 20 ),
+                        SizedBox(height: 20),
                       ],
                     ),
                   ),
@@ -391,11 +412,9 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
                     },
                   ),
                   IconButton(
-                    iconSize: 20.0,
+                      iconSize: 20.0,
                       onPressed: () async {
-                        await _deleteDiary(
-                            diaryId); // wait for the function to complete
-                        // await Future.delayed(Duration(milliseconds: 300));
+                        await _deleteDiary(diaryId);
                         if (mounted && Navigator.canPop(context)) {
                           Navigator.pop(context);
                         }
@@ -411,8 +430,6 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
     );
   }
 
-  // Function to select a profile picture
-
   // 이미지 확대/이동 컨트롤러
   final TransformationController _transformController =
   TransformationController();
@@ -427,7 +444,7 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
     final picker = ImagePicker();
     final XFile? image = await picker.pickImage(
       source: ImageSource.gallery,
-      maxWidth: 800,  // Optimize image size
+      maxWidth: 800,
       maxHeight: 800,
       imageQuality: 85,
     );
@@ -439,21 +456,14 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
     try {
       final File imageFile = File(image.path);
 
-      // Create a reference to Firebase Storage
       final String fileName = 'profile_$uid.jpg';
       final Reference storageRef = storage
           .ref('user_profile_pictures/${fileName}');
 
-      // Upload the file
       final UploadTask uploadTask = storageRef.putFile(imageFile);
-
-      // Wait for upload to complete
       final TaskSnapshot snapshot = await uploadTask;
-
-      // Get download URL
       final String downloadUrl = await snapshot.ref.getDownloadURL();
 
-      // Update Firestore with the new profile image URL
       await fs.collection('users').doc(uid).update({
         'profileImageUrl': downloadUrl,
       });
@@ -569,10 +579,13 @@ class _UserDiaryCardsState extends State<UserDiaryCards> {
                             style: const TextStyle(color: Colors.white),
                           ),
                           const SizedBox(width: 15),
-                          const Text(
-                            "0 \nAI lookbook",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.white),
+                          GestureDetector(
+                            onTap: () => context.go('/followList'),
+                            child: Text(
+                              "$followerCnt \nfollowers",  // UPDATED: Changed from "AI lookbook" to "followers"
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.white),
+                            ),
                           ),
                         ],
                       ),
