@@ -193,7 +193,7 @@ class _DiaryMapState extends State<DiaryMap> {
             .get();
 
         if (calendarQuery.docs.isNotEmpty) {
-          imageUrl = calendarQuery.docs.first.data()['imageUrl'];
+          imageUrl = calendarQuery.docs.first.data()['imageURL'];
         }
       }
     } catch (e) {
