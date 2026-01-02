@@ -658,7 +658,7 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFCAD83B),
+                        backgroundColor: Colors.white,
                         foregroundColor: Colors.black,
                         elevation: 0,
                         padding: EdgeInsets.zero,
@@ -691,7 +691,7 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
+                        backgroundColor: const Color(0xFFCAD83B),
                         foregroundColor: Colors.black,
                         elevation: 0,
                         padding: EdgeInsets.zero,
