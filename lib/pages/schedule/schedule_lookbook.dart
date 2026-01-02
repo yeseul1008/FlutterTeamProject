@@ -3,22 +3,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-
 class ScheduleLookbook extends StatefulWidget {
   const ScheduleLookbook({super.key});
 
   @override
-  State<ScheduleLookbook> createState() => _UserLookbookState();
+  State<ScheduleLookbook> createState() => _ScheduleLookbookState();
 }
 
-class _UserLookbookState extends State<ScheduleLookbook> {
+class _ScheduleLookbookState extends State<ScheduleLookbook> {
   final FirebaseFirestore fs = FirebaseFirestore.instance;
   final userId = FirebaseAuth.instance.currentUser?.uid;
 
-  List<Map<String, dynamic>> lookbooks = []; // 모든 문서 저장
+  List<Map<String, dynamic>> lookbooks = [];
   bool loading = true;
 
-  // 사용자 룩북 불러오기
   Future<void> _getUserLookbook() async {
     try {
       final querySnapshot = await fs
@@ -26,29 +24,18 @@ class _UserLookbookState extends State<ScheduleLookbook> {
           .where('userId', isEqualTo: userId)
           .get();
 
-      if (querySnapshot.docs.isNotEmpty) {
-        final dataList = querySnapshot.docs.map((doc) {
-          final data = doc.data();
-          data['docId'] = doc.id; // 상세보기 이동용 문서 ID 추가
-          return data;
-        }).toList();
+      final dataList = querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        data['docId'] = doc.id;
+        return data;
+      }).toList();
 
-        setState(() {
-          lookbooks = dataList;
-          loading = false;
-        });
-      } else {
-        setState(() {
-          lookbooks = [];
-          loading = false;
-        });
-        print('User not found');
-      }
-    } catch (e) {
       setState(() {
+        lookbooks = dataList;
         loading = false;
       });
-      print('Error fetching user info: $e');
+    } catch (_) {
+      setState(() => loading = false);
     }
   }
 
@@ -58,155 +45,221 @@ class _UserLookbookState extends State<ScheduleLookbook> {
     _getUserLookbook();
   }
 
+  void _showTempSnack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), duration: const Duration(milliseconds: 900)),
+    );
+  }
+
+  Future<void> _openLookbookModal(Map<String, dynamic> item) async {
+    final String docId = (item['docId'] ?? '').toString();
+    final String imageUrl = (item['resultImageUrl'] ?? '').toString();
+    final String alias = (item['alias'] ?? '').toString();
+
+    if (imageUrl.trim().isEmpty) {
+      _showTempSnack('이미지가 없습니다.');
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Colors.black),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close, color: Colors.black),
+                      splashRadius: 18,
+                    ),
+                    const Spacer(),
+                    Text(
+                      alias.isEmpty ? '룩북' : alias,
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const Spacer(),
+                    const SizedBox(width: 40),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                AspectRatio(
+                  aspectRatio: 3 / 4,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.grey),
+                      color: Colors.white,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      context.pop({
+                        'action': 'selectLookbook',
+                        'lookbookId': docId,
+                        'alias': alias,
+                        'resultImageUrl': imageUrl,
+                        'imageURL': imageUrl, // Add에서 쓰는 키
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFCAD83B),
+                      foregroundColor: Colors.black,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: const BorderSide(color: Colors.black),
+                      ),
+                    ),
+                    child: const Text(
+                      '룩북 결정하기',
+                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
 
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 80),
-        child: SizedBox(
-          height: 44,
-          child: FloatingActionButton.extended(
-            onPressed: () => context.push('/userLookbookAdd'),
-            backgroundColor: const Color(0xFFCAD83B),
-            elevation: 6,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(22),
-              side: const BorderSide(color: Colors.black),
-            ),
-            icon: const Icon(
-              Icons.add,
-              size: 18,
-              color: Colors.black,
-            ),
-            label: const Text(
-              '등록 완료하기',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-          ),
-        ),
-      ),
+      body: SafeArea(
+        top: true,
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            children: [
+              const SizedBox(height: 8),
 
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          children: [
-            const SizedBox(height: 30),
-
-            // 상단 헤더
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => context.go('/AddSchedule'),
-                    icon: const Icon(Icons.arrow_back_ios_new),
-                  ),
-                  Expanded(
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => context.go('/AddSchedule'),
+                      icon: const Icon(Icons.arrow_back_ios_new),
+                    ),
+                    const Expanded(
                       child: Center(
-                          child: Text(
-                            '나의 룩북',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),)
-                      )
+                        child: Text(
+                          '나의 룩북',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 48),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              Row(
+                children: [
+                  const Icon(Icons.menu),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Container(
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.black),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        children: [
+                          Expanded(
+                            child: Text('search...', style: TextStyle(color: Colors.grey)),
+                          ),
+                          Icon(Icons.search, size: 18),
+                        ],
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 48),
+                  const SizedBox(width: 12),
                 ],
               ),
-            ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // 검색 바 (정적)
-            Row(
-              children: [
-                const Icon(Icons.menu),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Container(
-                    height: 36,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.black),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      children: const [
-                        Expanded(
-                          child: Text(
-                            'search...',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        ),
-                        Icon(Icons.search, size: 18),
-                      ],
-                    ),
+              loading
+                  ? const Expanded(child: Center(child: CircularProgressIndicator()))
+                  : lookbooks.isEmpty
+                  ? const Expanded(child: Center(child: Text('등록된 룩북이 없습니다.')))
+                  : Expanded(
+                child: GridView.builder(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  itemCount: lookbooks.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.7,
                   ),
-                ),
-                const SizedBox(width: 12),
-              ],
-            ),
+                  itemBuilder: (context, index) {
+                    final item = lookbooks[index];
+                    final imageUrl = (item['resultImageUrl'] ?? '').toString();
 
-            const SizedBox(height: 16),
-
-            // 룩북 그리드
-            loading
-                ? const Expanded(
-                child: Center(child: CircularProgressIndicator()))
-                : lookbooks.isEmpty
-                ? const Expanded(
-                child: Center(child: Text('등록된 룩북이 없습니다.')))
-                : Expanded(
-              child: GridView.builder(
-                itemCount: lookbooks.length,
-                gridDelegate:
-                const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.7,
-                ),
-                itemBuilder: (context, index) {
-                  final item = lookbooks[index];
-                  final imageUrl = item['imageUrl'] ?? '';
-
-                  return GestureDetector(
-                    onTap: () {
-                    },
-                    child: Stack(
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey),
-                            color: Colors.white,
-                          ),
-                          child: imageUrl != ''
-                              ? ClipRRect(
-                            borderRadius:
-                            BorderRadius.circular(8),
-                            child: Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                            ),
-                          )
-                              : null,
+                    return GestureDetector(
+                      onTap: () => _openLookbookModal(item),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          color: Colors.white,
                         ),
-                      ],
-                    ),
-                  );
-                },
+                        child: imageUrl.isNotEmpty
+                            ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                          ),
+                        )
+                            : null,
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
