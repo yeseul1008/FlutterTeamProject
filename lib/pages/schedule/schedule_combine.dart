@@ -289,9 +289,10 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.white,
-                border: Border.all(color: Colors.black),
+                border: _isCapturing ? null : Border.all(color: Colors.black, width: 1.2),
                 borderRadius: BorderRadius.circular(14),
               ),
+
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(14),
                 child: Stack(

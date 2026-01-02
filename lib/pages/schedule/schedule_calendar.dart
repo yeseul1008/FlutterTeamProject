@@ -94,6 +94,12 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
     return s.isEmpty ? '없음' : s;
   }
 
+  void _showTempSnack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), duration: const Duration(milliseconds: 900)),
+    );
+  }
+
   Widget _infoText({required String label, required String value}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,6 +124,133 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
           ),
         ),
       ],
+    );
+  }
+
+  // ======================================================
+  // ✅ 룩북 옷 리스트 모달
+  // calendar.lookbookId -> lookbooks.clothesIds -> users/{uid}/wardrobe/{id}.productName
+  // ======================================================
+  Future<List<String>> _loadClothesNamesForLookbook(String lookbookId) async {
+    if (userId == null) return [];
+
+    final lbDoc = await fs.collection('lookbooks').doc(lookbookId).get();
+    final lb = lbDoc.data();
+    final raw = (lb?['clothesIds'] as List<dynamic>? ?? []);
+    final clothesIds = raw.map((e) => e.toString()).where((e) => e.isNotEmpty).toList();
+
+    if (clothesIds.isEmpty) return [];
+
+    final names = await Future.wait<String>(clothesIds.map((cid) async {
+      final wDoc = await fs
+          .collection('users')
+          .doc(userId)
+          .collection('wardrobe')
+          .doc(cid)
+          .get();
+
+      final w = wDoc.data();
+      final n = (w?['productName'] as String?)?.trim();
+
+      // productName이 비어있거나 null이면 대체
+      return (n != null && n.isNotEmpty) ? n : '이름 없음';
+    }));
+
+    return names;
+  }
+
+  void _openClothesInfoModal() {
+    final cal = _getCalendar(_selectedDay);
+
+    if (userId == null) {
+      _showTempSnack('로그인이 필요합니다.');
+      return;
+    }
+    if (cal == null) {
+      _showTempSnack('등록된 코디가 없습니다.');
+      return;
+    }
+
+    final lookbookId = (cal['lookbookId'] ?? '').toString().trim();
+    if (lookbookId.isEmpty) {
+      _showTempSnack('룩북 정보가 없습니다.');
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  '코디에 등록된 옷',
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                ),
+                const SizedBox(height: 12),
+                FutureBuilder<List<String>>(
+                  future: _loadClothesNamesForLookbook(lookbookId),
+                  builder: (context, snap) {
+                    if (snap.connectionState != ConnectionState.done) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+                    if (snap.hasError) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Text('불러오기 실패', style: TextStyle(color: Colors.black54)),
+                      );
+                    }
+
+                    final items = snap.data ?? [];
+                    if (items.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Text('등록된 옷 정보가 없습니다.', style: TextStyle(color: Colors.black54)),
+                      );
+                    }
+
+                    return Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.black, width: 1.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: items.length,
+                        separatorBuilder: (_, __) =>
+                        const Divider(height: 1, color: Colors.black12),
+                        itemBuilder: (_, i) => Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          child: Text(
+                            items[i],
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -345,7 +478,6 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
               child: Row(
                 children: [
                   Expanded(child: _infoText(label: '목적지', value: destinationText)),
-                  // const SizedBox(width: 5),
                   Expanded(child: _infoText(label: '일정', value: planText)),
                 ],
               ),
@@ -371,12 +503,41 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
                       ),
                     ),
                   )
-                      : Image.network(
-                    selectedThumb,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Center(
-                      child: Icon(Icons.image_not_supported),
-                    ),
+                      : Stack(
+                    children: [
+                      Positioned.fill(
+                        child: Image.network(
+                          selectedThumb,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Center(
+                            child: Icon(Icons.image_not_supported),
+                          ),
+                        ),
+                      ),
+
+                      // ✅ 인포 버튼(모달)
+                      Positioned(
+                        left: 10,
+                        top: 10,
+                        child: SizedBox(
+                          width: 30,
+                          height: 30,
+                          child: Material(
+                            color: const Color(0xFFE5E7EB),
+                            shape: const CircleBorder(),
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: _openClothesInfoModal,
+                              child: const Icon(
+                                Icons.info_outline,
+                                size: 18,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
