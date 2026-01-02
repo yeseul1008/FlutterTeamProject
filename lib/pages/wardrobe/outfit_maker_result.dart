@@ -9,6 +9,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import 'package:image/image.dart' as img;
 
 class AiOutfitMakerScreen extends StatefulWidget {
   final List<String> selectedImageUrls;
@@ -56,15 +57,33 @@ class _AiOutfitMakerScreenState extends State<AiOutfitMakerScreen> {
 
       setState(() => _currentStep = "AI 룩북 이미지를 생성하고 있습니다...");
 
-      // STRONGER white background emphasis with negative prompts
-      final enhancedPrompt = "$geminiPrompt, Korean e-commerce fashion photography style, ${gender} model standing straight with relaxed arms, pure white seamless background, no floor visible, professional clean product photo, full body from head to toe, sharp focus, even lighting, isolated on white --no shadows --no studio --no props --no floor line --no background gradient";
+      // You can simplify the prompt now since we'll crop afterwards
+      final enhancedPrompt = "$geminiPrompt, Korean e-commerce fashion photography style, ${gender} model standing straight with relaxed arms, pure white seamless background, no floor visible, professional clean product photo, full body shot, sharp focus, even lighting, isolated on white --no shadows --no studio --no props --no floor line --no background gradient";
 
       final generatedUrl = "https://image.pollinations.ai/prompt/${Uri.encodeComponent(enhancedPrompt)}?width=600&height=900&model=flux-realism&nologo=true&seed=${DateTime.now().millisecondsSinceEpoch}";
 
-      await _preloadImage(generatedUrl);
+      // Download and crop the image
+      setState(() => _currentStep = "이미지를 다운로드하고 처리하는 중...");
+      final response = await http.get(Uri.parse(generatedUrl));
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load image');
+      }
+
+      // Save to temporary file
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/ai_outfit_temp_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      await tempFile.writeAsBytes(response.bodyBytes);
+
+      // Crop the image to remove head
+      final croppedFile = await cropImageToNeck(tempFile);
+
+      // Read cropped file as bytes for display
+      final croppedBytes = await croppedFile.readAsBytes();
+      final croppedBase64 = base64Encode(croppedBytes);
 
       setState(() {
-        _generatedImageUrl = generatedUrl;
+        _generatedImageUrl = 'data:image/jpeg;base64,$croppedBase64';
         _isLoading = false;
         _currentStep = "완료!";
       });
@@ -74,14 +93,6 @@ class _AiOutfitMakerScreenState extends State<AiOutfitMakerScreen> {
         _isLoading = false;
         _errorMessage = "AI 룩북 생성에 실패했습니다. 다시 시도해주세요.\n\n오류: $e";
       });
-    }
-  }
-
-  // 이미지가 실제로 로드될 때까지 대기하는 함수
-  Future<void> _preloadImage(String url) async {
-    final response = await http.get(Uri.parse(url));
-    if (response.statusCode != 200) {
-      throw Exception('Failed to load image');
     }
   }
 
@@ -117,7 +128,7 @@ class _AiOutfitMakerScreenState extends State<AiOutfitMakerScreen> {
     }
 
     final textPrompt = TextPart(
-        'Analyze these clothing items. Create an image generation prompt for: A Korean fashion model standing perfectly straight with arms relaxed at sides, neutral facial expression, front-facing view, full body shot showing head to toe including shoes. The model should wear ALL these clothing items together. Style: Clean Korean fashion e-commerce product photo with PURE WHITE seamless background (like StyleNanda, Ader Error, or W Concept product photos). No floor line visible, no shadows on background, model should appear to float on white. Professional lighting, sharp focus on clothing details.'
+        'Analyze these clothing items. Create an image generation prompt for: A fashion model standing perfectly straight with arms relaxed at sides, front-facing view, full body shot showing head to toe including shoes. The model should wear ALL these clothing items together. Style: Clean Korean fashion e-commerce product photo with PURE WHITE seamless background (like StyleNanda, Ader Error, or W Concept product photos). No floor line visible, no shadows on background, model should appear to float on white. Professional lighting, sharp focus on clothing details.'
     );
 
     print("Sending request to Gemini...");
@@ -175,13 +186,14 @@ class _AiOutfitMakerScreenState extends State<AiOutfitMakerScreen> {
         return;
       }
 
-      // Download the generated image
-      final response = await http.get(Uri.parse(_generatedImageUrl!));
+      // Decode base64 image
+      final base64String = _generatedImageUrl!.split(',')[1];
+      final imageBytes = base64Decode(base64String);
 
       // Save to temporary file
       final tempDir = await getTemporaryDirectory();
       final file = File('${tempDir.path}/ai_outfit_${DateTime.now().millisecondsSinceEpoch}.jpg');
-      await file.writeAsBytes(response.bodyBytes);
+      await file.writeAsBytes(imageBytes);
 
       // Upload to Firebase Storage
       final fileName = 'ai_outfit_${DateTime.now().millisecondsSinceEpoch}.jpg';
@@ -303,25 +315,12 @@ class _AiOutfitMakerScreenState extends State<AiOutfitMakerScreen> {
           children: [
             const SizedBox(height: 20),
 
-            // Generated Image (no border)
+            // Generated Image (displaying base64)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Image.network(
-                _generatedImageUrl!,
+              child: Image.memory(
+                base64Decode(_generatedImageUrl!.split(',')[1]),
                 fit: BoxFit.contain,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    height: 500,
-                    alignment: Alignment.center,
-                    child: CircularProgressIndicator(
-                      value: loadingProgress.expectedTotalBytes != null
-                          ? loadingProgress.cumulativeBytesLoaded /
-                          loadingProgress.expectedTotalBytes!
-                          : null,
-                    ),
-                  );
-                },
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
                     height: 500,
@@ -360,15 +359,17 @@ class _AiOutfitMakerScreenState extends State<AiOutfitMakerScreen> {
               ),
             ),
             // Enter name of the AI lookbook
-            TextField(
-              // maxLines: maxLines,
-              controller: _AILookbookName,
-              decoration: InputDecoration(
-                label: Text('Name your outfit'),
-                contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: TextField(
+                controller: _AILookbookName,
+                decoration: InputDecoration(
+                  label: Text('Name your outfit'),
+                  contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
                 ),
               ),
             ),
@@ -389,9 +390,8 @@ class _AiOutfitMakerScreenState extends State<AiOutfitMakerScreen> {
         ),
       ),
 
-      // Keep the purple floating action button (if you have it elsewhere in your code)
       floatingActionButton: _generatedImageUrl != null
-          ? null // You can add your purple button here if needed
+          ? null
           : null,
     );
   }

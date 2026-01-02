@@ -56,6 +56,7 @@ class GoogleLogin extends StatelessWidget {
         provider: 'google',
         nickname: authNickname,
         profileImageUrl: authPhotoUrl,
+          gender: 'U'
       );
 
       await fs.initFollowDoc(uid);

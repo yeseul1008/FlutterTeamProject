@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
-import '../../widgets/common/main_btn.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
+import '../wardrobe/user_wardrobe_category.dart';
+
+/// =============================
+/// ScheduleWardrobe.dart
+/// =============================
 class UserLookbookAdd extends StatefulWidget {
   const UserLookbookAdd({super.key});
 
@@ -10,129 +16,296 @@ class UserLookbookAdd extends StatefulWidget {
 }
 
 class _UserLookbookAddState extends State<UserLookbookAdd> {
-  String? selectedCategory;
+  final FirebaseFirestore fs = FirebaseFirestore.instance;
+  final String? userId = FirebaseAuth.instance.currentUser?.uid;
 
-  bool spring = false;
-  bool summer = false;
-  bool fall = false;
-  bool winter = false;
+  String? selectedCategoryId;
+  bool showLikedOnly = false;
+
+  // ✅ 선택 상태
+  final Set<String> selectedClothesIds = {};
+  final Map<String, String> selectedImageUrls = {};
+
+  void _openCategoryModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) {
+        return UserWardrobeCategory(
+          onSelect: (categoryId) {
+            setState(() => selectedCategoryId = categoryId);
+            Navigator.pop(context);
+          },
+        );
+      },
+    );
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> _wardrobeStream() {
+    if (userId == null) return const Stream.empty();
+
+    Query<Map<String, dynamic>> ref =
+    fs.collection('users').doc(userId).collection('wardrobe');
+
+    if (selectedCategoryId != null && selectedCategoryId != 'all') {
+      ref = ref.where('categoryId', isEqualTo: selectedCategoryId);
+    }
+
+    if (showLikedOnly) {
+      ref = ref.where('liked', isEqualTo: true);
+    }
+
+    return ref.snapshots();
+  }
+
+  void _toggleSelect(String id, String imageUrl) {
+    setState(() {
+      if (selectedClothesIds.contains(id)) {
+        selectedClothesIds.remove(id);
+        selectedImageUrls.remove(id);
+      } else {
+        selectedClothesIds.add(id);
+        selectedImageUrls[id] = imageUrl;
+      }
+    });
+  }
+
+  // ✅ 조합하기 버튼: "선택값만" 상위(UserScheduleAdd)로 넘기고 pop
+  void _goToLookbookCombine() {
+    if (selectedClothesIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('옷을 먼저 선택해주세요')),
+      );
+      return;
+    }
+
+    // goRouter로 /lookbookCombine 이동 + extra 전달
+    context.push(
+      '/lookbookCombine',
+      extra: {
+        'clothesIds': selectedClothesIds.toList(),
+        'imageUrls': selectedImageUrls,
+        // 필요하면 선택 날짜 등 추가 가능
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'add lookbook',
-          style: TextStyle(color: Colors.black),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            context.pop();
-          },
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(30),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      body: SafeArea(
+        child: Stack(
           children: [
-            /// 이미지 영역 (placeholder)
-            Stack(
-              children: [
-                Container(
-                  height: 260,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.black),
-                    color: Colors.grey.shade100,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  const SizedBox(height: 8),
+
+                  // 🔹 상단
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => context.pop(),
+                        icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+                      ),
+                      const Expanded(
+                        child: Center(
+                          child: Text(
+                            '나의 옷장',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 48),
+                    ],
                   ),
-                ),
-                Positioned(
-                  top: 10,
-                  right: 10,
+
+                  const SizedBox(height: 12),
+
+                  // 🔹 검색 / 필터
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => _openCategoryModal(context),
+                        child: const Icon(Icons.menu, size: 22),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          height: 36,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.black),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'search...',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              ),
+                              Icon(Icons.search, size: 18),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      IconButton(
+                        icon: Icon(
+                          showLikedOnly ? Icons.favorite : Icons.favorite_border,
+                          color: Colors.black,
+                        ),
+                        onPressed: () {
+                          setState(() => showLikedOnly = !showLikedOnly);
+                        },
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // 🔹 그리드
+                  Expanded(
+                    child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: _wardrobeStream(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+
+                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          return const Center(child: Text('옷장이 비어있습니다.'));
+                        }
+
+                        final docs = snapshot.data!.docs;
+
+                        return GridView.builder(
+                          padding: const EdgeInsets.only(bottom: 120),
+                          itemCount: docs.length,
+                          gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 14,
+                            childAspectRatio: 0.72,
+                          ),
+                          itemBuilder: (context, index) {
+                            final doc = docs[index];
+                            final data = doc.data();
+                            final id = doc.id;
+                            final imageUrl = (data['imageUrl'] ?? '') as String;
+
+                            final bool isSelected =
+                            selectedClothesIds.contains(id);
+
+                            return GestureDetector(
+                              onTap: () => _toggleSelect(id, imageUrl),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? const Color(0xFF7B5CFF)
+                                        : Colors.grey,
+                                    width: isSelected ? 2 : 1,
+                                  ),
+                                ),
+                                child: Stack(
+                                  children: [
+                                    if (imageUrl.isNotEmpty)
+                                      Positioned.fill(
+                                        child: Image.network(
+                                          imageUrl,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    Positioned(
+                                      top: 4,
+                                      right: 4,
+                                      child: IconButton(
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        icon: Icon(
+                                          data['liked'] == true
+                                              ? Icons.favorite
+                                              : Icons.favorite_border,
+                                          color: Colors.black,
+                                          size: 18,
+                                        ),
+                                        onPressed: () async {
+                                          if (userId == null) return;
+
+                                          await fs
+                                              .collection('users')
+                                              .doc(userId)
+                                              .collection('wardrobe')
+                                              .doc(id)
+                                              .update({
+                                            'liked': !(data['liked'] == true),
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 🔹 조합하기 버튼: ✅ 선택값만 pop
+            Positioned(
+              right: 16,
+              bottom: 90,
+              child: Material(
+                color: const Color(0xFFCAD83B),
+                elevation: 6,
+                borderRadius: BorderRadius.circular(22),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(22),
+                  onTap: _goToLookbookCombine,
                   child: Container(
-                    width: 50,
-                    height: 50,
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                     decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(22),
                       border: Border.all(color: Colors.black),
-                      color: Colors.grey.shade300,
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.auto_awesome, size: 16),
+                        SizedBox(width: 6),
+                        Text(
+                          '조합하기',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
-            const SizedBox(height: 20),
-
-            /// 제품명 *
-            _label('lookbook name'),
-            _input(),
-
-            const SizedBox(height: 14),
-
-            /// add 버튼
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    // TODO: 저장 로직
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFCAD83B),
-                    foregroundColor: Colors.black,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 35,
-                      vertical: 17,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(40),
-                      side: const BorderSide(color: Colors.black),
-                    ),
-                  ),
-                  child: const Text(
-                    'add',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-
-            const SizedBox(height: 90),
           ],
-        ),
-      ),
-    );
-  }
-
-
-  /// ⭐ 라벨 Bold 처리
-  Widget _label(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.bold, // ⭐ bold 적용
-      ),
-    );
-  }
-
-  Widget _input({int maxLines = 1}) {
-    return TextField(
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        contentPadding:
-        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
         ),
       ),
     );
