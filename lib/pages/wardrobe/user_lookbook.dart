@@ -147,7 +147,7 @@ class _UserLookbookState extends State<UserLookbook> {
                       },
 
                       child: Text(
-                        published ? '게시중' : 'feed 게시',
+                        published ? '게시중' : 'community 게시',
                       ),
                     ),
 
