@@ -37,7 +37,6 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
   }
 
   /// Lookbooks 로드
-  /// Lookbooks 로드
   Future<void> _getLookbooks() async {
     setState(() {
       isLoading = true;
@@ -58,7 +57,6 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
         final String authorId = data['userId'] ?? '';
 
         String authorNickname = 'Unknown';
-        String authorLoginId = '';  // NEW: Add loginId
         String profileImageUrl = '';
         String authorLoginId = '';
 
@@ -66,7 +64,6 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
           final userDoc =
           await fs.collection('users').doc(authorId).get();
           authorNickname = userDoc.data()?['nickname'] ?? 'Unknown';
-          authorLoginId = userDoc.data()?['loginId'] ?? '';  // NEW: Get loginId
           profileImageUrl =
               userDoc.data()?['profileImageUrl'] ?? '';
           authorLoginId = userDoc.data()?['loginId'] ?? userDoc.data()?['email'] ?? '';
@@ -85,7 +82,6 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
           'docId': docId,
           'authorId': authorId,
           'authorNickname': authorNickname,
-          'authorLoginId': authorLoginId,  // NEW: Add to map
           'authorProfileImageUrl': profileImageUrl,
           'authorLoginId': authorLoginId,
           'resultImageUrl': data['resultImageUrl'],
