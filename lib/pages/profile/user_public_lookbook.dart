@@ -21,6 +21,8 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
   List<Map<String, dynamic>> userDiaries = [];
   int lookbookCnt = 0;
   int itemCnt = 0;
+  int followerCnt = 0;
+  bool isFollowing = false;
   File? selectedImage;
   bool isProcessingImage = false;
   String? profileImageUrl;
@@ -52,6 +54,132 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
     if (queryUserId != targetUserId) {
       targetUserId = queryUserId ?? currentUserId;
       _getUserInfo();
+    }
+  }
+
+  // Check if current user is following target user
+  Future<void> _checkFollowingStatus() async {
+    if (currentUserId == null || targetUserId == null) return;
+    if (currentUserId == targetUserId) return; // Can't follow yourself
+
+    try {
+      final doc = await fs
+          .collection('users')
+          .doc(targetUserId)
+          .collection('followers')
+          .doc(currentUserId)
+          .get();
+
+      setState(() {
+        isFollowing = doc.exists;
+      });
+    } catch (e) {
+      print('Error checking follow status: $e');
+    }
+  }
+
+  // Get follower count
+  Future<int> _getFollowerCount(String userId) async {
+    try {
+      final snapshot = await fs
+          .collection('users')
+          .doc(userId)
+          .collection('followers')
+          .get();
+
+      return snapshot.docs.length;
+    } catch (e) {
+      print('Error getting follower count: $e');
+      return 0;
+    }
+  }
+
+  // UPDATED: Follow/Unfollow functionality with bidirectional relationship
+  Future<void> _toggleFollow() async {
+    if (currentUserId == null || targetUserId == null) {
+      _showSnack('로그인이 필요합니다');
+      return;
+    }
+
+    if (currentUserId == targetUserId) {
+      _showSnack('자신을 팔로우할 수 없습니다');
+      return;
+    }
+
+    try {
+      // Get both users' info
+      final currentUserDoc = await fs.collection('users').doc(currentUserId).get();
+      final currentUserData = currentUserDoc.data();
+
+      final targetUserDoc = await fs.collection('users').doc(targetUserId).get();
+      final targetUserData = targetUserDoc.data();
+
+      if (isFollowing) {
+        // Unfollow - Remove from both subcollections
+
+        // 1. Remove from target user's followers
+        await fs
+            .collection('users')
+            .doc(targetUserId)
+            .collection('followers')
+            .doc(currentUserId)
+            .delete();
+
+        // 2. Remove from current user's following
+        await fs
+            .collection('users')
+            .doc(currentUserId)
+            .collection('following')
+            .doc(targetUserId)
+            .delete();
+
+        setState(() {
+          isFollowing = false;
+          followerCnt--;
+        });
+
+        _showSnack('팔로우 취소');
+      } else {
+        // Follow - Add to both subcollections
+
+        // 1. Add to target user's followers subcollection
+        await fs
+            .collection('users')
+            .doc(targetUserId)
+            .collection('followers')
+            .doc(currentUserId)
+            .set({
+          'userId': currentUserId,
+          'loginId': currentUserData?['loginId'] ?? '',
+          'nickname': currentUserData?['nickname'] ?? '',
+          'profileImageUrl': currentUserData?['profileImageUrl'],
+          'followedAt': FieldValue.serverTimestamp(),
+        });
+
+        // 2. Add to current user's following subcollection
+        await fs
+            .collection('users')
+            .doc(currentUserId)
+            .collection('following')
+            .doc(targetUserId)
+            .set({
+          'userId': targetUserId,
+          'loginId': targetUserData?['loginId'] ?? '',
+          'nickname': targetUserData?['nickname'] ?? '',
+          'profileImageUrl': targetUserData?['profileImageUrl'],
+          'followedAt': FieldValue.serverTimestamp(),
+        });
+
+        setState(() {
+          isFollowing = true;
+          followerCnt++;
+        });
+
+        _showSnack('팔로우 완료');
+      }
+    } catch (e) {
+      print('Error toggling follow: $e');
+      _showSnack('오류가 발생했습니다: $e');
     }
   }
 
@@ -88,11 +216,15 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
 
     final userSnapshot = await fs.collection('users').doc(uid).get();
 
+    // Get follower count
+    final followerCount = await _getFollowerCount(uid);
+
     if (!mounted) return;
     setState(() {
       userInfo = userSnapshot.data() ?? {'userId': uid};
       lookbookCnt = lookbookSnapshot.docs.length;
       itemCnt = wardrobeSnapshot.docs.length;
+      followerCnt = followerCount;
       userDiaries = diariesSnapshot.docs.map((doc) {
         final data = doc.data();
         data['diaryId'] = doc.id;
@@ -102,9 +234,13 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
       profileImageUrl = userInfo['profileImageUrl'];
     });
 
+    // Check following status
+    await _checkFollowingStatus();
+
     print('Number of diary entries: ${userDiaries.length}');
     print('Number of lookbooks : ${lookbookCnt}');
     print('Number of items in the wardrobe : ${itemCnt}');
+    print('Number of followers: $followerCnt');
   }
 
   @override
@@ -237,8 +373,6 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
       },
     );
   }
-
-  // Function to delete a diary entry
 
   Future<void> _deleteDiary(String diaryId) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -591,29 +725,35 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                             style: const TextStyle(color: Colors.white),
                           ),
                           const SizedBox(width: 15),
-                          const Text(
-                            "0 \nAI lookbook",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.white),
+                          GestureDetector(
+                            // onTap: () => context.go('/followList'),
+                            child: Text(
+                              "$followerCnt \nfollowers",
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.white),
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 10),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(140, 32),
-                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        ),
-                        onPressed: () => context.go('/'),
-                        child: const Text(
-                          "follow",
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                      // Follow button with dynamic state
+                      if (!isOwnProfile)
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(140, 32),
+                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            backgroundColor: isFollowing ? Colors.grey[300] : Colors.white,
+                          ),
+                          onPressed: _toggleFollow,
+                          child: Text(
+                            isFollowing ? "following" : "follow",
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),
