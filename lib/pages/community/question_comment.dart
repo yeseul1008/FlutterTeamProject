@@ -1,7 +1,9 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 
 class QuestionComment extends StatefulWidget {
   const QuestionComment({super.key});
@@ -18,16 +20,42 @@ class _QuestionCommentState extends State<QuestionComment> {
   List<Map<String, dynamic>> comments = [];
   bool isLoading = true;
   late String postId;
+  late String postAuthorId; // 게시글 주인의 아이디
   String currentUserId = '';
   int commentCount = 0;
 
-  /// 댓글 불러오기 (questions 컬렉션 기준)
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final extra = GoRouterState.of(context).extra as Map<String, dynamic>?;
+    if (extra != null) {
+      postId = extra['postId'];
+      _loadPostAuthor(); // 게시글 작성자 조회
+      _getComments();
+    }
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  /// 게시글 작성자 조회
+  Future<void> _loadPostAuthor() async {
+    try {
+      final doc = await fs.collection('questions').doc(postId).get();
+      postAuthorId = doc.data()?['authorId'] ?? '';
+    } catch (e) {
+      debugPrint('게시글 작성자 조회 실패: $e');
+    }
+  }
+
+  /// 댓글 불러오기
   Future<void> _getComments() async {
     try {
       final user = auth.currentUser;
-      if (user != null) {
-        currentUserId = user.uid;
-      }
+      if (user != null) currentUserId = user.uid;
 
       final snapshot = await fs
           .collection('questions')
@@ -42,11 +70,13 @@ class _QuestionCommentState extends State<QuestionComment> {
 
         String authorNickname = 'Unknown';
         String profileImageUrl = '';
+        String loginId = 'Unknown';
 
         if (authorId.isNotEmpty) {
           final userDoc = await fs.collection('users').doc(authorId).get();
           authorNickname = userDoc.data()?['nickname'] ?? 'Unknown';
           profileImageUrl = userDoc.data()?['profileImageUrl'] ?? '';
+          loginId = userDoc.data()?['loginId'] ?? 'Unknown';
         }
 
         final likesSnapshot = await fs
@@ -63,9 +93,11 @@ class _QuestionCommentState extends State<QuestionComment> {
         return {
           'commentId': doc.id,
           'authorId': authorId,
+          'loginId': loginId,
           'authorNickname': authorNickname,
           'authorProfileImageUrl': profileImageUrl,
           'comment': data['comment'] ?? '',
+          'commentImgUrl': data['commentImg'] ?? '', // 이미지 URL 포함
           'likeCount': likesSnapshot.size,
           'isLiked': isLiked,
           'createdAt': data['createdAt'],
@@ -77,7 +109,6 @@ class _QuestionCommentState extends State<QuestionComment> {
         isLoading = false;
       });
 
-      // 댓글 수를 questions 문서에 업데이트
       await fs.collection('questions').doc(postId).update({
         'commentCount': commentCount,
       });
@@ -90,8 +121,11 @@ class _QuestionCommentState extends State<QuestionComment> {
   }
 
   /// 댓글 추가
-  Future<void> _addComment() async {
+  Future<void> _addComment({String? commentImgUrl}) async {
     if (_commentController.text.trim().isEmpty) return;
+
+    final user = auth.currentUser;
+    if (user == null) return;
 
     try {
       await fs
@@ -100,7 +134,8 @@ class _QuestionCommentState extends State<QuestionComment> {
           .collection('qna_comments')
           .add({
         'comment': _commentController.text.trim(),
-        'authorId': currentUserId,
+        'authorId': user.uid,
+        'commentImg': commentImgUrl ?? '',
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -149,9 +184,7 @@ class _QuestionCommentState extends State<QuestionComment> {
             ElevatedButton(
               onPressed: () async {
                 if (editController.text.trim().isEmpty) return;
-
                 Navigator.pop(dialogContext);
-
                 try {
                   await fs
                       .collection('questions')
@@ -161,17 +194,13 @@ class _QuestionCommentState extends State<QuestionComment> {
                       .update({
                     'comment': editController.text.trim(),
                   });
-
-                  if (mounted) {
-                    _getComments();
-                  }
+                  _getComments();
                 } catch (e) {
                   debugPrint('댓글 수정 실패: $e');
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('댓글 수정 중 오류가 발생했습니다')),
-                    );
-                  }
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('댓글 수정 중 오류가 발생했습니다')),
+                  );
                 }
               },
               child: const Text('수정'),
@@ -192,7 +221,6 @@ class _QuestionCommentState extends State<QuestionComment> {
         .collection('likes')
         .doc(currentUserId);
 
-    // 낙관적 업데이트
     setState(() {
       final comment = comments.firstWhere((c) => c['commentId'] == commentId);
       if (isLiked) {
@@ -211,10 +239,8 @@ class _QuestionCommentState extends State<QuestionComment> {
         await likeRef.set({'likedAt': FieldValue.serverTimestamp()});
       }
     } catch (e) {
-      // 에러 시 되돌리기
       setState(() {
-        final comment =
-        comments.firstWhere((c) => c['commentId'] == commentId);
+        final comment = comments.firstWhere((c) => c['commentId'] == commentId);
         if (isLiked) {
           comment['isLiked'] = true;
           comment['likeCount']++;
@@ -228,32 +254,15 @@ class _QuestionCommentState extends State<QuestionComment> {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    final extra = GoRouterState.of(context).extra as Map<String, dynamic>?;
-    if (extra != null) {
-      postId = extra['postId'];
-      _getComments();
-    }
-  }
-
-  @override
-  void dispose() {
-    _commentController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final String currentPath = GoRouterState.of(context).uri.path;
 
     return Container(
-      color: Colors.white, // ⭐ 전체 백그라운드 흰색
+      color: Colors.white,
       child: SafeArea(
         child: Column(
           children: [
-            /// ===== 상단 탭 UI =====
+            /// 상단 탭 UI
             Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -279,7 +288,7 @@ class _QuestionCommentState extends State<QuestionComment> {
               ),
             ),
 
-            /// ===== COMMENTS 헤더 =====
+            /// COMMENTS 헤더
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
@@ -319,7 +328,7 @@ class _QuestionCommentState extends State<QuestionComment> {
               ),
             ),
 
-            /// ===== 댓글 리스트 =====
+            /// 댓글 리스트
             Expanded(
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -330,25 +339,25 @@ class _QuestionCommentState extends State<QuestionComment> {
                 itemCount: comments.length,
                 itemBuilder: (context, index) {
                   final comment = comments[index];
-                  bool isAuthor =
-                      comment['authorId'] == currentUserId;
+                  bool isAuthor = comment['authorId'] == currentUserId;
 
                   return _commentItem(
                     nickname: comment['authorNickname'],
                     authorId: comment['authorId'],
-                    profileImageUrl:
-                    comment['authorProfileImageUrl'],
+                    loginId: comment['loginId'],
+                    profileImageUrl: comment['authorProfileImageUrl'],
                     content: comment['comment'],
                     commentId: comment['commentId'],
                     likeCount: comment['likeCount'],
                     isLiked: comment['isLiked'],
                     isAuthor: isAuthor,
+                    commentImgUrl: comment['commentImgUrl'],
                   );
                 },
               ),
             ),
 
-            /// ===== 댓글 입력 영역 =====
+            /// 댓글 입력 영역
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -389,8 +398,36 @@ class _QuestionCommentState extends State<QuestionComment> {
                     ),
                   ),
                   const SizedBox(width: 12),
+                  /// 📷 이미지 버튼 (추가)
                   GestureDetector(
-                    onTap: _addComment,
+                    onTap: () {
+                      if (postAuthorId.isEmpty) return;
+
+                      context.go(
+                        '/questionCloset',
+                        extra: {
+                          'userId': postAuthorId, // ✅ 게시글 주인 ID 전달
+                          'postId': postId,       // (선택) 게시글 ID도 같이 전달 가능
+                        },
+                      );
+                    },
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.checkroom,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 10),
+                  GestureDetector(
+                    onTap: () => _addComment(), // 여기서 바로 댓글 업로드
                     child: Container(
                       width: 48,
                       height: 48,
@@ -413,7 +450,7 @@ class _QuestionCommentState extends State<QuestionComment> {
     );
   }
 
-  /// ===== 공통 탭 버튼 =====
+  /// 공통 탭 버튼
   Widget _topButton({
     required String text,
     required bool active,
@@ -445,16 +482,18 @@ class _QuestionCommentState extends State<QuestionComment> {
     );
   }
 
-  /// ===== 댓글 카드 UI =====
+  /// 댓글 카드 UI
   Widget _commentItem({
     required String nickname,
     required String authorId,
+    required String loginId,
     required String profileImageUrl,
     required String content,
     required String commentId,
     required int likeCount,
     required bool isLiked,
     required bool isAuthor,
+    String? commentImgUrl,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -470,89 +509,102 @@ class _QuestionCommentState extends State<QuestionComment> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 프로필 이미지
-          CircleAvatar(
-            radius: 20,
-            backgroundImage: profileImageUrl.isNotEmpty
-                ? NetworkImage(profileImageUrl)
-                : null,
-            child: profileImageUrl.isEmpty ? const Icon(Icons.person) : null,
-          ),
-          const SizedBox(width: 12),
-
-          // 댓글 내용
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  nickname,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
-                ),
-                Text(
-                  '@$authorId',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  content,
-                  style: const TextStyle(fontSize: 14),
-                ),
-              ],
-            ),
-          ),
-
-          // 수정, 삭제 버튼 (작성자만)
-          if (isAuthor)
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_horiz),
-              onSelected: (value) {
-                if (value == 'edit') {
-                  _editComment(commentId, content);
-                } else if (value == 'delete') {
-                  _deleteComment(commentId);
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'edit',
-                  child: Text('수정'),
-                ),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Text('삭제'),
-                ),
-              ],
-            ),
-
-          // 좋아요 버튼
-          Column(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconButton(
-                onPressed: () => _toggleLike(commentId, isLiked),
-                icon: Icon(
-                  isLiked ? Icons.favorite : Icons.favorite_border,
-                  color: isLiked ? Colors.red : Colors.black,
-                ),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
+              CircleAvatar(
+                radius: 20,
+                backgroundImage: profileImageUrl.isNotEmpty
+                    ? NetworkImage(profileImageUrl)
+                    : null,
+                child: profileImageUrl.isEmpty ? const Icon(Icons.person) : null,
               ),
-              if (likeCount > 0)
-                Text(
-                  '$likeCount',
-                  style: const TextStyle(fontSize: 12),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      nickname,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    Text(
+                      '@$loginId',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      content,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ],
                 ),
+              ),
+              if (isAuthor)
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_horiz),
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      _editComment(commentId, content);
+                    } else if (value == 'delete') {
+                      _deleteComment(commentId);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Text('수정'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Text('삭제'),
+                    ),
+                  ],
+                ),
+              Column(
+                children: [
+                  IconButton(
+                    onPressed: () => _toggleLike(commentId, isLiked),
+                    icon: Icon(
+                      isLiked ? Icons.thumb_up : Icons.thumb_up_alt_outlined,
+                      color: isLiked ? Colors.black : Colors.black,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  if (likeCount > 0)
+                    Text(
+                      '$likeCount',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                ],
+              ),
             ],
           ),
+          // 댓글 이미지
+          if (commentImgUrl != null && commentImgUrl.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: SizedBox(
+                width: 300,
+                height: 300,
+                child: Image.network(
+                  commentImgUrl,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
