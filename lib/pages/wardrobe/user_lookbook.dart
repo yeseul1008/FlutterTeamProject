@@ -52,6 +52,7 @@ class _UserLookbookState extends State<UserLookbook> {
     final docId = item['docId'] as String?;
     final imageUrl = item['resultImageUrl'] as String? ?? '';
     final alias = item['alias'] as String? ?? '';
+    final published = item['publishToCommunity'] == true;
 
     if (docId == null || imageUrl.isEmpty) return;
 
@@ -90,6 +91,68 @@ class _UserLookbookState extends State<UserLookbook> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
+                    /// ✅ feed 게시 버튼
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                        published ? Colors.grey[400] : const Color(0xFFCAD83B),
+                        foregroundColor: Colors.black,
+                      ),
+                      onPressed: published
+                          ? null
+                          : () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) {
+                            return AlertDialog(
+                              title: const Text('피드 게시'),
+                              content: const Text(
+                                '한 번 게시하면 취소할 수 없습니다.\n그래도 게시하시겠습니까?',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(false),
+                                  child: const Text('취소'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(true),
+                                  child: const Text(
+                                    '게시',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+
+                        if (confirm != true) return;
+
+                        try {
+                          await fs.collection('lookbooks').doc(docId).update({
+                            'publishToCommunity': true,
+                          });
+
+                          Navigator.of(ctx).pop(); // 룩북 모달 닫기
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('피드에 게시되었습니다.')),
+                          );
+                        } catch (e) {
+                          print('피드 게시 실패: $e');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('피드 게시 실패')),
+                          );
+                        }
+                      },
+
+                      child: Text(
+                        published ? '게시중' : 'community 게시',
+                      ),
+                    ),
+
+
+                    /// 🗑 삭제 버튼
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.black,
@@ -109,7 +172,10 @@ class _UserLookbookState extends State<UserLookbook> {
                                 ),
                                 TextButton(
                                   onPressed: () => Navigator.of(ctx).pop(true),
-                                  child: const Text('삭제', style: TextStyle(color: Colors.red)),
+                                  child: const Text(
+                                    '삭제',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
                                 ),
                               ],
                             );
@@ -122,7 +188,7 @@ class _UserLookbookState extends State<UserLookbook> {
                             setState(() {
                               lookbooks.removeWhere((e) => e['docId'] == docId);
                             });
-                            Navigator.of(ctx).pop(); // 모달 닫기
+                            Navigator.of(ctx).pop();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('룩북이 삭제되었습니다.')),
                             );
@@ -136,18 +202,21 @@ class _UserLookbookState extends State<UserLookbook> {
                       },
                       child: const Text('삭제'),
                     ),
+
+                    /// 닫기 버튼
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.grey[300],
                         foregroundColor: Colors.black,
                       ),
                       onPressed: () {
-                        Navigator.of(ctx).pop(); // 닫기
+                        Navigator.of(ctx).pop();
                       },
                       child: const Text('닫기'),
                     ),
                   ],
                 ),
+
               ],
             ),
           ),
