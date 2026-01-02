@@ -22,6 +22,10 @@ class _CalendarPageState extends State<CalendarPage> {
   // Store lookbooks by date
   Map<DateTime, Map<String, dynamic>> _lookbooksByDate = {};
 
+  // final isToday = isSameDay(day, DateTime.now());
+  // final isSelected = isSameDay(day, _selectedDay);
+
+
   @override
   void initState() {
     super.initState();
@@ -179,6 +183,7 @@ class _CalendarPageState extends State<CalendarPage> {
               ],
             ),
           ),
+          SizedBox(height: 20),
 
           TableCalendar(
             firstDay: DateTime.utc(2023, 1, 1),
@@ -196,16 +201,81 @@ class _CalendarPageState extends State<CalendarPage> {
             headerVisible: false,  // Hide the default header
             calendarStyle: CalendarStyle(
               selectedDecoration: BoxDecoration(
-                color: Color(0xFFCAD83B).withOpacity(0.5),
-                shape: BoxShape.circle,
+                color: Colors.transparent,
+                shape: BoxShape.rectangle,
+                border: Border.all(color: Colors.purple)
               ),
               todayDecoration: BoxDecoration(
-                color: Color(0xFFA88AEE).withOpacity(0.5),
+                color: Colors.transparent,
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.grey)
+                // border: Border.all(color: Colors.grey, width: 2),
               ),
             ),
             calendarBuilders: CalendarBuilders(
+              todayBuilder: (context, day, focusedDay) {
+                final imageUrl = _getOutfitImage(day);
+
+                return Container(
+                  margin: EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Color(0xFFA88AF7), width: 2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        '${day.day}',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      Expanded(
+                        child: imageUrl != null
+                            ? ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                          ),
+                        )
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ),
+                );
+              },
+
+              selectedBuilder: (context, day, focusedDay) {
+                final imageUrl = _getOutfitImage(day);
+
+                return Container(
+                  margin: EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: const Color(0xFFCAD83B), width: 2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        '${day.day}',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      Expanded(
+                        child: imageUrl != null
+                            ? ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                          ),
+                        )
+                            : const SizedBox.expand(),
+                      ),
+                    ],
+                  ),
+                );
+              },
+
               defaultBuilder: (context, day, focusedDay) {
                 final imageUrl = _getOutfitImage(day);
 
@@ -214,7 +284,9 @@ class _CalendarPageState extends State<CalendarPage> {
                   decoration: BoxDecoration(
                     border: Border.all(
                       color: isSameDay(day, _selectedDay)
-                          ? Color(0xFFCAD83B)
+                          ? const Color(0xFFCAD83B)
+                          : isSameDay(day, DateTime.now())
+                          ? Colors.grey
                           : Colors.transparent,
                       width: 2,
                     ),
