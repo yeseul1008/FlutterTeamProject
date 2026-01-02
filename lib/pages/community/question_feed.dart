@@ -63,7 +63,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
         if (authorId.isNotEmpty) {
           final userDoc = await fs.collection('users').doc(authorId).get();
           authorNickname = userDoc.data()?['nickname'] ?? 'Unknown';
-          authorLoginId = userDoc.data()?['loginId'] ?? ''; // loginId 가져오기
+          authorLoginId = userDoc.data()?['loginId'] ?? '';
           profileImageUrl = userDoc.data()?['profileImageUrl'] ?? '';
         }
 
@@ -83,6 +83,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
           'authorProfileImageUrl': profileImageUrl,
           'text': data['text'] ?? '',
           'imageUrl': data['imageUrl'] ?? '',
+          'resultImageUrl': data['resultImageUrl'] ?? '',
           'commentCount': data['commentCount'] ?? 0,
           'likeCount': likesSnapshot.size,
           'isLiked': isLiked,
@@ -235,7 +236,6 @@ class _QuestionFeedState extends State<QuestionFeed> {
               item['authorNickname'],
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            // loginId로 변경
             subtitle: Text('@${item['authorLoginId']}'),
             trailing: IconButton(
               icon: const Icon(Icons.more_horiz),
@@ -256,29 +256,36 @@ class _QuestionFeedState extends State<QuestionFeed> {
             ),
           ),
 
+          // 일반 이미지 - 탭하면 전체 화면으로
           if (item['imageUrl'] != null && item['imageUrl'].isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  item['imageUrl'],
-                  height: 280,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox(
-                    height: 280,
-                    child: Center(child: Icon(Icons.broken_image)),
+            GestureDetector(
+              onTap: () => _showFullScreenImage(context, item['imageUrl'], item['docId'], true),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Hero(
+                    tag: 'image_${item['docId']}',
+                    child: Image.network(
+                      item['imageUrl'],
+                      height: 280,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox(
+                        height: 280,
+                        child: Center(child: Icon(Icons.broken_image)),
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
 
-          //  이미지 - 탭하면 전체 화면으로
+          // 결과 이미지 - 탭하면 전체 화면으로
           if (item['resultImageUrl'] != null &&
               item['resultImageUrl'].isNotEmpty)
             GestureDetector(
-              onTap: () => _showFullScreenImage(context, item['resultImageUrl']),
+              onTap: () => _showFullScreenImage(context, item['resultImageUrl'], item['docId'], false),
               child: Container(
                 decoration: BoxDecoration(
                   border: Border(
@@ -287,7 +294,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                   ),
                 ),
                 child: Hero(
-                  tag: item['resultImageUrl'],
+                  tag: 'result_${item['docId']}',
                   child: Image.network(
                     item['resultImageUrl'],
                     height: 280,
@@ -355,7 +362,9 @@ class _QuestionFeedState extends State<QuestionFeed> {
   }
 
   /// 전체 화면 이미지 보기
-  void _showFullScreenImage(BuildContext context, String imageUrl) {
+  void _showFullScreenImage(BuildContext context, String imageUrl, String docId, bool isMainImage) {
+    final heroTag = isMainImage ? 'image_$docId' : 'result_$docId';
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => Scaffold(
@@ -364,7 +373,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
             onTap: () => Navigator.of(context).pop(),
             child: Center(
               child: Hero(
-                tag: imageUrl,
+                tag: heroTag,
                 child: InteractiveViewer(
                   panEnabled: true,
                   minScale: 0.5,
