@@ -262,7 +262,7 @@ class _UserLoginState extends State<UserLogin> {
                         if (result == null) return;
 
                         if (!context.mounted) return;
-                        context.go('/userDiaryCards');
+                        context.go('/userWardrobeList');
                       } catch (e) {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
