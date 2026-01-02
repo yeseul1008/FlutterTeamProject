@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:team_project_flutter/pages/community/question_closet.dart';
+import 'package:team_project_flutter/pages/community/question_closet_result.dart';
 import 'package:team_project_flutter/pages/schedule/schedule_add_Lookbook.dart';
 import 'package:team_project_flutter/pages/schedule/schedule_lookbook.dart';
 import 'package:team_project_flutter/pages/wardrobe/user_wardrobe_edit.dart';
@@ -83,6 +85,16 @@ final GoRouter router = GoRouter(
           builder: (context, state) => const UserLogin(),
         ),
         // community 폴더 속 파일 이동
+        GoRoute(
+          path: '/questionCloset',
+          builder: (context, state) => const QuestionCloset(),
+        ),
+        GoRoute(
+          path: '/questionClosetResult',
+          builder: (context, state) {
+            return QuestionClosetResult(extra: state.extra);
+          },
+        ),
         GoRoute(
           path: '/followList',
           builder: (context, state) => const FollowList(),
