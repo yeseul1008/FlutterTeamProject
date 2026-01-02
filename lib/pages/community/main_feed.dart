@@ -107,7 +107,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
     final String currentPath = GoRouterState.of(context).uri.path;
 
     return Container(
-      color: Colors.white, // ⭐ 전체 백그라운드 흰색
+      color: Colors.white,
       child: SafeArea(
         child: Column(
           children: [
@@ -176,10 +176,10 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          /// 프로필 클릭 페이지이동
+          ///  프로필 클릭 시 해당 작성자의 userId를 쿼리 파라미터로 전달
           ListTile(
             onTap: () {
-              context.go('/publicWardrobe');
+              context.go('/publicLookBook?userId=${item['authorId']}');
             },
             leading: CircleAvatar(
               backgroundImage:
@@ -197,15 +197,25 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
             subtitle: Text('@${item['authorId']}'),
           ),
 
+          //  이미지 - 양옆 테두리까지 꽉 차게
           if (item['resultImageUrl'] != null &&
               item['resultImageUrl'].isNotEmpty)
-            Image.network(
-              item['resultImageUrl'],
-              height: 280,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const SizedBox(
+            Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: Colors.grey.shade300, width: 1),
+                  bottom: BorderSide(color: Colors.grey.shade300, width: 1),
+                ),
+              ),
+              child: Image.network(
+                item['resultImageUrl'],
                 height: 280,
-                child: Center(child: Icon(Icons.broken_image)),
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox(
+                  height: 280,
+                  child: Center(child: Icon(Icons.broken_image)),
+                ),
               ),
             ),
 
@@ -247,7 +257,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
     );
   }
 
-  /// ❤️ 좋아요 토글
+  /// ❤️ 좋아요 토글 (users/{userId}/scraps 추가 포함)
   Future<void> _toggleLike(Map<String, dynamic> item) async {
     final docId = item['docId'];
 
@@ -257,6 +267,14 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
         .collection('likes')
         .doc(userId);
 
+    // users/{userId}/scraps/{scrapId} 구조
+    final scrapRef = fs
+        .collection('users')
+        .doc(userId)
+        .collection('scraps')
+        .doc(docId);
+
+    // UI 먼저 업데이트
     setState(() {
       if (item['isLiked']) {
         item['isLiked'] = false;
@@ -269,11 +287,23 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
 
     try {
       if (item['isLiked']) {
+        // 좋아요 추가
         await likeRef.set({'likedAt': FieldValue.serverTimestamp()});
+
+        // users/{userId}/scraps에도 추가
+        await scrapRef.set({
+          'feedId': docId,
+          'scrapedAt': FieldValue.serverTimestamp(),
+        });
       } else {
+        // 좋아요 제거
         await likeRef.delete();
+
+        // users/{userId}/scraps에서도 제거
+        await scrapRef.delete();
       }
     } catch (e) {
+      // 오류 발생 시 롤백
       setState(() {
         if (item['isLiked']) {
           item['isLiked'] = false;
@@ -283,6 +313,12 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
           item['likeCount']++;
         }
       });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('좋아요 처리 중 오류가 발생했습니다')),
+        );
+      }
     }
   }
 

@@ -10,6 +10,10 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 
+        <!-- 구글 MAP KEY -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyBO2BgSMtsxin9A8SXXBfprPGKLVy2CxRA"/>
 
         <!-- 카카오 SDK App Key -->
         <meta-data
