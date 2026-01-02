@@ -223,12 +223,14 @@ final GoRouter router = GoRouter(
 
         GoRoute(
           path: '/userScrapView',
-          pageBuilder: (context, state) {
-            return const NoTransitionPage(
-              child: UserScrapView(),
-            );
+          builder: (context, state) {
+            final lookbookId = state.extra as String; // null 아님
+            return UserScrapView(lookbookId: lookbookId);
           },
         ),
+
+
+
         GoRoute(
           path: '/userWardrobeDetail',
           pageBuilder: (context, state) {
