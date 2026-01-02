@@ -98,7 +98,7 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
 
       // AI 착용샷 버튼
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 100),
+        padding: const EdgeInsets.only(bottom: 110),
         child: SizedBox(
           height: 44,
           child: FloatingActionButton.extended(
