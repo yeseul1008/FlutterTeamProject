@@ -11,7 +11,6 @@ final FirestoreService _firestoreService = FirestoreService();
 
 class lookbookCombine extends StatefulWidget {
   const lookbookCombine({super.key, required this.extra});
-
   final Object? extra;
 
   @override
@@ -120,6 +119,15 @@ class _LookbookCombineState extends State<lookbookCombine> {
     );
   }
 
+  // ✅ 클릭 시 최상단으로
+  void _bringToFront(String id) {
+    if (!_canvasItems.containsKey(id)) return;
+    setState(() {
+      final item = _canvasItems.remove(id)!;
+      _canvasItems[id] = item; // 마지막 = 최상단
+    });
+  }
+
   Future<String?> _askLookbookAlias() async {
     final controller = TextEditingController();
 
@@ -209,6 +217,9 @@ class _LookbookCombineState extends State<lookbookCombine> {
       );
 
       _showTempSnack('룩북에 저장되었습니다.');
+      if (mounted) {
+        context.go('/userLookbook');
+      }
     } catch (_) {
       _showTempSnack('룩북 저장 실패');
     } finally {
@@ -279,12 +290,10 @@ class _LookbookCombineState extends State<lookbookCombine> {
                           child: DecoratedBox(
                             decoration: BoxDecoration(
                               color: Colors.black,
-                              borderRadius:
-                              BorderRadius.all(Radius.circular(10)),
+                              borderRadius: BorderRadius.all(Radius.circular(10)),
                             ),
                             child: Padding(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 6),
+                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               child: Text(
                                 '이미지 불러오는 중...',
                                 style: TextStyle(
@@ -310,6 +319,7 @@ class _LookbookCombineState extends State<lookbookCombine> {
                             imageUrl: url,
                             scale: state.scale,
                             hideControls: _isCapturing,
+                            onBringToFront: () => _bringToFront(id),
                             onMove: (delta) {
                               setState(() {
                                 final cur = _canvasItems[id];
@@ -323,14 +333,11 @@ class _LookbookCombineState extends State<lookbookCombine> {
                               setState(() {
                                 final cur = _canvasItems[id];
                                 if (cur == null) return;
-                                _canvasItems[id] = cur.copyWith(
-                                  scale: nextScale.clamp(0.6, 1.8),
-                                );
+                                _canvasItems[id] =
+                                    cur.copyWith(scale: nextScale.clamp(0.6, 1.8));
                               });
                             },
-                            onRemove: () {
-                              setState(() => _canvasItems.remove(id));
-                            },
+                            onRemove: () => setState(() => _canvasItems.remove(id)),
                           ),
                         );
                       }),
@@ -359,8 +366,7 @@ class _LookbookCombineState extends State<lookbookCombine> {
                     ),
                     child: Text(
                       _isSavingLookbook ? '저장 중...' : '룩북에 저장하기',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w900, fontSize: 12),
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -374,15 +380,12 @@ class _LookbookCombineState extends State<lookbookCombine> {
   }
 }
 
-// CanvasItem & DraggableCanvasItem 코드 그대로 유지
+// CanvasItem & DraggableCanvasItem
 class _CanvasItemState {
   final Offset offset;
   final double scale;
 
-  const _CanvasItemState({
-    required this.offset,
-    this.scale = 1.0,
-  });
+  const _CanvasItemState({required this.offset, this.scale = 1.0});
 
   _CanvasItemState copyWith({Offset? offset, double? scale}) {
     return _CanvasItemState(
@@ -401,6 +404,7 @@ class _DraggableCanvasItem extends StatefulWidget {
     required this.onMove,
     required this.onScale,
     required this.onRemove,
+    this.onBringToFront,
   });
 
   final String id;
@@ -410,6 +414,7 @@ class _DraggableCanvasItem extends StatefulWidget {
   final void Function(Offset delta) onMove;
   final void Function(double nextScale) onScale;
   final VoidCallback onRemove;
+  final VoidCallback? onBringToFront;
 
   @override
   State<_DraggableCanvasItem> createState() => _DraggableCanvasItemState();
@@ -418,33 +423,40 @@ class _DraggableCanvasItem extends StatefulWidget {
 class _DraggableCanvasItemState extends State<_DraggableCanvasItem> {
   double? _startScale;
 
+  static const double _baseW = 92;
+  static const double _baseH = 120;
+
   void _onResizeDrag(DragUpdateDetails d) {
-    final delta = d.delta.dx - d.delta.dy;
+    final delta = d.delta.dx + d.delta.dy;
     final next = (widget.scale + delta * 0.006).clamp(0.6, 1.8);
     widget.onScale(next);
   }
 
   @override
   Widget build(BuildContext context) {
+    final w = _baseW * widget.scale;
+    final h = _baseH * widget.scale;
+
     return GestureDetector(
+      onTapDown: (_) => widget.onBringToFront?.call(),
       onScaleStart: (_) => _startScale = widget.scale,
       onScaleUpdate: (details) {
         if (details.focalPointDelta != Offset.zero) {
           widget.onMove(details.focalPointDelta);
         }
         if (details.pointerCount >= 2 && _startScale != null) {
-          widget.onScale(_startScale! * details.scale);
+          widget.onScale((_startScale! * details.scale).clamp(0.6, 1.8));
         }
       },
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Transform.scale(
-            scale: widget.scale,
-            alignment: Alignment.topLeft,
-            child: Container(
-              width: 92,
-              height: 120,
+      child: SizedBox(
+        width: w,
+        height: h,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: w,
+              height: h,
               decoration: BoxDecoration(
                 border: widget.hideControls
                     ? null
@@ -454,52 +466,63 @@ class _DraggableCanvasItemState extends State<_DraggableCanvasItem> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  widget.imageUrl,
-                  fit: BoxFit.cover,
-                ),
+                child: Image.network(widget.imageUrl, fit: BoxFit.cover),
               ),
             ),
-          ),
-          if (!widget.hideControls)
-            Positioned(
-              right: -8,
-              top: -8,
-              child: InkWell(
-                onTap: widget.onRemove,
-                child: Container(
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  child: const Icon(Icons.close, size: 14, color: Colors.white),
-                ),
-              ),
-            ),
-          if (!widget.hideControls)
-            Positioned(
-              right: -6,
-              bottom: -6,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onPanUpdate: _onResizeDrag,
-                child: Container(
-                  width: 18,
-                  height: 18,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: Colors.black),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.open_in_full, size: 10, color: Colors.black),
+            if (!widget.hideControls)
+              Positioned(
+                right: -10,
+                top: -10,
+                child: InkWell(
+                  onTap: widget.onRemove,
+                  borderRadius: BorderRadius.circular(999),
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: const Icon(Icons.close, size: 14, color: Colors.white),
                   ),
                 ),
               ),
-            ),
-        ],
+            if (!widget.hideControls)
+              Positioned(
+                right: -10,
+                bottom: -10,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onPanUpdate: _onResizeDrag,
+                  child: SizedBox(
+                    width: 34,
+                    height: 34,
+                    child: Center(
+                      child: Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: Colors.black),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Transform.rotate(
+                            angle: 1.6,
+                            child: const Icon(
+                              Icons.open_in_full,
+                              size: 12,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

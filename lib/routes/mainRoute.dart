@@ -50,7 +50,7 @@ import '../pages/schedule/schedule_combine.dart';
 final GlobalKey<NavigatorState> _shellNavigatorKey =
 GlobalKey<NavigatorState>();
 final GoRouter router = GoRouter(
-  initialLocation: '/', // ⭐ 명시 (중요)
+  initialLocation: '/userLogin', // ⭐ 명시 (중요)
   routes: [
     ShellRoute(
       navigatorKey: _shellNavigatorKey,
