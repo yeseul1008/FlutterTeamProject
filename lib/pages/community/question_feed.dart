@@ -1,10 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:image_picker/image_picker.dart';
 
 class QuestionFeed extends StatefulWidget {
   const QuestionFeed({super.key});
@@ -338,7 +341,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                   },
                   child: Row(
                     children: [
-                      const Icon(Icons.chat_bubble_outline),
+                      const Icon(Icons.chat_outlined),
                       const SizedBox(width: 6),
                       Text(item['commentCount'].toString()),
                     ],
@@ -514,53 +517,209 @@ class _QuestionFeedState extends State<QuestionFeed> {
     );
   }
 
-  void _editPost(String postId, String content) {
+  void _editPost(String postId, String content) async {
+    // 현재 게시글 데이터 가져오기
+    final doc = await fs.collection('questions').doc(postId).get();
+    final data = doc.data();
+
     final controller = TextEditingController(text: content);
+    String currentImageUrl = data?['imageUrl'] ?? '';
+    String currentResultImageUrl = data?['resultImageUrl'] ?? '';
+
+    File? newImageFile;
+    File? newResultImageFile;
+
+    final ImagePicker picker = ImagePicker();
+
+    if (!mounted) return;
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('질문 수정'),
-        content: TextField(controller: controller, maxLines: 5),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final newText = controller.text.trim();
-              Navigator.pop(dialogContext);
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text('질문 수정'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 텍스트 입력
+                    TextField(
+                      controller: controller,
+                      maxLines: 5,
+                      decoration: const InputDecoration(
+                        hintText: '질문을 입력하세요...',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
 
-              if (newText.isEmpty) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('내용을 입력해주세요')),
-                  );
-                }
-                return;
-              }
+                    // 이미지
+                    const Text('이미지', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    if (newImageFile != null)
+                      Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.file(
+                              newImageFile!,
+                              height: 150,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: IconButton(
+                              icon: const Icon(Icons.close, color: Colors.white),
+                              style: IconButton.styleFrom(
+                                backgroundColor: Colors.black54,
+                              ),
+                              onPressed: () {
+                                setDialogState(() => newImageFile = null);
+                              },
+                            ),
+                          ),
+                        ],
+                      )
+                    else if (currentImageUrl.isNotEmpty)
+                      Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              currentImageUrl,
+                              height: 150,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                height: 150,
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.broken_image),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: IconButton(
+                              icon: const Icon(Icons.close, color: Colors.white),
+                              style: IconButton.styleFrom(
+                                backgroundColor: Colors.black54,
+                              ),
+                              onPressed: () {
+                                setDialogState(() => currentImageUrl = '');
+                              },
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      Container(
+                        height: 100,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Center(
+                          child: Text('이미지 없음', style: TextStyle(color: Colors.grey)),
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final XFile? pickedFile = await picker.pickImage(
+                          source: ImageSource.gallery,
+                        );
+                        if (pickedFile != null) {
+                          setDialogState(() {
+                            newImageFile = File(pickedFile.path);
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.photo_library),
+                      label: const Text('이미지 변경'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFCAD83B),
+                        foregroundColor: Colors.black,
+                      ),
+                    ),
 
-              try {
-                await fs
-                    .collection('questions')
-                    .doc(postId)
-                    .update({'text': newText});
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('취소'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final newText = controller.text.trim();
+                  Navigator.pop(dialogContext);
 
-                if (mounted) {
-                  _getQuestions();
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('수정 중 오류가 발생했습니다')),
-                  );
-                }
-              }
-            },
-            child: const Text('수정'),
-          ),
-        ],
+                  if (newText.isEmpty) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('내용을 입력해주세요')),
+                      );
+                    }
+                    return;
+                  }
+
+                  try {
+                    String? uploadedImageUrl = currentImageUrl.isNotEmpty ? currentImageUrl : null;
+                    String? uploadedResultImageUrl = currentResultImageUrl.isNotEmpty ? currentResultImageUrl : null;
+
+                    // 새 메인 이미지 업로드
+                    if (newImageFile != null) {
+                      final ref = FirebaseStorage.instance
+                          .ref()
+                          .child('questions/${postId}_${DateTime.now().millisecondsSinceEpoch}.jpg');
+                      await ref.putFile(newImageFile!);
+                      uploadedImageUrl = await ref.getDownloadURL();
+                    }
+
+                    // 새 결과 이미지 업로드
+                    if (newResultImageFile != null) {
+                      final ref = FirebaseStorage.instance
+                          .ref()
+                          .child('questions/${postId}_result_${DateTime.now().millisecondsSinceEpoch}.jpg');
+                      await ref.putFile(newResultImageFile!);
+                      uploadedResultImageUrl = await ref.getDownloadURL();
+                    }
+
+                    await fs.collection('questions').doc(postId).update({
+                      'text': newText,
+                      'imageUrl': uploadedImageUrl ?? '',
+                      'resultImageUrl': uploadedResultImageUrl ?? '',
+                    });
+
+                    if (mounted) {
+                      _getQuestions();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('수정이 완료되었습니다')),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('수정 중 오류가 발생했습니다')),
+                      );
+                    }
+                  }
+                },
+                child: const Text('수정'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
