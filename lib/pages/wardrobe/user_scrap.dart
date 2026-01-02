@@ -18,8 +18,7 @@ class _UserScrapState extends State<UserScrap> {
   List<Map<String, dynamic>> scraps = [];
   bool isLoading = true;
 
-  final FirebaseFirestore fs = FirebaseFirestore.instance;
-  final userId = FirebaseAuth.instance.currentUser?.uid;
+  // final String? userId = FirebaseAuth.instance.currentUser?.uid;
 
   // 검색
   TextEditingController searchController = TextEditingController();
