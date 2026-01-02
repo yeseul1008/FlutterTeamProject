@@ -421,12 +421,18 @@ class _UserDiaryCardsState extends State<PublicWardrobe> {
   }
 
   _openCategoryModal(BuildContext context) {
+    final uid = targetUserId ?? currentUserId;
+    if (uid == null) {  // NEW: Add null check
+      _showSnack('사용자 정보를 불러올 수 없습니다');
+      return;
+    }
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) {
         return UserPublicWardrobeCategory(
+          targetUserId: uid,
           onSelect: (categoryName) {
             print('==== CATEGORY SELECTED ====');
             print('Received from UserWardrobeCategory: "$categoryName"');

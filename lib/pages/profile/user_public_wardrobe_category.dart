@@ -14,21 +14,23 @@ const Map<String, String> categoryImageMap = {
 
 class UserPublicWardrobeCategory extends StatelessWidget {
   final void Function(String categoryId) onSelect;
+  final String targetUserId;
 
   const UserPublicWardrobeCategory({
     super.key,
     required this.onSelect,
+    required this.targetUserId,
   });
 
   @override
   Widget build(BuildContext context) {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return const SizedBox.shrink();
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;  // CHANGED: renamed for clarity
+    final isOwnProfile = currentUserId == targetUserId;  // NEW: check if viewing own profile
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
           .collection('users')
-          .doc(userId)
+          .doc(targetUserId)  // Using targetUserId
           .collection('categories')
           .orderBy('createdAt')
           .snapshots(),
@@ -46,11 +48,11 @@ class UserPublicWardrobeCategory extends StatelessWidget {
         }).toList();
 
         return GestureDetector(
-          onTap: () => Navigator.pop(context), // CLOSE WHEN CLICKING OUTSIDE
+          onTap: () => Navigator.pop(context),
           behavior: HitTestBehavior.opaque,
           child: Center(
             child: GestureDetector(
-              onTap: () {}, // PREVENT CLOSING WHEN CLICKING INSIDE
+              onTap: () {},
               child: SizedBox(
                 width: MediaQuery.of(context).size.width * 0.88,
                 height: MediaQuery.of(context).size.height * 0.75,
@@ -126,7 +128,8 @@ class UserPublicWardrobeCategory extends StatelessWidget {
                                 ),
                               ],
                             ),
-                            if (!isDefault)
+                            // CHANGED: Only show delete button if viewing own profile AND not default
+                            if (isOwnProfile && !isDefault)
                               Positioned(
                                 top: 4,
                                 right: 4,
@@ -134,7 +137,7 @@ class UserPublicWardrobeCategory extends StatelessWidget {
                                   onTap: () async {
                                     await FirebaseFirestore.instance
                                         .collection('users')
-                                        .doc(userId)
+                                        .doc(targetUserId)  // CHANGED: use targetUserId
                                         .collection('categories')
                                         .doc(docId)
                                         .delete();
