@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../widgets/common/main_btn.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -12,6 +11,12 @@ class UserScrap extends StatefulWidget {
 }
 
 class _UserScrapState extends State<UserScrap> {
+  final FirebaseFirestore fs = FirebaseFirestore.instance;
+  final FirebaseAuth auth = FirebaseAuth.instance;
+
+  late String userId;
+  List<Map<String, dynamic>> scraps = [];
+  bool isLoading = true;
 
   final FirebaseFirestore fs = FirebaseFirestore.instance;
   final userId = FirebaseAuth.instance.currentUser?.uid;
@@ -37,10 +42,111 @@ class _UserScrapState extends State<UserScrap> {
 
 
   @override
+  void initState() {
+    super.initState();
+    _loadScraps();
+  }
+
+  /// 스크랩 데이터 로드
+  Future<void> _loadScraps() async {
+    setState(() => isLoading = true);
+
+    try {
+      final user = auth.currentUser;
+      if (user == null) return;
+      userId = user.uid;
+
+      // users/{userId}/scraps 에서 데이터 가져오기
+      final scrapsSnapshot = await fs
+          .collection('users')
+          .doc(userId)
+          .collection('scraps')
+          .orderBy('scrapedAt', descending: true)
+          .get();
+
+      scraps = await Future.wait(scrapsSnapshot.docs.map((scrapDoc) async {
+        final feedId = scrapDoc.data()['feedId'] ?? '';
+
+        // feedId로 lookbooks 정보 가져오기
+        String imageUrl = '';
+        if (feedId.isNotEmpty) {
+          final lookbookDoc =
+          await fs.collection('lookbooks').doc(feedId).get();
+          if (lookbookDoc.exists) {
+            imageUrl = lookbookDoc.data()?['resultImageUrl'] ?? '';
+          }
+        }
+
+        return {
+          'feedId': feedId,
+          'imageUrl': imageUrl,
+          'scrapedAt': scrapDoc.data()['scrapedAt'],
+        };
+      }).toList());
+
+      setState(() => isLoading = false);
+    } catch (e) {
+      setState(() => isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('데이터를 불러오는 중 오류가 발생했습니다')),
+        );
+      }
+    }
+  }
+
+  /// 스크랩 해제 (좋아요 해제)
+  Future<void> _removeScrap(String feedId) async {
+    try {
+      // users/{userId}/scraps에서 삭제
+      await fs
+          .collection('users')
+          .doc(userId)
+          .collection('scraps')
+          .doc(feedId)
+          .delete();
+
+      // lookbooks/{feedId}/likes에서도 삭제
+      await fs
+          .collection('lookbooks')
+          .doc(feedId)
+          .collection('likes')
+          .doc(userId)
+          .delete();
+
+      // UI 업데이트
+      setState(() {
+        scraps.removeWhere((item) => item['feedId'] == feedId);
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('스크랩이 해제되었습니다')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('스크랩 해제 중 오류가 발생했습니다')),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // 검색 필터링
+    final filteredScraps = searchText.isEmpty
+        ? scraps
+        : scraps.where((item) {
+      return item['feedId']
+          .toString()
+          .toLowerCase()
+          .contains(searchText.toLowerCase());
+    }).toList();
+
     return Scaffold(
       backgroundColor: Colors.white,
-
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -48,19 +154,19 @@ class _UserScrapState extends State<UserScrap> {
             children: [
               const SizedBox(height: 10),
 
-              // 상단 버튼 3개 (ElevatedButton)
+              // 상단 버튼 3개
               Row(
                 children: [
                   Expanded(
                     child: SizedBox(
-                      height: 50, // ⭐ 버튼 높이 증가
+                      height: 50,
                       child: ElevatedButton(
                         onPressed: () => context.go('/userWardrobeList'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: Colors.black,
                           elevation: 0,
-                          padding: EdgeInsets.zero, // 높이 정확히 맞춤
+                          padding: EdgeInsets.zero,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
                             side: const BorderSide(color: Colors.black),
@@ -68,8 +174,8 @@ class _UserScrapState extends State<UserScrap> {
                         ),
                         child: const Text(
                           'closet',
-                          style: TextStyle(fontWeight: FontWeight.bold,
-                              fontSize: 20),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 20),
                         ),
                       ),
                     ),
@@ -92,8 +198,8 @@ class _UserScrapState extends State<UserScrap> {
                         ),
                         child: const Text(
                           'lookbooks',
-                          style: TextStyle(fontWeight: FontWeight.bold,
-                              fontSize: 18),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 18),
                         ),
                       ),
                     ),
@@ -116,8 +222,8 @@ class _UserScrapState extends State<UserScrap> {
                         ),
                         child: const Text(
                           'scrap',
-                          style: TextStyle(fontWeight: FontWeight.bold,
-                              fontSize: 20),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 20),
                         ),
                       ),
                     ),
@@ -125,13 +231,11 @@ class _UserScrapState extends State<UserScrap> {
                 ],
               ),
 
-
               const SizedBox(height: 18),
 
-              // 검색 바 영역
+              // 검색 바
               Row(
                 children: [
-                  // const Icon(Icons.menu),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Container(
@@ -157,13 +261,13 @@ class _UserScrapState extends State<UserScrap> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Icon(Icons.search, size: 28),
+                  const Icon(Icons.search, size: 28),
                 ],
               ),
 
               const SizedBox(height: 16),
 
-              // 옷 그리드 (빈 공간)
+              // 스크랩 그리드
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
                   stream: fs

@@ -25,14 +25,39 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
   bool isProcessingImage = false;
   String? profileImageUrl;
 
+  // 현재 보고 있는 사용자의 ID (URL 파라미터로 받음)
+  String? targetUserId;
+  //  로그인한 사용자의 ID
+  String? currentUserId;
+
   String formatKoreanDate(Timestamp? timestamp) {
     if (timestamp == null) return '날짜 없음';
     final dt = timestamp.toDate();
     return '${dt.year}년 ${dt.month}월 ${dt.day}일';
   }
 
+  // URL 쿼리 파라미터에서 userId 추출
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // 로그인한 사용자 ID 저장
+    currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
+    // URL에서 userId 파라미터 가져오기
+    final uri = GoRouterState.of(context).uri;
+    final queryUserId = uri.queryParameters['userId'];
+
+    // targetUserId가 변경되었을 때만 데이터 로드
+    if (queryUserId != targetUserId) {
+      targetUserId = queryUserId ?? currentUserId;
+      _getUserInfo();
+    }
+  }
+
   Future<void> _getUserInfo() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    // targetUserId가 있으면 해당 사용자의 정보를, 없으면 로그인한 사용자의 정보를 가져옴
+    final uid = targetUserId ?? currentUserId;
 
     if (uid == null) {
       if (!mounted) return;
@@ -85,7 +110,7 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
   @override
   void initState() {
     super.initState();
-    _getUserInfo();
+    // didChangeDependencies에서 처리하므로 여기서는 호출하지 않음
   }
 
   void _showSnack(String msg) {
@@ -297,7 +322,8 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
     final diary = userDiaries[index];
     final diaryId = diary['diaryId'];
     final diaryImg = diary['imageUrl'];
-    // const imageUrl = 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600';
+    // 자신의 다이어리인지 확인
+    final isOwnDiary = targetUserId == currentUserId;
 
     showDialog(
       context: context,
@@ -305,7 +331,7 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
         backgroundColor: Colors.white,
         child: Stack(
           children: [
-            SingleChildScrollView(  // ADD THIS to make dialog scrollable
+            SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -315,17 +341,17 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         SizedBox(height: 5),
-                        // Location - UPDATED TO HANDLE LONG TEXT
+                        // Location
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,  // Align to top
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Icon(Icons.location_on, size: 20),
                             SizedBox(width: 5),
-                            Expanded(  // ADD THIS to allow text wrapping
+                            Expanded(
                               child: Text(
                                 "${diary['locationText'] ?? '위치 없음'}",
-                                maxLines: 2,  // Limit to 2 lines
-                                overflow: TextOverflow.ellipsis,  // Show ... if too long
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -365,53 +391,51 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                             ),
                           ),
                         ),
-                        SizedBox(height: 20 ),
+                        SizedBox(height: 20),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-            Positioned(
-              bottom: 3,
-              right: 8,
-              child: Row(
-                children: [
-                  IconButton(
-                    iconSize: 20.0,
-                    icon: Icon(Icons.edit),
-                    onPressed: () {
-                      Navigator.pop(context);
-                      final date = diary['date'] as Timestamp?;
-                      context.go('/userDiaryAdd', extra: {
-                        'lookbookId': diary['lookbookId'],
-                        'date': date,
-                        'selectedDay': date?.toDate(),
-                      });
-                    },
-                  ),
-                  IconButton(
+            // 자신의 다이어리일 때만 편집/삭제 버튼 표시
+            if (isOwnDiary)
+              Positioned(
+                bottom: 3,
+                right: 8,
+                child: Row(
+                  children: [
+                    IconButton(
+                      iconSize: 20.0,
+                      icon: Icon(Icons.edit),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        final date = diary['date'] as Timestamp?;
+                        context.go('/userDiaryAdd', extra: {
+                          'lookbookId': diary['lookbookId'],
+                          'date': date,
+                          'selectedDay': date?.toDate(),
+                        });
+                      },
+                    ),
+                    IconButton(
                       iconSize: 20.0,
                       onPressed: () async {
-                        await _deleteDiary(
-                            diaryId); // wait for the function to complete
-                        // await Future.delayed(Duration(milliseconds: 300));
+                        await _deleteDiary(diaryId);
                         if (mounted && Navigator.canPop(context)) {
                           Navigator.pop(context);
                         }
                       },
-                      icon: Icon(Icons.delete)
-                  )
-                ],
+                      icon: Icon(Icons.delete),
+                    )
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),
     );
   }
-
-  // Function to select a profile picture
 
   // 이미지 확대/이동 컨트롤러
   final TransformationController _transformController =
@@ -427,7 +451,7 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
     final picker = ImagePicker();
     final XFile? image = await picker.pickImage(
       source: ImageSource.gallery,
-      maxWidth: 800,  // Optimize image size
+      maxWidth: 800,
       maxHeight: 800,
       imageQuality: 85,
     );
@@ -439,21 +463,14 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
     try {
       final File imageFile = File(image.path);
 
-      // Create a reference to Firebase Storage
       final String fileName = 'profile_$uid.jpg';
       final Reference storageRef = storage
           .ref('user_profile_pictures/${fileName}');
 
-      // Upload the file
       final UploadTask uploadTask = storageRef.putFile(imageFile);
-
-      // Wait for upload to complete
       final TaskSnapshot snapshot = await uploadTask;
-
-      // Get download URL
       final String downloadUrl = await snapshot.ref.getDownloadURL();
 
-      // Update Firestore with the new profile image URL
       await fs.collection('users').doc(uid).update({
         'profileImageUrl': downloadUrl,
       });
@@ -476,6 +493,8 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
+    // 자신의 프로필인지 확인
+    final isOwnProfile = targetUserId == currentUserId;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -492,7 +511,8 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                   left: 15,
                   top: 40,
                   child: GestureDetector(
-                    onTap: isProcessingImage ? null : _pickImage,
+                    // 자신의 프로필일 때만 이미지 변경 가능
+                    onTap: isOwnProfile && !isProcessingImage ? _pickImage : null,
                     child: Stack(
                       children: [
                         CircleAvatar(
@@ -520,23 +540,25 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                               ),
                             ),
                           ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            padding: EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.black, width: 1),
-                            ),
-                            child: Icon(
-                              Icons.camera_alt,
-                              size: 16,
-                              color: Colors.black,
+                        // 자신의 프로필일 때만 카메라 아이콘 표시
+                        if (isOwnProfile)
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.black, width: 1),
+                              ),
+                              child: Icon(
+                                Icons.camera_alt,
+                                size: 16,
+                                color: Colors.black,
+                              ),
                             ),
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -595,22 +617,24 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                     ],
                   ),
                 ),
-                Positioned(
-                  top: topPad + 2,
-                  right: 8,
-                  child: SizedBox(
-                    width: 56,
-                    height: 56,
-                    child: IconButton(
-                      onPressed: _openMoreMenu,
-                      icon: const Icon(
-                        Icons.more_horiz,
-                        color: Colors.white,
-                        size: 40,
+                // 자신의 프로필일 때만 메뉴 버튼 표시
+                if (isOwnProfile)
+                  Positioned(
+                    top: topPad + 2,
+                    right: 8,
+                    child: SizedBox(
+                      width: 56,
+                      height: 56,
+                      child: IconButton(
+                        onPressed: _openMoreMenu,
+                        icon: const Icon(
+                          Icons.more_horiz,
+                          color: Colors.white,
+                          size: 40,
+                        ),
                       ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
@@ -625,7 +649,14 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                   child: SizedBox(
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () => context.go('/publicWardrobe'),
+                      onPressed: () {
+                        // targetUserId를 쿼리 파라미터로 전달
+                        if (targetUserId != null) {
+                          context.go('/publicWardrobe?userId=$targetUserId');
+                        } else {
+                          context.go('/publicWardrobe');
+                        }
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFCAD83B),
                         foregroundColor: Colors.black,
@@ -651,7 +682,14 @@ class _UserDiaryCardsState extends State<PublicLookBook> {
                   child: SizedBox(
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () => context.go('/publicLookBook'),
+                      onPressed: () {
+                        // targetUserId를 쿼리 파라미터로 전달
+                        if (targetUserId != null) {
+                          context.go('/publicLookBook?userId=$targetUserId');
+                        } else {
+                          context.go('/publicLookBook');
+                        }
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: Colors.black,
