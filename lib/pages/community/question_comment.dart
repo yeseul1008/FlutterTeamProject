@@ -403,11 +403,11 @@ class _QuestionCommentState extends State<QuestionComment> {
                     onTap: () {
                       if (postAuthorId.isEmpty) return;
 
-                      context.go(
+                      context.push(
                         '/questionCloset',
                         extra: {
-                          'userId': postAuthorId, // ✅ 게시글 주인 ID 전달
-                          'postId': postId,       // (선택) 게시글 ID도 같이 전달 가능
+                          'userId': postAuthorId, // 게시글 주인 ID
+                          'postId': postId,       // 게시글 ID
                         },
                       );
                     },

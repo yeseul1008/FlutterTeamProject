@@ -109,7 +109,7 @@ class _QuestionClosetState extends State<QuestionCloset> {
       extra: {
         'clothesIds': selectedClothesIds.toList(),
         'imageUrls': selectedImageUrls,
-        'postId': postId, // 🔥 게시글 ID 전달
+        'postId': postId, // 게시글 ID
       },
     );
   }
