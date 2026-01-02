@@ -57,11 +57,13 @@ class _QuestionFeedState extends State<QuestionFeed> {
         final String authorId = data['authorId'] ?? '';
 
         String authorNickname = 'Unknown';
+        String authorLoginId = '';
         String profileImageUrl = '';
 
         if (authorId.isNotEmpty) {
           final userDoc = await fs.collection('users').doc(authorId).get();
           authorNickname = userDoc.data()?['nickname'] ?? 'Unknown';
+          authorLoginId = userDoc.data()?['loginId'] ?? ''; // loginId 가져오기
           profileImageUrl = userDoc.data()?['profileImageUrl'] ?? '';
         }
 
@@ -77,6 +79,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
           'docId': docId,
           'authorId': authorId,
           'authorNickname': authorNickname,
+          'authorLoginId': authorLoginId,
           'authorProfileImageUrl': profileImageUrl,
           'text': data['text'] ?? '',
           'imageUrl': data['imageUrl'] ?? '',
@@ -232,7 +235,8 @@ class _QuestionFeedState extends State<QuestionFeed> {
               item['authorNickname'],
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            subtitle: Text('@${item['authorId']}'),
+            // loginId로 변경
+            subtitle: Text('@${item['authorLoginId']}'),
             trailing: IconButton(
               icon: const Icon(Icons.more_horiz),
               onPressed: () => _showPostOptionsMenu(
@@ -265,6 +269,34 @@ class _QuestionFeedState extends State<QuestionFeed> {
                   errorBuilder: (_, __, ___) => const SizedBox(
                     height: 280,
                     child: Center(child: Icon(Icons.broken_image)),
+                  ),
+                ),
+              ),
+            ),
+
+          //  이미지 - 탭하면 전체 화면으로
+          if (item['resultImageUrl'] != null &&
+              item['resultImageUrl'].isNotEmpty)
+            GestureDetector(
+              onTap: () => _showFullScreenImage(context, item['resultImageUrl']),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: Colors.grey.shade300, width: 1),
+                    bottom: BorderSide(color: Colors.grey.shade300, width: 1),
+                  ),
+                ),
+                child: Hero(
+                  tag: item['resultImageUrl'],
+                  child: Image.network(
+                    item['resultImageUrl'],
+                    height: 280,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const SizedBox(
+                      height: 280,
+                      child: Center(child: Icon(Icons.broken_image)),
+                    ),
                   ),
                 ),
               ),
@@ -318,6 +350,42 @@ class _QuestionFeedState extends State<QuestionFeed> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// 전체 화면 이미지 보기
+  void _showFullScreenImage(BuildContext context, String imageUrl) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          body: GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Center(
+              child: Hero(
+                tag: imageUrl,
+                child: InteractiveViewer(
+                  panEnabled: true,
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+        ),
       ),
     );
   }
