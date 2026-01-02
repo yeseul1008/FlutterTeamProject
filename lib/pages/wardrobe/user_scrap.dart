@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserScrap extends StatefulWidget {
   const UserScrap({super.key});
@@ -18,9 +18,28 @@ class _UserScrapState extends State<UserScrap> {
   List<Map<String, dynamic>> scraps = [];
   bool isLoading = true;
 
+  final FirebaseFirestore fs = FirebaseFirestore.instance;
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+
   // 검색
   TextEditingController searchController = TextEditingController();
   String searchText = '';
+
+  Future<void> deleteScrap(String feedId) async {
+    if (userId == null) return;
+
+    final snapshot = await fs
+        .collection('users')
+        .doc(userId)
+        .collection('scraps')
+        .where('feedId', isEqualTo: feedId)
+        .get();
+
+    for (var doc in snapshot.docs) {
+      await doc.reference.delete();
+    }
+  }
+
 
   @override
   void initState() {
@@ -250,69 +269,100 @@ class _UserScrapState extends State<UserScrap> {
 
               // 스크랩 그리드
               Expanded(
-                child: isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : filteredScraps.isEmpty
-                    ? const Center(child: Text('스크랩한 항목이 없습니다'))
-                    : GridView.builder(
-                  itemCount: filteredScraps.length,
-                  gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1,
-                  ),
-                  itemBuilder: (context, index) {
-                    final item = filteredScraps[index];
-                    return Stack(
-                      children: [
-                        // 이미지
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey),
-                            color: Colors.white,
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: fs
+                      .collection('users')
+                      .doc(userId)
+                      .collection('scraps')
+                      .snapshots(),
+                  builder: (context, scrapSnapshot) {
+                    if (!scrapSnapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    // feedId 리스트 추출
+                    final feedIds = scrapSnapshot.data!.docs
+                        .map((doc) => doc['feedId'] as String)
+                        .toList();
+
+                    if (feedIds.isEmpty) {
+                      return const Center(child: Text('스크랩한 게시물이 없습니다.'));
+                    }
+
+                    return StreamBuilder<QuerySnapshot>(
+                      stream: fs
+                          .collection('lookbooks')
+                          .where(
+                        FieldPath.documentId,
+                        whereIn: feedIds,
+                      )
+                          .snapshots(),
+                      builder: (context, lookbookSnapshot) {
+                        if (!lookbookSnapshot.hasData) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+
+                        final lookbooks = lookbookSnapshot.data!.docs;
+
+                        return GridView.builder(
+                          itemCount: lookbooks.length,
+                          gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 1,
                           ),
-                          child: item['imageUrl'].isNotEmpty
-                              ? Image.network(
-                            item['imageUrl'],
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
-                            errorBuilder: (_, __, ___) =>
-                            const Center(
-                              child: Icon(Icons.broken_image),
-                            ),
-                          )
-                              : const Center(
-                            child: Icon(Icons.image_not_supported),
-                          ),
-                        ),
-                        // 좋아요 아이콘 (빨간 하트)
-                        Positioned(
-                          top: 4,
-                          right: 4,
-                          child: InkWell(
-                            onTap: () => _removeScrap(item['feedId']),
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.8),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.favorite,
-                                size: 18,
-                                color: Colors.red,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                          itemBuilder: (context, index) {
+                            final doc = lookbooks[index];
+                            final data =
+                            lookbooks[index].data() as Map<String, dynamic>;
+
+                            return Stack(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.grey),
+                                    image: DecorationImage(
+                                      image: NetworkImage(data['resultImageUrl']),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 4,
+                                  right: 4,
+                                  child: IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    onPressed: () async {
+                                      // 👉 여기에 기존 스크랩 삭제 로직 그대로 두시면 됩니다
+                                      await deleteScrap(doc.id);
+                                    },
+                                    icon: Stack(
+                                      alignment: Alignment.center,
+                                      children: const [
+                                        Icon(
+                                          Icons.favorite,
+                                          color: Color(0xFFCAD83B), // 채움
+                                          size: 22,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+
+
+                              ],
+                            );
+                          },
+                        );
+                      },
                     );
                   },
                 ),
               ),
+
             ],
           ),
         ),
