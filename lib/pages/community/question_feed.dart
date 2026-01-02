@@ -153,25 +153,38 @@ class _QuestionFeedState extends State<QuestionFeed> {
                         },
                       ),
 
-                  /// 글쓰기 버튼
+                  /// 글쓰기 버튼 (반투명 스타일)
                   Positioned(
                     bottom: 25,
                     right: 30,
-                    child: ElevatedButton(
-                      onPressed: () => context.go('/questionAdd'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFCAD83B),
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 22, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(30),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      child: const Text(
-                        'post a look',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 18),
+                      child: ElevatedButton(
+                        onPressed: () => context.go('/questionAdd'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFCAD83B).withOpacity(0.85),
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 22, vertical: 12),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                        ),
+                        child: const Text(
+                          'post a look',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 18),
+                        ),
                       ),
                     ),
                   ),

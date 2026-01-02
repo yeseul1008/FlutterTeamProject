@@ -48,6 +48,35 @@ class _AiOutfitMakerScreenState extends State<AiOutfitMakerScreen> {
     _getUserInfo();
   }
 
+  // NEW: Crop function to remove head
+  Future<File> cropImageToNeck(File imageFile) async {
+    try {
+      final bytes = await imageFile.readAsBytes();
+      final image = img.decodeImage(bytes);
+
+      if (image != null) {
+        // Crop top 15% to remove head area
+        final cropAmount = (image.height * 0.15).round();
+        final cropped = img.copyCrop(
+            image,
+            x: 0,
+            y: cropAmount,
+            width: image.width,
+            height: image.height - cropAmount
+        );
+
+        // Save cropped image
+        final croppedBytes = img.encodeJpg(cropped, quality: 90);
+        await imageFile.writeAsBytes(croppedBytes);
+        return imageFile;
+      }
+      return imageFile;
+    } catch (e) {
+      print('Error cropping image: $e');
+      return imageFile; // Return original if cropping fails
+    }
+  }
+
   Future<void> _generateCombinedImage() async {
     try {
       setState(() => _currentStep = "AI가 옷을 분석하고 있습니다...");
