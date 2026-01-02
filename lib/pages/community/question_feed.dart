@@ -79,7 +79,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
           'docId': docId,
           'authorId': authorId,
           'authorNickname': authorNickname,
-          'authorLoginId': authorLoginId,
+          'authorLoginId': authorLoginId, // <- 추가
           'authorProfileImageUrl': profileImageUrl,
           'text': data['text'] ?? '',
           'imageUrl': data['imageUrl'] ?? '',
