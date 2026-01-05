@@ -27,24 +27,24 @@
 
 ```text
 lib/
-├── main.dart                     # 앱 진입점
+├── main.dart                     - 앱 진입점
 │
-├── routes/                       # 라우팅 관리
+├── routes/                       - 라우팅 관리
 │   └── main_route.dart
 │
-├── firebase/                     # Firebase 설정 및 공통 서비스
+├── firebase/                     - Firebase 설정 및 공통 서비스
 │   ├── firebase_options.dart
 │   └── firebase_service.dart
 │
-├── pages/                        # 주요 화면(Page) 단위
+├── pages/                        - 주요 화면(Page) 단위
 │   │
-│   ├── auth/                     # 인증 관련 화면
+│   ├── auth/                     - 인증 관련 화면
 │   │   ├── user_login.dart
 │   │   ├── user_google_login.dart
 │   │   ├── user_join.dart
 │   │   └── find_acc.dart
 │   │
-│   ├── wardrobe/                 # 디지털 옷장 & 룩북
+│   ├── wardrobe/                 - 디지털 옷장 & 룩북
 │   │   ├── user_wardrobe_list.dart
 │   │   ├── user_wardrobe_category.dart
 │   │   ├── user_wardrobe_add.dart
@@ -54,7 +54,7 @@ lib/
 │   │   ├── user_scrap_view.dart
 │   │   └── outfit_maker.dart
 │   │
-│   ├── profile/                  # 마이페이지 & 다이어리
+│   ├── profile/                  - 마이페이지 & 다이어리
 │   │   ├── user_diary_cards.dart
 │   │   ├── user_diary_map.dart
 │   │   ├── user_diary_calendar.dart
@@ -62,19 +62,19 @@ lib/
 │   │   ├── user_public_wardrobe.dart
 │   │   └── user_public_lookbook.dart
 │   │
-│   ├── community/                # 커뮤니티 & QnA
+│   ├── community/                - 커뮤니티 & QnA
 │   │   ├── main_feed.dart
 │   │   ├── question_feed.dart
 │   │   ├── question_add.dart
 │   │   ├── question_comment.dart
 │   │   └── follow_list.dart
 │   │
-│   └── admin/                    # 관리자 페이지
+│   └── admin/                    - 관리자 페이지
 │       └── admin_page.dart
 │
-└── widgets/                      # 재사용 UI 컴포넌트
+└── widgets/                      - 재사용 UI 컴포넌트
     │
-    ├── common/                   # 공통 위젯
+    ├── common/                   - 공통 위젯
     │   ├── main_btn.dart
     │   ├── sub_button.dart
     │   ├── drawer_menu.dart
@@ -84,10 +84,10 @@ lib/
     │   ├── snack_bar.dart
     │   └── share_plus.dart
     │
-    ├── wardrobe/                 # 옷장 관련 UI 컴포넌트
+    ├── wardrobe/                 - 옷장 관련 UI 컴포넌트
     │   └── clothes_card.dart
     │
-    └── diary/                    # 다이어리 관련 UI 컴포넌트
+    └── diary/                    - 다이어리 관련 UI 컴포넌트
         ├── weather_chip.dart
         └── purpose_chip.dart
 ```
