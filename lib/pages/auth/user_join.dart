@@ -177,7 +177,7 @@ class _UserJoinState extends State<UserJoin> {
       return;
     }
 
-    // ✅ 아이디 중복확인 필수 체크
+    // 아이디 중복확인 필수 체크
     if (!_isIdChecked || !_isIdAvailable) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -423,7 +423,7 @@ class _UserJoinState extends State<UserJoin> {
 
                 const SizedBox(height: 16),
 
-                // ✅ 아이디 입력 필드 + 중복확인 버튼
+                // 아이디 입력 필드 + 중복확인 버튼
                 const Text('아이디', style: TextStyle(color: Colors.black, fontSize: 12)),
                 const SizedBox(height: 8),
                 Row(
@@ -484,7 +484,7 @@ class _UserJoinState extends State<UserJoin> {
                   ],
                 ),
 
-                // ✅ 중복확인 결과 메시지
+                // 중복확인 결과 메시지
                 if (_idCheckMessage.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 6, left: 4),
