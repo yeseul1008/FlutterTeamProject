@@ -259,10 +259,10 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
     final cal = _getCalendar(_selectedDay);
     final selectedThumb = _getThumb(_selectedDay);
 
-    final hasSchedule = cal != null; // ✅ 문서 존재 여부
-    final btnText = hasSchedule ? '일정 수정' : '일정 추가';
+    final hasSchedule = cal != null; // 문서 존재 여부(스케쥴 들어가기 전 버튼 요소)
+    final btnText = hasSchedule ? 'Edit' : 'Add';
 
-    // ✅ 목적지/일정(없으면 '없음')
+    // 목적지/일정(없으면 '없음')
     final destinationText = _safeText(cal?['destinationName']);
     final planText = _safeText(cal?['planText']);
 

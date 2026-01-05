@@ -121,7 +121,7 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
     );
   }
 
-  // ✅ 터치 시 레이어 최상단
+  // 캔버스영역 : 터치 시 해당 사진 레이어 최상단
   void _bringToFront(String id) {
     if (!_canvasItems.containsKey(id)) return;
     setState(() {
@@ -471,7 +471,6 @@ class _DraggableCanvasItemState extends State<_DraggableCanvasItem> {
   static const double _baseW = 92;
   static const double _baseH = 120;
 
-  // ✅ 방향만 변경: ↘로 키우고 줄이기 (dx + dy)
   void _onResizeDrag(DragUpdateDetails d) {
     final delta = d.delta.dx + d.delta.dy;
     final next = (widget.scale + delta * 0.006).clamp(0.6, 1.8);
@@ -545,7 +544,7 @@ class _DraggableCanvasItemState extends State<_DraggableCanvasItem> {
                 ),
               ),
 
-            // ✅ “일반적인” 리사이즈 아이콘(기존 open_in_full) + 방향만 ↘ 느낌으로 살짝 회전
+            //캔버스에서 개별 사진 사이즈 조절 버튼
             if (!widget.hideControls)
               Positioned(
                 right: -10,
