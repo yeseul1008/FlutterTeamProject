@@ -34,69 +34,64 @@ class _BottomNavBarState extends State<BottomNavBar> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 120, // 🔑 충분히 높게 잡아야 중앙 버튼 안 잘림
-      child: Stack(
-        alignment: Alignment.bottomCenter,
-        children: [
-          // 🔽 기존 BottomAppBar
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              decoration: const BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: Colors.black, width: 1),
-                ),
-              ),
-              child: BottomAppBar(
-                color: Colors.white,
-                shape: const CircularNotchedRectangle(),
-                notchMargin: 8,
-                child: SizedBox(
-                  height: 70,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      navItem(Icons.checkroom, "closet", 0),
-                      navItem(Icons.calendar_month, "calendar", 1),
-                      const SizedBox(width: 40), // 노치 공간
-                      navItem(Icons.book, "diary", 2),
-                      navItem(Icons.groups, "community", 3),
-                    ],
-                  ),
-                ),
-              ),
+    return Stack(
+      clipBehavior: Clip.none, // 버튼이 Stack 밖으로 나가도 잘리지 않음
+      alignment: Alignment.bottomCenter,
+      children: [
+        // BottomAppBar를 Container로 감싸 테두리 추가
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border(
+              top: BorderSide(color: Colors.black54, width: 1), // 검정 테두리
             ),
           ),
-
-          // 🔼 가운데 보라색 원형 버튼
-          Positioned(
-            bottom: 35, // 🔑 BottomAppBar 위로 띄움
+          child: BottomAppBar(
+            color: Colors.transparent, // Container가 배경이므로 투명
+            shape: const CircularNotchedRectangle(),
+            notchMargin: 8,
             child: SizedBox(
-              width: 72,
-              height: 72,
-              child: Material(
-                shape: const CircleBorder(),
-                elevation: 6,
-                color: const Color(0xFFA88AEE),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: () => context.push('/userWardrobeAdd'),
-                  child: const Icon(
-                    Icons.add,
-                    size: 40,
-                    color: Colors.white,
-                  ),
+              height: 70,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  navItem(Icons.checkroom, "closet", 0),
+                  navItem(Icons.calendar_month, "calendar", 1),
+                  const SizedBox(width: 40), // 노치 공간
+                  navItem(Icons.book, "diary", 2),
+                  navItem(Icons.groups, "community", 3),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // 가운데 보라색 원형 버튼
+        Positioned(
+          top: -36, // BottomAppBar 위로 떠오르게
+          child: SizedBox(
+            width: 72,
+            height: 72,
+            child: Material(
+              shape: const CircleBorder(),
+              elevation: 6,
+              color: const Color(0xFFA88AEE),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: () => context.push('/userWardrobeAdd'),
+                child: const Icon(
+                  Icons.add,
+                  size: 40,
+                  color: Colors.white,
                 ),
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
+
 
   Widget navItem(IconData icon, String label, int index) {
     final bool isSelected = selectedIndex == index;

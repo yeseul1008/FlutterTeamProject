@@ -36,7 +36,7 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
       setState(() {
         userInfo = snapshot.data()!;
       });
-      print(userInfo);
+      // print(userInfo);
     } else {
       print('User not found');
     }
@@ -50,7 +50,7 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
       builder: (_) {
         return UserWardrobeCategory(
           onSelect: (categoryId) {
-            print('선택된 카테고리 ID: $categoryId');
+            // print('선택된 카테고리 ID: $categoryId');
             setState(() {
               selectedCategoryId = categoryId; // 상태에 저장
             });
@@ -98,7 +98,7 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
 
       // AI 착용샷 버튼
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 100),
+        padding: const EdgeInsets.only(bottom: 110),
         child: SizedBox(
           height: 44,
           child: FloatingActionButton.extended(

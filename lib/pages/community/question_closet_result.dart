@@ -5,29 +5,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../firebase/firestore_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
-final FirestoreService _firestoreService = FirestoreService();
+class QuestionClosetResult extends StatefulWidget {
+  const QuestionClosetResult({super.key, required this.extra});
 
-class lookbookCombine extends StatefulWidget {
-  const lookbookCombine({super.key, required this.extra});
   final Object? extra;
 
   @override
-  State<lookbookCombine> createState() => _LookbookCombineState();
+  State<QuestionClosetResult> createState() => _QuestionClosetResultState();
 }
 
-class _LookbookCombineState extends State<lookbookCombine> {
+class _QuestionClosetResultState extends State<QuestionClosetResult> {
   final GlobalKey _canvasKey = GlobalKey();
 
+  late final String postId;
   late final List<String> clothesIds;
   late final Map<String, String> imageUrls;
 
-  DateTime? _selectedDate;
   final Map<String, _CanvasItemState> _canvasItems = {};
   bool _imagesReady = false;
   bool _isCapturing = false;
-  bool _isSavingLookbook = false;
+  bool _isUploadingComment = false;
 
   @override
   void initState() {
@@ -35,15 +35,11 @@ class _LookbookCombineState extends State<lookbookCombine> {
 
     final data = widget.extra as Map<String, dynamic>?;
 
+    postId = data?['postId'] ?? '';
     clothesIds = (data?['clothesIds'] as List<dynamic>? ?? []).cast<String>();
     final Map<String, dynamic> imageUrlsRaw =
     (data?['imageUrls'] as Map<String, dynamic>? ?? {});
     imageUrls = imageUrlsRaw.map((k, v) => MapEntry(k, v.toString()));
-
-    final dt = data?['selectedDate'];
-    if (dt is DateTime) {
-      _selectedDate = DateTime(dt.year, dt.month, dt.day);
-    }
 
     for (int i = 0; i < clothesIds.length; i++) {
       final id = clothesIds[i];
@@ -119,59 +115,8 @@ class _LookbookCombineState extends State<lookbookCombine> {
     );
   }
 
-  // ✅ 클릭 시 최상단으로
-  void _bringToFront(String id) {
-    if (!_canvasItems.containsKey(id)) return;
-    setState(() {
-      final item = _canvasItems.remove(id)!;
-      _canvasItems[id] = item; // 마지막 = 최상단
-    });
-  }
-
-  Future<String?> _askLookbookAlias() async {
-    final controller = TextEditingController();
-
-    final result = await showDialog<String>(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text(
-            '룩북 이름',
-            style: TextStyle(fontWeight: FontWeight.w900),
-          ),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            maxLength: 30,
-            decoration: const InputDecoration(
-              hintText: '예) 오늘의 코디',
-              counterText: '',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('취소'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final alias = controller.text.trim();
-                if (alias.isEmpty) return;
-                Navigator.pop(ctx, alias);
-              },
-              child: const Text('저장'),
-            ),
-          ],
-        );
-      },
-    );
-
-    return result?.trim().isEmpty == true ? null : result?.trim();
-  }
-
-  Future<void> _saveToLookbook() async {
-    if (_isSavingLookbook) return;
+  Future<void> _saveCommentToPost() async {
+    if (_isUploadingComment) return;
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -179,8 +124,7 @@ class _LookbookCombineState extends State<lookbookCombine> {
       return;
     }
 
-    final selected = _canvasItems.keys.toList();
-    if (selected.isEmpty) {
+    if (_canvasItems.isEmpty) {
       _showTempSnack('캔버스에 남은 옷이 없습니다.');
       return;
     }
@@ -190,40 +134,68 @@ class _LookbookCombineState extends State<lookbookCombine> {
       return;
     }
 
-    final alias = await _askLookbookAlias();
-    if (alias == null || alias.isEmpty) return;
+    final TextEditingController commentController = TextEditingController();
+    final commentText = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('댓글 입력'),
+        content: TextField(
+          controller: commentController,
+          maxLines: 3,
+          decoration: const InputDecoration(hintText: '댓글 내용을 입력하세요'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, null),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, commentController.text.trim()),
+            child: const Text('등록'),
+          ),
+        ],
+      ),
+    );
 
-    setState(() => _isSavingLookbook = true);
+    if (commentText == null || commentText.isEmpty) return;
+
+    setState(() => _isUploadingComment = true);
 
     try {
       final pngBytes = await _captureCanvasPng();
       if (pngBytes == null || pngBytes.isEmpty) {
-        _showTempSnack('캡처 실패(빈 이미지)');
+        _showTempSnack('이미지 캡처 실패');
         return;
       }
 
-      final resultImageUrl = await _firestoreService.uploadLookbookCanvasPng(
-        userId: user.uid,
-        pngBytes: pngBytes,
-      );
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('commentImg/${user.uid}_${DateTime.now().millisecondsSinceEpoch}.png');
+      final uploadTask = storageRef.putData(pngBytes);
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
 
-      await _firestoreService.createLookbookWithFlag(
-        userId: user.uid,
-        alias: alias,
-        resultImageUrl: resultImageUrl,
-        clothesIds: selected,
-        inLookbook: true,
-        publishToCommunity: false,
-      );
+      final commentRef = FirebaseFirestore.instance
+          .collection('questions')
+          .doc(postId)
+          .collection('qna_comments')
+          .doc();
 
-      _showTempSnack('룩북에 저장되었습니다.');
-      if (mounted) {
-        context.go('/userLookbook');
-      }
-    } catch (_) {
-      _showTempSnack('룩북 저장 실패');
+      await commentRef.set({
+        'comment': commentText,
+        'commentImg': downloadUrl,
+        'authorId': user.uid,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      _showTempSnack('댓글이 등록되었습니다.');
+      Navigator.pop(context);
+      Navigator.pop(context);
+    } catch (e) {
+      _showTempSnack('댓글 등록 실패');
+      debugPrint('댓글 업로드 에러: $e');
     } finally {
-      if (mounted) setState(() => _isSavingLookbook = false);
+      if (mounted) setState(() => _isUploadingComment = false);
     }
   }
 
@@ -290,10 +262,12 @@ class _LookbookCombineState extends State<lookbookCombine> {
                           child: DecoratedBox(
                             decoration: BoxDecoration(
                               color: Colors.black,
-                              borderRadius: BorderRadius.all(Radius.circular(10)),
+                              borderRadius:
+                              BorderRadius.all(Radius.circular(10)),
                             ),
                             child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              padding:
+                              EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               child: Text(
                                 '이미지 불러오는 중...',
                                 style: TextStyle(
@@ -319,14 +293,12 @@ class _LookbookCombineState extends State<lookbookCombine> {
                             imageUrl: url,
                             scale: state.scale,
                             hideControls: _isCapturing,
-                            onBringToFront: () => _bringToFront(id),
                             onMove: (delta) {
                               setState(() {
                                 final cur = _canvasItems[id];
                                 if (cur == null) return;
-                                _canvasItems[id] = cur.copyWith(
-                                  offset: cur.offset + delta,
-                                );
+                                _canvasItems[id] =
+                                    cur.copyWith(offset: cur.offset + delta);
                               });
                             },
                             onScale: (nextScale) {
@@ -337,7 +309,15 @@ class _LookbookCombineState extends State<lookbookCombine> {
                                     cur.copyWith(scale: nextScale.clamp(0.6, 1.8));
                               });
                             },
-                            onRemove: () => setState(() => _canvasItems.remove(id)),
+                            onRemove: () {
+                              setState(() => _canvasItems.remove(id));
+                            },
+                            onTap: () {
+                              setState(() {
+                                final tapped = _canvasItems.remove(id);
+                                if (tapped != null) _canvasItems[id] = tapped;
+                              });
+                            },
                           ),
                         );
                       }),
@@ -353,9 +333,11 @@ class _LookbookCombineState extends State<lookbookCombine> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: (_canvasItems.isEmpty || !_imagesReady || _isSavingLookbook)
+                    onPressed: (_canvasItems.isEmpty ||
+                        !_imagesReady ||
+                        _isUploadingComment)
                         ? null
-                        : _saveToLookbook,
+                        : _saveCommentToPost,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.black,
                       side: const BorderSide(color: Colors.black),
@@ -365,8 +347,9 @@ class _LookbookCombineState extends State<lookbookCombine> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: Text(
-                      _isSavingLookbook ? '저장 중...' : '룩북에 저장하기',
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
+                      _isUploadingComment ? '업로드 중...' : '댓글 추가하기',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w900, fontSize: 12),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -380,7 +363,7 @@ class _LookbookCombineState extends State<lookbookCombine> {
   }
 }
 
-// CanvasItem & DraggableCanvasItem
+// CanvasItem 상태
 class _CanvasItemState {
   final Offset offset;
   final double scale;
@@ -395,6 +378,7 @@ class _CanvasItemState {
   }
 }
 
+// DraggableCanvasItem
 class _DraggableCanvasItem extends StatefulWidget {
   const _DraggableCanvasItem({
     required this.id,
@@ -404,7 +388,7 @@ class _DraggableCanvasItem extends StatefulWidget {
     required this.onMove,
     required this.onScale,
     required this.onRemove,
-    this.onBringToFront,
+    this.onTap,
   });
 
   final String id;
@@ -414,7 +398,7 @@ class _DraggableCanvasItem extends StatefulWidget {
   final void Function(Offset delta) onMove;
   final void Function(double nextScale) onScale;
   final VoidCallback onRemove;
-  final VoidCallback? onBringToFront;
+  final VoidCallback? onTap;
 
   @override
   State<_DraggableCanvasItem> createState() => _DraggableCanvasItemState();
@@ -438,7 +422,7 @@ class _DraggableCanvasItemState extends State<_DraggableCanvasItem> {
     final h = _baseH * widget.scale;
 
     return GestureDetector(
-      onTapDown: (_) => widget.onBringToFront?.call(),
+      onTap: widget.onTap,
       onScaleStart: (_) => _startScale = widget.scale,
       onScaleUpdate: (details) {
         if (details.focalPointDelta != Offset.zero) {
@@ -509,7 +493,7 @@ class _DraggableCanvasItemState extends State<_DraggableCanvasItem> {
                         child: Center(
                           child: Transform.rotate(
                             angle: 1.6,
-                            child: const Icon(
+                            child: Icon(
                               Icons.open_in_full,
                               size: 12,
                               color: Colors.black,

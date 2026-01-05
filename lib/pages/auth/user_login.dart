@@ -114,7 +114,7 @@ class _UserLoginState extends State<UserLogin> {
       await _fs.initFollowDoc(uid);
 
       if (!mounted) return;
-      context.go('/userDiaryCards');
+      context.go('/userWardrobeList');
     } on FirebaseAuthException catch (e) {
       final msg = switch (e.code) {
         'user-not-found' => '등록된 계정이 없습니다.',
@@ -156,7 +156,7 @@ class _UserLoginState extends State<UserLogin> {
                 Center(
                   child: Image.asset(
                     'assets/applogo.png',
-                    width: 220,
+                    width: 150,
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -262,7 +262,7 @@ class _UserLoginState extends State<UserLogin> {
                         if (result == null) return;
 
                         if (!context.mounted) return;
-                        context.go('/userDiaryCards');
+                        context.go('/userWardrobeList');
                       } catch (e) {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(

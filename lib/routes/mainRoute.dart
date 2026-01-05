@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:team_project_flutter/pages/community/question_closet.dart';
+import 'package:team_project_flutter/pages/community/question_closet_result.dart';
 import 'package:team_project_flutter/pages/schedule/schedule_add_Lookbook.dart';
 import 'package:team_project_flutter/pages/schedule/schedule_lookbook.dart';
 import 'package:team_project_flutter/pages/wardrobe/user_wardrobe_edit.dart';
@@ -13,6 +15,7 @@ import '../pages/admin/admin_page.dart';
 import '../pages/auth/user_google_login.dart';
 import '../pages/auth/user_join.dart';
 import '../pages/auth/user_login.dart';
+import '../pages/auth/SplashScreen.dart';
 import '../pages/auth/find_id.dart';
 import '../pages/auth/find_pwd.dart';
 import '../pages/community/follow_list.dart';
@@ -59,7 +62,7 @@ final GoRouter router = GoRouter(
         // 메인(mainPage.dart) 페이지!!!! 앱 첫 실행시 이 페이지가 뜸!! (나중에 옷장이 메인페이지가 되도록 바꿀것임. 지금은 ㄴㄴ)
         GoRoute(
           path: '/',
-          builder: (context, state) => const StartPage(),
+          builder: (context, state) => const SplashScreen(),
         ),
         // auth 폴더 속 파일 이동
         GoRoute(
@@ -83,6 +86,16 @@ final GoRouter router = GoRouter(
           builder: (context, state) => const UserLogin(),
         ),
         // community 폴더 속 파일 이동
+        GoRoute(
+          path: '/questionCloset',
+          builder: (context, state) => const QuestionCloset(),
+        ),
+        GoRoute(
+          path: '/questionClosetResult',
+          builder: (context, state) {
+            return QuestionClosetResult(extra: state.extra);
+          },
+        ),
         GoRoute(
           path: '/followList',
           builder: (context, state) => const FollowList(),
@@ -223,12 +236,14 @@ final GoRouter router = GoRouter(
 
         GoRoute(
           path: '/userScrapView',
-          pageBuilder: (context, state) {
-            return const NoTransitionPage(
-              child: UserScrapView(),
-            );
+          builder: (context, state) {
+            final lookbookId = state.extra as String; // null 아님
+            return UserScrapView(lookbookId: lookbookId);
           },
         ),
+
+
+
         GoRoute(
           path: '/userWardrobeDetail',
           pageBuilder: (context, state) {

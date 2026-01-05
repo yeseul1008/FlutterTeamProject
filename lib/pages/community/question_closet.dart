@@ -5,27 +5,49 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../wardrobe/user_wardrobe_category.dart';
 
-/// =============================
-/// ScheduleWardrobe.dart
-/// =============================
-class UserLookbookAdd extends StatefulWidget {
-  const UserLookbookAdd({super.key});
+class QuestionCloset extends StatefulWidget {
+  const QuestionCloset({super.key});
 
   @override
-  State<UserLookbookAdd> createState() => _UserLookbookAddState();
+  State<QuestionCloset> createState() => _QuestionClosetState();
 }
 
-class _UserLookbookAddState extends State<UserLookbookAdd> {
+class _QuestionClosetState extends State<QuestionCloset> {
   final FirebaseFirestore fs = FirebaseFirestore.instance;
-  final String? userId = FirebaseAuth.instance.currentUser?.uid;
+
+  /// 현재 로그인 유저
+  final String? viewerUserId = FirebaseAuth.instance.currentUser?.uid;
+
+  /// 게시글 정보 (extra로 전달받음)
+  late String closetOwnerId; // 게시글 작성자
+  late String postId;        // 게시글 ID
 
   String? selectedCategoryId;
   bool showLikedOnly = false;
 
-  // ✅ 선택 상태
+  /// 선택 상태
   final Set<String> selectedClothesIds = {};
   final Map<String, String> selectedImageUrls = {};
 
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (_initialized) return;
+
+    final extra =
+    GoRouterState.of(context).extra as Map<String, dynamic>?;
+
+    if (extra != null) {
+      closetOwnerId = extra['userId'];
+      postId = extra['postId'];
+      _initialized = true;
+    }
+  }
+
+  /// 카테고리 선택 모달
   void _openCategoryModal(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -42,11 +64,12 @@ class _UserLookbookAddState extends State<UserLookbookAdd> {
     );
   }
 
+  /// 🔥 게시글 주인의 옷장 스트림
   Stream<QuerySnapshot<Map<String, dynamic>>> _wardrobeStream() {
-    if (userId == null) return const Stream.empty();
-
     Query<Map<String, dynamic>> ref =
-    fs.collection('users').doc(userId).collection('wardrobe');
+    fs.collection('users')
+        .doc(closetOwnerId)
+        .collection('wardrobe');
 
     if (selectedCategoryId != null && selectedCategoryId != 'all') {
       ref = ref.where('categoryId', isEqualTo: selectedCategoryId);
@@ -59,6 +82,7 @@ class _UserLookbookAddState extends State<UserLookbookAdd> {
     return ref.snapshots();
   }
 
+  /// 옷 선택 토글
   void _toggleSelect(String id, String imageUrl) {
     setState(() {
       if (selectedClothesIds.contains(id)) {
@@ -71,7 +95,7 @@ class _UserLookbookAddState extends State<UserLookbookAdd> {
     });
   }
 
-  // ✅ 조합하기 버튼: "선택값만" 상위(UserScheduleAdd)로 넘기고 pop
+  /// 조합하기 버튼
   void _goToLookbookCombine() {
     if (selectedClothesIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -80,13 +104,12 @@ class _UserLookbookAddState extends State<UserLookbookAdd> {
       return;
     }
 
-    // goRouter로 /lookbookCombine 이동 + extra 전달
     context.push(
-      '/lookbookCombine',
+      '/questionClosetResult',
       extra: {
         'clothesIds': selectedClothesIds.toList(),
         'imageUrls': selectedImageUrls,
-        // 필요하면 선택 날짜 등 추가 가능
+        'postId': postId, // 게시글 ID
       },
     );
   }
@@ -104,18 +127,20 @@ class _UserLookbookAddState extends State<UserLookbookAdd> {
                 children: [
                   const SizedBox(height: 8),
 
-                  // 🔹 상단
+                  /// 상단 헤더
                   Row(
                     children: [
                       IconButton(
                         onPressed: () => context.pop(),
                         icon: const Icon(Icons.arrow_back_ios_new, size: 18),
                       ),
-                      const Expanded(
+                      Expanded(
                         child: Center(
                           child: Text(
-                            '나의 옷장',
-                            style: TextStyle(
+                            viewerUserId == closetOwnerId
+                                ? '나의 옷장'
+                                : '질문 작성자의 옷장',
+                            style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
@@ -128,7 +153,7 @@ class _UserLookbookAddState extends State<UserLookbookAdd> {
 
                   const SizedBox(height: 12),
 
-                  // 🔹 검색 / 필터
+                  /// 검색 / 필터
                   Row(
                     children: [
                       GestureDetector(
@@ -160,8 +185,9 @@ class _UserLookbookAddState extends State<UserLookbookAdd> {
                       const SizedBox(width: 10),
                       IconButton(
                         icon: Icon(
-                          showLikedOnly ? Icons.favorite : Icons.favorite_border,
-                          color: Colors.black,
+                          showLikedOnly
+                              ? Icons.favorite
+                              : Icons.favorite_border,
                         ),
                         onPressed: () {
                           setState(() => showLikedOnly = !showLikedOnly);
@@ -172,7 +198,7 @@ class _UserLookbookAddState extends State<UserLookbookAdd> {
 
                   const SizedBox(height: 16),
 
-                  // 🔹 그리드
+                  /// 옷장 그리드
                   Expanded(
                     child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                       stream: _wardrobeStream(),
@@ -184,8 +210,11 @@ class _UserLookbookAddState extends State<UserLookbookAdd> {
                           );
                         }
 
-                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                          return const Center(child: Text('옷장이 비어있습니다.'));
+                        if (!snapshot.hasData ||
+                            snapshot.data!.docs.isEmpty) {
+                          return const Center(
+                            child: Text('옷장이 비어있습니다.'),
+                          );
                         }
 
                         final docs = snapshot.data!.docs;
@@ -204,7 +233,8 @@ class _UserLookbookAddState extends State<UserLookbookAdd> {
                             final doc = docs[index];
                             final data = doc.data();
                             final id = doc.id;
-                            final imageUrl = (data['imageUrl'] ?? '') as String;
+                            final imageUrl =
+                            (data['imageUrl'] ?? '') as String;
 
                             final bool isSelected =
                             selectedClothesIds.contains(id);
@@ -213,7 +243,6 @@ class _UserLookbookAddState extends State<UserLookbookAdd> {
                               onTap: () => _toggleSelect(id, imageUrl),
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
                                   border: Border.all(
                                     color: isSelected
                                         ? const Color(0xFF7B5CFF)
@@ -230,33 +259,35 @@ class _UserLookbookAddState extends State<UserLookbookAdd> {
                                           fit: BoxFit.cover,
                                         ),
                                       ),
-                                    Positioned(
-                                      top: 4,
-                                      right: 4,
-                                      child: IconButton(
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                        icon: Icon(
-                                          data['liked'] == true
-                                              ? Icons.favorite
-                                              : Icons.favorite_border,
-                                          color: Colors.black,
-                                          size: 18,
-                                        ),
-                                        onPressed: () async {
-                                          if (userId == null) return;
 
-                                          await fs
-                                              .collection('users')
-                                              .doc(userId)
-                                              .collection('wardrobe')
-                                              .doc(id)
-                                              .update({
-                                            'liked': !(data['liked'] == true),
-                                          });
-                                        },
+                                    /// 좋아요 (본인 옷장일 때만 노출)
+                                    if (viewerUserId == closetOwnerId)
+                                      Positioned(
+                                        top: 4,
+                                        right: 4,
+                                        child: IconButton(
+                                          padding: EdgeInsets.zero,
+                                          constraints:
+                                          const BoxConstraints(),
+                                          icon: Icon(
+                                            data['liked'] == true
+                                                ? Icons.favorite
+                                                : Icons.favorite_border,
+                                            size: 18,
+                                          ),
+                                          onPressed: () async {
+                                            await fs
+                                                .collection('users')
+                                                .doc(closetOwnerId)
+                                                .collection('wardrobe')
+                                                .doc(id)
+                                                .update({
+                                              'liked':
+                                              !(data['liked'] == true),
+                                            });
+                                          },
+                                        ),
                                       ),
-                                    ),
                                   ],
                                 ),
                               ),
@@ -270,7 +301,7 @@ class _UserLookbookAddState extends State<UserLookbookAdd> {
               ),
             ),
 
-            // 🔹 조합하기 버튼: ✅ 선택값만 pop
+            /// 조합하기 버튼
             Positioned(
               right: 16,
               bottom: 30,
@@ -282,8 +313,8 @@ class _UserLookbookAddState extends State<UserLookbookAdd> {
                   borderRadius: BorderRadius.circular(22),
                   onTap: _goToLookbookCombine,
                   child: Container(
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 10),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(22),
                       border: Border.all(color: Colors.black),

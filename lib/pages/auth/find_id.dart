@@ -80,7 +80,7 @@ class _FindIdState extends State<FindId> {
                 Center(
                   child: Image.asset(
                     'assets/applogo.png',
-                    width: 220,
+                    width: 150,
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -143,7 +143,7 @@ class _FindIdState extends State<FindId> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => context.go('/'),
+                      onTap: () => context.go('/userLogin'),
                       child: const Text(
                         '로그인으로 돌아가기 >',
                         style: TextStyle(
