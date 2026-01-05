@@ -276,7 +276,7 @@ class FirestoreService {
   }
 
   // ======================================================
-  // ✅ 핵심: schedules + calendar 생성 (완료 버튼 시점)
+  // schedules + calendar 생성 (완료 버튼 시점)
   // - schedules: users/{uid}/schedules (date: Timestamp)
   // - calendar : users/{uid}/calendar/{YYYY-MM-DD} (단일문서)
   // - calendar에 imageURL + inDiary(false) + edit용 필드 함께 저장
@@ -319,13 +319,13 @@ class FirestoreService {
       'date': Timestamp.fromDate(day),
       'lookbookId': lookbookId,
 
-      // ✅ 썸네일/프리뷰
+      // 썸네일/프리뷰
       'imageURL': imageURL,
 
-      // ✅ 다이어리 미작성 기본
+      // 다이어리 미작성 기본
       'inDiary': false,
 
-      // ✅ 7번(수정 진입 시 Add 자동 채움)용 필드
+      // 7번(수정 진입 시 Add 자동 채움)용 필드
       'scheduleId': scheduleDoc.id,
       'destinationName': destinationName,
       'destination': GeoPoint(lat, lon),
@@ -339,7 +339,7 @@ class FirestoreService {
   }
 
   // ======================================================
-  // ✅ 핵심: schedules + calendar 수정 (7번)
+  // schedules + calendar 수정
   // ======================================================
   Future<void> updateScheduleAndCalendar({
     required String userId,
@@ -654,4 +654,43 @@ class FirestoreService {
   Future<DocumentSnapshot<Map<String, dynamic>>> getFollowDoc(String userId) {
     return _db.collection('users').doc(userId).collection('follows').doc('meta').get();
   }
+
+  Future<void> deleteSchedule({
+    required String userId,
+    required String scheduleId,
+  }) async {
+    await _db
+        .collection('users')
+        .doc(userId)
+        .collection('schedules')
+        .doc(scheduleId)
+        .delete();
+  }
+
+  Future<void> deleteScheduleAndCalendar({
+    required String userId,
+    required String scheduleId,
+    required DateTime date,
+  }) async {
+    final day = DateTime(date.year, date.month, date.day);
+    final dateKey =
+        '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+
+    await Future.wait([
+      _db
+          .collection('users')
+          .doc(userId)
+          .collection('schedules')
+          .doc(scheduleId)
+          .delete(),
+      _db
+          .collection('users')
+          .doc(userId)
+          .collection('calendar')
+          .doc(dateKey)
+          .delete(),
+    ]);
+  }
 }
+
+

@@ -28,7 +28,6 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
   // 좋아요 필터 토글
   bool showLikedOnly = false;
 
-  // 사용자 정보 가져오기
   Future<void> _getUserInfo() async {
     if (userId == null) return;
     final snapshot = await fs.collection('users').doc(userId).get();
@@ -66,7 +65,6 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
     );
   }
 
-  // wardrobe 컬렉션 스트림
   Stream<QuerySnapshot<Map<String, dynamic>>> _wardrobeStream() {
     if (userId == null) return const Stream.empty();
 
@@ -76,12 +74,9 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
         .collection('wardrobe')
         .orderBy('createdAt', descending: true);
 
-    // 카테고리 필터 적용
     if (selectedCategoryId != null && selectedCategoryId != 'all') {
       ref = ref.where('categoryId', isEqualTo: selectedCategoryId);
     }
-
-    // 좋아요 필터 적용
     if (showLikedOnly) {
       ref = ref.where('liked', isEqualTo: true);
     }
@@ -109,7 +104,6 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
     return Scaffold(
       backgroundColor: Colors.white,
 
-      // AI 착용샷 버튼
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 110),
         child: SizedBox(
@@ -212,7 +206,6 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                       return const Center(child: Text('옷장이 비어있습니다.'));
                     }
 
-                    // 검색 필터 적용
                     final filteredDocs = allDocs.where((doc) {
                       final data = doc.data();
                       final productName =
@@ -242,10 +235,7 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                         final String docId = filteredDocs[index].id;
 
                         return GestureDetector(
-                          onTap: () => context.push(
-                            '/userWardrobeDetail',
-                            extra: docId,
-                          ),
+                          onTap: () => context.push('/userWardrobeDetail', extra: docId),
                           child: Stack(
                             children: [
                               Container(
