@@ -595,206 +595,213 @@ class _DiaryMapState extends State<DiaryMap> {
 
   @override
   Widget build(BuildContext context) {
-    final topPad = MediaQuery.of(context).padding.top;
+    // final topPad = MediaQuery.of(context).padding.top;
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          // Custom AppBar
-          Container(
-            width: double.infinity,
-            height: 180,
-            color: Colors.black,
-            child: Stack(
-              children: [
-                Positioned(
-                  left: 15,
-                  top: 40,
-                  child: GestureDetector(
-                    onTap: isProcessingImage ? null : _pickImage,
+    return Container(
+        color: Colors.black,
+        child: SafeArea(
+            bottom: false,
+            child: Scaffold(
+              backgroundColor: Colors.white,
+              body: Column(
+                children: [
+                  // Custom AppBar
+                  Container(
+                    width: double.infinity,
+                    height: 180,
+                    color: Colors.black,
                     child: Stack(
                       children: [
-                        CircleAvatar(
-                          radius: 40,
-                          backgroundColor: Colors.grey[300],
-                          backgroundImage: profileImageUrl != null
-                              ? NetworkImage(profileImageUrl!)
-                              : null,
-                          child: profileImageUrl == null
-                              ? Icon(
-                            Icons.person,
-                            size: 40,
-                            color: Colors.grey[600],
-                          )
-                              : null,
-                        ),
-                        if (isProcessingImage)
-                          Positioned.fill(
-                            child: CircleAvatar(
-                              radius: 40,
-                              backgroundColor: Colors.black54,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
+                        Positioned(
+                          left: 15,
+                          top: 25,
+                          child: GestureDetector(
+                            onTap: isProcessingImage ? null : _pickImage,
+                            child: Stack(
+                              children: [
+                                CircleAvatar(
+                                  radius: 40,
+                                  backgroundColor: Colors.grey[300],
+                                  backgroundImage: profileImageUrl != null
+                                      ? NetworkImage(profileImageUrl!)
+                                      : null,
+                                  child: profileImageUrl == null
+                                      ? Icon(
+                                    Icons.person,
+                                    size: 40,
+                                    color: Colors.grey[600],
+                                  )
+                                      : null,
+                                ),
+                                if (isProcessingImage)
+                                  Positioned.fill(
+                                    child: CircleAvatar(
+                                      radius: 40,
+                                      backgroundColor: Colors.black54,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  ),
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: Container(
+                                    padding: EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.black, width: 1),
+                                    ),
+                                    child: Icon(
+                                      Icons.camera_alt,
+                                      size: 16,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                        ),
                         Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            padding: EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.black, width: 1),
-                            ),
-                            child: Icon(
-                              Icons.camera_alt,
-                              size: 16,
-                              color: Colors.black,
+                          top: 15,
+                          left: 130,
+                          right: 70,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                "${userInfo['nickname'] ?? 'UID'} \n@${userInfo['loginId'] ?? 'user ID'}",
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "$itemCnt \nitems",
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(color: Colors.white),
+                                  ),
+                                  const SizedBox(width: 15),
+                                  Text(
+                                    "$lookbookCnt \nlookbook",
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(color: Colors.white),
+                                  ),
+                                  const SizedBox(width: 15),
+                                  GestureDetector(
+                                    onTap: () => context.go('/followList'),
+                                    child: Text(
+                                      "$followerCnt \nfollowers",  // UPDATED: Changed from "AI lookbook" to "followers"
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(color: Colors.white),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size(140, 32),
+                                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                ),
+                                onPressed: () => context.go('/calendarPage'),
+                                child: const Text(
+                                  "+ diary",
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Positioned(
+                          top:  2,
+                          right: 8,
+                          child: SizedBox(
+                            width: 56,
+                            height: 56,
+                            child: IconButton(
+                              onPressed: _openMoreMenu,
+                              icon: const Icon(
+                                Icons.more_horiz,
+                                color: Colors.white,
+                                size: 40,
+                              ),
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
-                Positioned(
-                  top: 20,
-                  left: 130,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "${userInfo['nickname'] ?? 'UID'} \n@${userInfo['loginId'] ?? 'user ID'}",
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      const SizedBox(height: 15),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            "${itemCnt} \nitems",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          const SizedBox(width: 20),
-                          Text(
-                            "$lookbookCnt \nlookbook",
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          const SizedBox(width: 20),
-                          GestureDetector(
-                            onTap: () => context.go('/followList'),
-                            child: Text(
-                              "$followerCnt \nfollowers",
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.white),
+
+                  const SizedBox(height: 10),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 50,
+                            child: ElevatedButton(
+                              onPressed: () => context.go('/userDiaryCards'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: Colors.black,
+                                elevation: 0,
+                                padding: EdgeInsets.zero,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                  side: const BorderSide(color: Colors.black),
+                                ),
+                              ),
+                              child: const Text(
+                                'diary',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                ),
+                              ),
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(150, 35),
                         ),
-                        onPressed: () => context.go('/calendarPage'),
-                        child: const Text(
-                          "+ diary",
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontWeight: FontWeight.bold,
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: SizedBox(
+                            height: 50,
+                            child: ElevatedButton(
+                              onPressed: () => context.go('/diaryMap'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFCAD83B),
+                                foregroundColor: Colors.black,
+                                elevation: 0,
+                                padding: EdgeInsets.zero,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                  side: const BorderSide(color: Colors.black),
+                                ),
+                              ),
+                              child: const Text(
+                                'map',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                Positioned(
-                  top: topPad + 2,
-                  right: 8,
-                  child: SizedBox(
-                    width: 56,
-                    height: 56,
-                    child: IconButton(
-                      onPressed: _openMoreMenu,
-                      icon: const Icon(
-                        Icons.more_horiz,
-                        color: Colors.white,
-                        size: 40,
-                      ),
+                      ],
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 10),
-
-          // Buttons Row
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: () => context.go('/userDiaryCards'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        elevation: 0,
-                        padding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          side: const BorderSide(color: Colors.black),
-                        ),
-                      ),
-                      child: const Text(
-                        'diary',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: SizedBox(
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: () => context.go('/diaryMap'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFCAD83B),
-                        foregroundColor: Colors.black,
-                        elevation: 0,
-                        padding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          side: const BorderSide(color: Colors.black),
-                        ),
-                      ),
-                      child: const Text(
-                        'map',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
 
           const SizedBox(height: 20),
 
@@ -874,6 +881,8 @@ class _DiaryMapState extends State<DiaryMap> {
           const SizedBox(height: 130),
         ],
       ),
+    ),
+    ),
     );
   }
 }

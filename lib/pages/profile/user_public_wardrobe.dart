@@ -365,6 +365,7 @@ class _UserDiaryCardsState extends State<PublicWardrobe> {
       ),
       builder: (ctx) {
         return SafeArea(
+          bottom: false,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -557,297 +558,302 @@ class _UserDiaryCardsState extends State<PublicWardrobe> {
 
   @override
   Widget build(BuildContext context) {
-    final topPad = MediaQuery.of(context).padding.top;
     final isOwnProfile = targetUserId == currentUserId;
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            height: 180,
-            color: Colors.black,
-            child: Stack(
-              children: [
-                Positioned(
-                  left: 15,
-                  top: 40,
-                  child: GestureDetector(
-                    onTap: isOwnProfile && !isProcessingImage ? _pickImage : null,
-                    child: Stack(
-                      children: [
-                        CircleAvatar(
-                          radius: 40,
-                          backgroundColor: Colors.grey[300],
-                          backgroundImage: profileImageUrl != null
-                              ? NetworkImage(profileImageUrl!)
-                              : null,
-                          child: profileImageUrl == null
-                              ? Icon(Icons.person, size: 40, color: Colors.grey[600])
-                              : null,
-                        ),
-                        if (isProcessingImage)
-                          const Positioned.fill(
-                            child: CircleAvatar(
+    return Container(
+      color: Colors.black,  // This makes the safe area black
+      child: SafeArea(
+        bottom: false,
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          body: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                height: 180,
+                color: Colors.black,
+                child: Stack(
+                  children: [
+                    Positioned(
+                      left: 15,
+                      top: 25,
+                      child: GestureDetector(
+                        onTap: isOwnProfile && !isProcessingImage ? _pickImage : null,
+                        child: Stack(
+                          children: [
+                            CircleAvatar(
                               radius: 40,
-                              backgroundColor: Colors.black54,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
+                              backgroundColor: Colors.grey[300],
+                              backgroundImage: profileImageUrl != null
+                                  ? NetworkImage(profileImageUrl!)
+                                  : null,
+                              child: profileImageUrl == null
+                                  ? Icon(Icons.person, size: 40, color: Colors.grey[600])
+                                  : null,
                             ),
-                          ),
-                        if (isOwnProfile)
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.black, width: 1),
+                            if (isProcessingImage)
+                              const Positioned.fill(
+                                child: CircleAvatar(
+                                  radius: 40,
+                                  backgroundColor: Colors.black54,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                ),
                               ),
-                              child: const Icon(Icons.camera_alt, size: 16, color: Colors.black),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 25,
-                  left: 130,
-                  right: 70,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        "${userInfo['nickname'] ?? 'UID'} \n@${userInfo['loginId'] ?? 'user ID'}",
-                        style: const TextStyle(color: Colors.white),
-                        textAlign: TextAlign.center,
+                            if (isOwnProfile)
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.black, width: 1),
+                                  ),
+                                  child: const Icon(Icons.camera_alt, size: 16, color: Colors.black),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                    ),
+                    Positioned(
+                      top: 15,
+                      left: 130,
+                      right: 70,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text("$itemCnt \nitems", textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
-                          const SizedBox(width: 15),
-                          Text("$lookbookCnt \nlookbook", textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
-                          const SizedBox(width: 15),
-                          GestureDetector(
-                            onTap: () => context.go('/followList${targetUserId != null ? '?userId=$targetUserId' : ''}'),
-                            child: Text("$followerCnt \nfollowers", textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
+                          Text(
+                            "${userInfo['nickname'] ?? 'UID'} \n@${userInfo['loginId'] ?? 'user ID'}",
+                            style: const TextStyle(color: Colors.white),
+                            textAlign: TextAlign.center,
                           ),
+                          const SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text("$itemCnt \nitems", textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
+                              const SizedBox(width: 15),
+                              Text("$lookbookCnt \nlookbook", textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
+                              const SizedBox(width: 15),
+                              GestureDetector(
+                                onTap: () => context.go('/followList${targetUserId != null ? '?userId=$targetUserId' : ''}'),
+                                child: Text("$followerCnt \nfollowers", textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          if (!isOwnProfile)
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                minimumSize: const Size(140, 32),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                backgroundColor: isFollowing ? Colors.grey[300] : Colors.white,
+                              ),
+                              onPressed: _toggleFollow,
+                              child: Text(
+                                isFollowing ? "following" : "follow",
+                                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                            ),
                         ],
                       ),
-                      const SizedBox(height: 10),
-                      if (!isOwnProfile)
-                        ElevatedButton(
+                    ),
+                    if (isOwnProfile)
+                      Positioned(
+                        top: 2,
+                        right: 8,
+                        child: SizedBox(
+                          width: 56,
+                          height: 56,
+                          child: IconButton(
+                            onPressed: _openMoreMenu,
+                            icon: const Icon(Icons.more_horiz, color: Colors.white, size: 40),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (targetUserId != null) {
+                              context.go('/publicWardrobe?userId=$targetUserId');
+                            } else {
+                              context.go('/publicWardrobe');
+                            }
+                          },
                           style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(140, 32),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            backgroundColor: isFollowing ? Colors.grey[300] : Colors.white,
+                            backgroundColor: const Color(0xFFCAD83B),
+                            foregroundColor: Colors.black,
+                            elevation: 0,
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                              side: const BorderSide(color: Colors.black),
+                            ),
                           ),
-                          onPressed: _toggleFollow,
-                          child: Text(
-                            isFollowing ? "following" : "follow",
-                            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 14),
+                          child: const Text('wardrobe', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SizedBox(
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (targetUserId != null) {
+                              context.go('/publicLookBook?userId=$targetUserId');
+                            } else {
+                              context.go('/publicLookBook');
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black,
+                            elevation: 0,
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                              side: const BorderSide(color: Colors.black),
+                            ),
                           ),
-                        ),
-                    ],
-                  ),
-                ),
-                if (isOwnProfile)
-                  Positioned(
-                    top: topPad + 2,
-                    right: 8,
-                    child: SizedBox(
-                      width: 56,
-                      height: 56,
-                      child: IconButton(
-                        onPressed: _openMoreMenu,
-                        icon: const Icon(Icons.more_horiz, color: Colors.white, size: 40),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 10),
-
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (targetUserId != null) {
-                          context.go('/publicWardrobe?userId=$targetUserId');
-                        } else {
-                          context.go('/publicWardrobe');
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFCAD83B),
-                        foregroundColor: Colors.black,
-                        elevation: 0,
-                        padding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          side: const BorderSide(color: Colors.black),
+                          child: const Text('lookbook', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                         ),
                       ),
-                      child: const Text('wardrobe', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: SizedBox(
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (targetUserId != null) {
-                          context.go('/publicLookBook?userId=$targetUserId');
-                        } else {
-                          context.go('/publicLookBook');
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        elevation: 0,
-                        padding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          side: const BorderSide(color: Colors.black),
-                        ),
-                      ),
-                      child: const Text('lookbook', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+              ),
 
-          const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: () => _openCategoryModal(context),
-                  child: Icon(
-                    Icons.menu,
-                    color: selectedCategoryName != null ? const Color(0xFFCAD83B) : Colors.black,
-                  ),
-                ),
-                if (selectedCategoryName != null)
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        selectedCategoryName = null;
-                      });
-                      _filterWardrobe();
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.only(left: 4),
-                      child: Icon(Icons.close, size: 20),
-                    ),
-                  ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Container(
-                    height: 36,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.black),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: TextField(
-                      controller: searchController,
-                      onChanged: (value) {
-                        setState(() {
-                          searchText = value.trim();
-                        });
-                        _filterWardrobe();
-                      },
-                      decoration: const InputDecoration(
-                        hintText: 'search...',
-                        border: InputBorder.none,
-                        isDense: true,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => _openCategoryModal(context),
+                      child: Icon(
+                        Icons.menu,
+                        color: selectedCategoryName != null ? const Color(0xFFCAD83B) : Colors.black,
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          Expanded(
-            child: filteredWardrobe.isEmpty
-                ? Center(
-              child: Text(
-                searchText.isEmpty && selectedCategoryName == null
-                    ? '아직 옷장이 비어있습니다'
-                    : '검색 결과가 없습니다',
-              ),
-            )
-                : GridView.builder(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                bottom: MediaQuery.of(context).padding.bottom + 80,
-              ),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                childAspectRatio: 0.8,
-              ),
-              itemCount: filteredWardrobe.length,
-              itemBuilder: (context, index) {
-                final wardrobe = filteredWardrobe[index];
-                return GestureDetector(
-                  onTap: () => _wardrobeDialog(context, index),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Colors.grey[300]!,
-                        width: 1,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        wardrobe['imageUrl'],
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.image_not_supported, size: 40),
-                          );
+                    if (selectedCategoryName != null)
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            selectedCategoryName = null;
+                          });
+                          _filterWardrobe();
                         },
+                        child: const Padding(
+                          padding: EdgeInsets.only(left: 4),
+                          child: Icon(Icons.close, size: 20),
+                        ),
+                      ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Container(
+                        height: 36,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.black),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: TextField(
+                          controller: searchController,
+                          onChanged: (value) {
+                            setState(() {
+                              searchText = value.trim();
+                            });
+                            _filterWardrobe();
+                          },
+                          decoration: const InputDecoration(
+                            hintText: 'search...',
+                            border: InputBorder.none,
+                            isDense: true,
+                          ),
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 12),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              Expanded(
+                child: filteredWardrobe.isEmpty
+                    ? Center(
+                  child: Text(
+                    searchText.isEmpty && selectedCategoryName == null
+                        ? '아직 옷장이 비어있습니다'
+                        : '검색 결과가 없습니다',
                   ),
-                );
-              },
-            ),
+                )
+                    : GridView.builder(
+                  padding: EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    bottom: MediaQuery.of(context).padding.bottom + 80,
+                  ),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: 0.8,
+                  ),
+                  itemCount: filteredWardrobe.length,
+                  itemBuilder: (context, index) {
+                    final wardrobe = filteredWardrobe[index];
+                    return GestureDetector(
+                      onTap: () => _wardrobeDialog(context, index),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.grey[300]!,
+                            width: 1,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            wardrobe['imageUrl'],
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.image_not_supported, size: 40),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

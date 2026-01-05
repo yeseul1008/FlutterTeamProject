@@ -886,7 +886,7 @@ class _ProfileEditState extends State<ProfileEdit> {
                               ),
                             ),
                             child: const Text(
-                              '저장',
+                              'Save',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,
