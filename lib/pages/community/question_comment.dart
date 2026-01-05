@@ -190,7 +190,7 @@ class _QuestionCommentState extends State<QuestionComment> {
                     ),
                   ),
                   child: const Text(
-                    '취소',
+                    'cencle',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -232,7 +232,7 @@ class _QuestionCommentState extends State<QuestionComment> {
                     ),
                   ),
                   child: const Text(
-                    '삭제',
+                    'delete',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -302,7 +302,7 @@ class _QuestionCommentState extends State<QuestionComment> {
                       ),
                     ),
                     child: const Text(
-                      '취소',
+                      'cancle',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -347,7 +347,7 @@ class _QuestionCommentState extends State<QuestionComment> {
                       ),
                     ),
                     child: const Text(
-                      '수정',
+                      'correction',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
