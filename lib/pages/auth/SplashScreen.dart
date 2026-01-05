@@ -44,7 +44,7 @@ class _SplashScreenState extends State<SplashScreen>
       context.go('/userWardrobeList');
     } else {
       // ❌ 로그인 안됨 → 로그인 화면
-      context.go('/login');
+      context.go('/userLogin');
     }
   }
 
