@@ -80,7 +80,7 @@ class _FindIdState extends State<FindId> {
                 Center(
                   child: Image.asset(
                     'assets/applogo.png',
-                    width: 150,
+                    width: 200,
                     fit: BoxFit.contain,
                   ),
                 ),
