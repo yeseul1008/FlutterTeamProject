@@ -94,11 +94,21 @@ final GoRouter router = GoRouter(
         ),
         GoRoute(
           path: '/followList',
-          builder: (context, state) => const FollowList(),
+          pageBuilder: (context, state) {
+            return NoTransitionPage(
+              key: state.pageKey,
+              child: const FollowList(),
+            );
+          },
         ),
         GoRoute(
           path: '/communityMainFeed',
-          builder: (context, state) => const CommunityMainFeed(),
+          pageBuilder: (context, state) {
+            return NoTransitionPage(
+              key: state.pageKey,
+              child: const CommunityMainFeed(),
+            );
+          },
         ),
         GoRoute(
           path: '/questionAdd',
@@ -110,7 +120,12 @@ final GoRouter router = GoRouter(
         ),
         GoRoute(
           path: '/questionFeed',
-          builder: (context, state) => const QuestionFeed(),
+          pageBuilder: (context, state) {
+            return NoTransitionPage(
+              key: state.pageKey,
+              child: const QuestionFeed(),
+            );
+          },
         ),
 
         //카카오 지도
@@ -159,12 +174,24 @@ final GoRouter router = GoRouter(
         ),
         GoRoute(
           path: '/userDiaryCards',
-          builder: (context, state) => const UserDiaryCards(),
+          pageBuilder: (context, state) {
+            return NoTransitionPage(
+              key: state.pageKey,
+              child: const UserDiaryCards(),
+            );
+          },
         ),
+
         GoRoute(
           path: '/diaryMap',
-          builder: (context, state) => const DiaryMap(),
+          pageBuilder: (context, state) {
+            return NoTransitionPage(
+              key: state.pageKey,
+              child: const DiaryMap(),
+            );
+          },
         ),
+
         GoRoute(
           path: '/profileEdit',
           builder: (context, state) => const ProfileEdit(),

@@ -81,11 +81,6 @@ class _QuestionClosetResultState extends State<QuestionClosetResult> {
       _canvasKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) return null;
 
-      if (boundary.debugNeedsPaint) {
-        await WidgetsBinding.instance.endOfFrame;
-        await WidgetsBinding.instance.endOfFrame;
-      }
-
       final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       return byteData?.buffer.asUint8List();
@@ -95,6 +90,7 @@ class _QuestionClosetResultState extends State<QuestionClosetResult> {
       if (mounted) setState(() => _isCapturing = false);
     }
   }
+
 
   void _resetLayout() {
     setState(() {
@@ -236,7 +232,7 @@ class _QuestionClosetResultState extends State<QuestionClosetResult> {
                 height: 320,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Colors.transparent,
                   border: Border.all(color: Colors.black),
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -446,7 +442,7 @@ class _DraggableCanvasItemState extends State<_DraggableCanvasItem> {
                     ? null
                     : Border.all(color: const Color(0xFF7B5CFF), width: 2),
                 borderRadius: BorderRadius.circular(10),
-                color: Colors.white,
+                color: Colors.transparent,
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),

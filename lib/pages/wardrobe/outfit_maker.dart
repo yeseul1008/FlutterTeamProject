@@ -92,7 +92,7 @@ class _AiOutfitMakerState extends State<AiOutfitMaker> {
       backgroundColor: Colors.white,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 110),
+        padding: const EdgeInsets.only(bottom: 140),
         child: Builder(
           builder: (context) {
             return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(

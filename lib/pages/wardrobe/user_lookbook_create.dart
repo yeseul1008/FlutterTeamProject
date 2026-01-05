@@ -85,11 +85,6 @@ class _LookbookCombineState extends State<lookbookCombine> {
       _canvasKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) return null;
 
-      if (boundary.debugNeedsPaint) {
-        await WidgetsBinding.instance.endOfFrame;
-        await WidgetsBinding.instance.endOfFrame;
-      }
-
       final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       return byteData?.buffer.asUint8List();
@@ -99,6 +94,7 @@ class _LookbookCombineState extends State<lookbookCombine> {
       if (mounted) setState(() => _isCapturing = false);
     }
   }
+
 
   void _resetLayout() {
     setState(() {
@@ -135,35 +131,85 @@ class _LookbookCombineState extends State<lookbookCombine> {
       context: context,
       barrierDismissible: true,
       builder: (ctx) {
-        return AlertDialog(
-          title: const Text(
-            '룩북 이름',
-            style: TextStyle(fontWeight: FontWeight.w900),
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            maxLength: 30,
-            decoration: const InputDecoration(
-              hintText: '예) 오늘의 코디',
-              counterText: '',
+          backgroundColor: Colors.white, // 배경 하얀색
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  '룩북 이름',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  maxLength: 30,
+                  decoration: InputDecoration(
+                    hintText: '예) 놀이공원 코디',
+                    counterText: '',
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.black), // 기본 테두리
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.black), // 포커스 테두리
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.black, // 글자 색 검정
+                      ),
+                      child: const Text(
+                        '취소',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        final alias = controller.text.trim();
+                        if (alias.isEmpty) return;
+                        Navigator.pop(ctx, alias);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFCAD83B),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                      child: const Text(
+                        '저장',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('취소'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final alias = controller.text.trim();
-                if (alias.isEmpty) return;
-                Navigator.pop(ctx, alias);
-              },
-              child: const Text('저장'),
-            ),
-          ],
         );
+
       },
     );
 
@@ -264,7 +310,7 @@ class _LookbookCombineState extends State<lookbookCombine> {
                 height: 320,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Colors.transparent,
                   border: Border.all(color: Colors.black),
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -462,7 +508,7 @@ class _DraggableCanvasItemState extends State<_DraggableCanvasItem> {
                     ? null
                     : Border.all(color: const Color(0xFF7B5CFF), width: 2),
                 borderRadius: BorderRadius.circular(10),
-                color: Colors.white,
+                color: Colors.transparent,
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),

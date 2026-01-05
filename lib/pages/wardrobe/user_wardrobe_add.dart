@@ -40,6 +40,8 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
   File? selectedImage;
   bool isProcessingImage = false;
 
+  bool useAiRemoveBg = false; // 누끼 사용 여부
+
   // 이미지 확대/이동 컨트롤러
   final TransformationController _transformController =
   TransformationController();
@@ -79,28 +81,37 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
   // =========================
   // 이미지 선택 + 누끼 자동 처리
   // =========================
-  Future<void> _pickImage() async {
+  Future<void> _pickImage({required bool useAi}) async {
     final picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
     if (image == null) return;
 
-    setState(() => isProcessingImage = true);
+    setState(() {
+      isProcessingImage = true;
+      useAiRemoveBg = useAi;
+    });
 
     try {
       final original = File(image.path);
-      final noBgPng = await _removeBackground(original);
 
-      setState(() {
+      if (useAi) {
+        // 🔥 AI 누끼
+        final noBgPng = await _removeBackground(original);
         selectedImage = noBgPng;
-        _transformController.value = Matrix4.identity(); // 중앙 초기화
-      });
+      } else {
+        // ✅ 그냥 업로드
+        selectedImage = original;
+      }
+
+      _transformController.value = Matrix4.identity();
     } catch (e) {
       _showFailDialog();
     } finally {
       setState(() => isProcessingImage = false);
     }
   }
+
 
   void _showFailDialog() {
     if (mounted) setState(() => isProcessingImage = false);
@@ -132,6 +143,74 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
       ),
     );
   }
+
+  Future<void> _showImagePickOption() async {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              24,
+              24,
+              24,
+              24 + MediaQuery.of(ctx).padding.bottom, // ⭐ 핵심
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '이미지 업로드 방식',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  '원하는 방법을 선택해주세요',
+                  style: TextStyle(color: Colors.black54),
+                ),
+                const SizedBox(height: 24),
+
+                _imageOptionTile(
+                  title: '그냥 올리기',
+                  subtitle: '원본 이미지를 그대로 업로드합니다',
+                  icon: Icons.image_outlined,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickImage(useAi: false);
+                  },
+                ),
+
+                const SizedBox(height: 14),
+
+                _imageOptionTile(
+                  title: 'AI 누끼 따기',
+                  subtitle: '배경을 제거하여 옷만 남깁니다',
+                  icon: Icons.auto_fix_high,
+                  highlight: true,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickImage(useAi: true);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+
+      },
+    );
+  }
+
+
 
   // =========================
   // Transform + 투명 배경 PNG 생성
@@ -197,7 +276,7 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
               children: [
                 /// 이미지 선택/누끼 영역
                 GestureDetector(
-                  onTap: _pickImage,
+                  onTap: _showImagePickOption,
                   child: Stack(
                     children: [
                       Container(
@@ -475,4 +554,59 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
       ),
     );
   }
+}
+Widget _imageOptionTile({
+  required String title,
+  required String subtitle,
+  required IconData icon,
+  required VoidCallback onTap,
+  bool highlight = false,
+}) {
+  return InkWell(
+    borderRadius: BorderRadius.circular(16),
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: highlight ? const Color(0xFFF7F7FF) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: highlight ? Colors.black : Colors.black12,
+          width: highlight ? 1.5 : 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 28,
+            color: highlight ? Colors.black : Colors.black54,
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }

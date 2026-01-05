@@ -32,7 +32,9 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
     if (userId == null) return;
     final snapshot = await fs.collection('users').doc(userId).get();
     if (snapshot.exists) {
-      setState(() => userInfo = snapshot.data()!);
+      setState(() {
+        userInfo = snapshot.data()!;
+      });
     }
   }
 
@@ -96,7 +98,8 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
 
   @override
   Widget build(BuildContext context) {
-    const int currentIndex = 0;
+    // 현재 페이지: closet
+    const int selectedIndex = 0;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -133,13 +136,17 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
             children: [
               const SizedBox(height: 10),
 
-              _OfficeTopTabsLime(
-                currentIndex: currentIndex,
-                routes: const ['/userWardrobeList', '/userLookbook', '/userScrap'],
+              // ✅ 세련된 상단탭 (슬라이딩 인디케이터 + 아이콘/텍스트)
+              _SleekTopTabs(
+                selectedIndex: selectedIndex,
+                onTapCloset: () => context.go('/userWardrobeList'),
+                onTapLookbooks: () => context.go('/userLookbook'),
+                onTapScrap: () => context.go('/userScrap'),
               ),
 
               const SizedBox(height: 12),
 
+              // 검색 바 영역
               Row(
                 children: [
                   GestureDetector(
@@ -157,7 +164,9 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                       ),
                       child: TextField(
                         controller: searchController,
-                        onChanged: (value) => setState(() => searchText = value.trim()),
+                        onChanged: (value) {
+                          setState(() => searchText = value.trim());
+                        },
                         decoration: const InputDecoration(
                           hintText: 'search...',
                           border: InputBorder.none,
@@ -167,18 +176,23 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                     ),
                   ),
                   const SizedBox(width: 12),
+
+                  // ❤️ 하트 필터 버튼
                   IconButton(
                     icon: Icon(
                       showLikedOnly ? Icons.favorite : Icons.favorite_border,
                       color: Colors.black,
                     ),
-                    onPressed: () => setState(() => showLikedOnly = !showLikedOnly),
+                    onPressed: () {
+                      setState(() => showLikedOnly = !showLikedOnly);
+                    },
                   ),
                 ],
               ),
 
               const SizedBox(height: 16),
 
+              // 옷 그리드
               Expanded(
                 child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                   stream: _wardrobeStream(),
@@ -196,6 +210,7 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                       final data = doc.data();
                       final productName =
                       (data['productName'] ?? '').toString().toLowerCase();
+
                       if (searchText.isEmpty) return true;
                       return productName.contains(searchText.toLowerCase());
                     }).toList();
@@ -206,7 +221,8 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
 
                     return GridView.builder(
                       itemCount: filteredDocs.length,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
                         crossAxisSpacing: 8,
                         mainAxisSpacing: 12,
@@ -214,7 +230,8 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                       ),
                       itemBuilder: (context, index) {
                         final data = filteredDocs[index].data();
-                        final String imageUrl = (data['imageUrl'] ?? '').toString();
+                        final String imageUrl =
+                        (data['imageUrl'] ?? '').toString();
                         final String docId = filteredDocs[index].id;
 
                         return GestureDetector(
@@ -252,8 +269,10 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                                         .collection('wardrobe')
                                         .doc(docId);
 
-                                    final bool currentLiked = data['liked'] == true;
-                                    await docRef.update({'liked': !currentLiked});
+                                    final bool currentLiked =
+                                        data['liked'] == true;
+                                    await docRef
+                                        .update({'liked': !currentLiked});
                                   },
                                   icon: data['liked'] == true
                                       ? const Icon(
@@ -264,8 +283,16 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                                       : Stack(
                                     alignment: Alignment.center,
                                     children: const [
-                                      Icon(Icons.favorite, color: Colors.white, size: 22),
-                                      Icon(Icons.favorite_border, color: Colors.black, size: 22),
+                                      Icon(
+                                        Icons.favorite,
+                                        color: Colors.white,
+                                        size: 22,
+                                      ),
+                                      Icon(
+                                        Icons.favorite_border,
+                                        color: Colors.black,
+                                        size: 22,
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -286,115 +313,158 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
   }
 }
 
-/// ✅ 상단탭: 연두 배경 유지 + (선택 시) 바닥에 붙는 검정 인디케이터
-class _OfficeTopTabsLime extends StatelessWidget {
-  const _OfficeTopTabsLime({
-    required this.currentIndex,
-    required this.routes,
+/// ===============================
+/// ✅ 가장 무난하고 “세련되게” 보이는: 슬라이딩 인디케이터 탭
+/// - 전체는 얇은 테두리/라운드
+/// - 선택은 내부 인디케이터(살짝 떠 보이는 느낌)
+/// - 아이콘+텍스트(가독성/완성도 좋음)
+/// ===============================
+class _SleekTopTabs extends StatelessWidget {
+  const _SleekTopTabs({
+    required this.selectedIndex,
+    required this.onTapCloset,
+    required this.onTapLookbooks,
+    required this.onTapScrap,
   });
 
-  final int currentIndex;
-  final List<String> routes;
+  final int selectedIndex;
+  final VoidCallback onTapCloset;
+  final VoidCallback onTapLookbooks;
+  final VoidCallback onTapScrap;
 
-  void _go(BuildContext context, int index) {
-    if (index == currentIndex) return;
-    context.go(routes[index]);
+  Alignment _indicatorAlign() {
+    if (selectedIndex == 0) return Alignment.centerLeft;
+    if (selectedIndex == 1) return Alignment.center;
+    return Alignment.centerRight;
   }
 
   @override
   Widget build(BuildContext context) {
-    const double h = 44;
-    const Color lime = Color(0xFFCAD83B);
+    const double height = 46;
 
-    return Container(
-      height: h,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F6),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.black, width: 1.1),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Row(
-        children: [
-          Expanded(
-            child: _OfficeTabChip(
-              label: 'CLOSET',
-              selected: currentIndex == 0,
-              selectedBg: lime,
-              onTap: () => _go(context, 0),
-            ),
-          ),
-          Container(width: 1, color: Colors.black.withOpacity(0.18)),
-          Expanded(
-            child: _OfficeTabChip(
-              label: 'LOOKBOOKS',
-              selected: currentIndex == 1,
-              selectedBg: lime,
-              onTap: () => _go(context, 1),
-            ),
-          ),
-          Container(width: 1, color: Colors.black.withOpacity(0.18)),
-          Expanded(
-            child: _OfficeTabChip(
-              label: 'SCRAP',
-              selected: currentIndex == 2,
-              selectedBg: lime,
-              onTap: () => _go(context, 2),
-            ),
-          ),
-        ],
+    return SizedBox(
+      height: height,
+      child: LayoutBuilder(
+        builder: (context, c) {
+          final double w = c.maxWidth;
+          final double segmentW = w / 3;
+
+          return Stack(
+            children: [
+              // 바탕(테두리만)
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.black, width: 1.2),
+                  borderRadius: BorderRadius.circular(26),
+                ),
+              ),
+
+              // 선택 인디케이터(슬라이드)
+              AnimatedAlign(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                alignment: _indicatorAlign(),
+                child: Container(
+                  width: segmentW,
+                  height: height,
+                  padding: const EdgeInsets.all(4),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCAD83B), // 기존 감성 유지
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: Colors.black, width: 1.2),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // 탭 버튼들
+              Row(
+                children: [
+                  Expanded(
+                    child: _TabButton(
+                      selected: selectedIndex == 0,
+                      icon: Icons.checkroom,
+                      label: 'closet',
+                      onTap: onTapCloset,
+                    ),
+                  ),
+                  Expanded(
+                    child: _TabButton(
+                      selected: selectedIndex == 1,
+                      icon: Icons.auto_awesome_mosaic,
+                      label: 'lookbooks',
+                      onTap: onTapLookbooks,
+                    ),
+                  ),
+                  Expanded(
+                    child: _TabButton(
+                      selected: selectedIndex == 2,
+                      icon: Icons.bookmark,
+                      label: 'scrap',
+                      onTap: onTapScrap,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 }
 
-class _OfficeTabChip extends StatelessWidget {
-  const _OfficeTabChip({
-    required this.label,
+class _TabButton extends StatelessWidget {
+  const _TabButton({
     required this.selected,
-    required this.selectedBg,
+    required this.icon,
+    required this.label,
     required this.onTap,
   });
 
-  final String label;
   final bool selected;
-  final Color selectedBg;
+  final IconData icon;
+  final String label;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final textStyle = TextStyle(
-      fontSize: 12,
-      fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
-      letterSpacing: 0.9,
-      color: Colors.black.withOpacity(selected ? 1.0 : 0.55),
+    final TextStyle textStyle = TextStyle(
+      fontWeight: FontWeight.w900,
+      fontSize: 17,
+      color: Colors.black,
+      letterSpacing: 0.2,
     );
 
     return Material(
-      color: selected ? selectedBg : Colors.transparent,
+      color: Colors.transparent,
       child: InkWell(
+        borderRadius: BorderRadius.circular(26),
         onTap: onTap,
-        splashColor: Colors.black.withOpacity(0.04),
-        highlightColor: Colors.black.withOpacity(0.02),
-        child: Stack(
-          children: [
-            Center(child: Text(label, style: textStyle)),
-
-            // ✅ 스샷처럼: "탭의 최하단(바닥 0)에 붙고", "왼쪽에서 시작하는" 짧은 두꺼운 바
-            Positioned(
-              left: 35,
-              bottom: 0,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                width: selected ? 64 : 0, // 짧은 바
-                height: 3,               // 두꺼운 바
-                decoration: BoxDecoration(
-                  color: selected ? Colors.black : Colors.transparent,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
+        splashColor: Colors.black.withOpacity(0.05),
+        highlightColor: Colors.black.withOpacity(0.03),
+        child: Center(
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 160),
+            opacity: selected ? 1.0 : 0.85,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 18, color: Colors.black),
+                const SizedBox(width: 6),
+                Text(label, style: textStyle),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
