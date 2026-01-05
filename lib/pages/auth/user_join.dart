@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../firebase/firestore_service.dart';
 
 class UserJoin extends StatefulWidget {
@@ -21,6 +22,17 @@ class _UserJoinState extends State<UserJoin> {
   String _gender = 'M';
 
   bool _loading = false;
+  bool _checkingId = false;
+  bool _isIdChecked = false;
+  bool _isIdAvailable = false;
+  String _idCheckMessage = '';
+
+  // 닉네임 중복확인 관련
+  bool _checkingNickname = false;
+  bool _isNicknameChecked = false;
+  bool _isNicknameAvailable = false;
+  String _nicknameCheckMessage = '';
+
   final _fs = FirestoreService();
 
   @override
@@ -32,6 +44,116 @@ class _UserJoinState extends State<UserJoin> {
     _phone.dispose();
     _nickname.dispose();
     super.dispose();
+  }
+
+  /// 아이디 중복 확인
+  Future<void> _checkLoginId() async {
+    final loginId = _loginId.text.trim();
+
+    if (loginId.isEmpty) {
+      setState(() {
+        _isIdChecked = false;
+        _isIdAvailable = false;
+        _idCheckMessage = '';
+      });
+      return;
+    }
+
+    if (loginId.length < 4) {
+      setState(() {
+        _isIdChecked = true;
+        _isIdAvailable = false;
+        _idCheckMessage = '아이디는 4자 이상이어야 합니다';
+      });
+      return;
+    }
+
+    setState(() => _checkingId = true);
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('loginId', isEqualTo: loginId)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        setState(() {
+          _isIdChecked = true;
+          _isIdAvailable = true;
+          _idCheckMessage = '사용 가능한 아이디입니다';
+        });
+      } else {
+        setState(() {
+          _isIdChecked = true;
+          _isIdAvailable = false;
+          _idCheckMessage = '이미 사용 중인 아이디입니다';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isIdChecked = true;
+        _isIdAvailable = false;
+        _idCheckMessage = '아이디 확인 중 오류가 발생했습니다';
+      });
+    } finally {
+      setState(() => _checkingId = false);
+    }
+  }
+
+  /// 닉네임 중복 확인
+  Future<void> _checkNickname() async {
+    final nickname = _nickname.text.trim();
+
+    if (nickname.isEmpty) {
+      setState(() {
+        _isNicknameChecked = false;
+        _isNicknameAvailable = false;
+        _nicknameCheckMessage = '';
+      });
+      return;
+    }
+
+    if (nickname.length < 2) {
+      setState(() {
+        _isNicknameChecked = true;
+        _isNicknameAvailable = false;
+        _nicknameCheckMessage = '닉네임은 2자 이상이어야 합니다';
+      });
+      return;
+    }
+
+    setState(() => _checkingNickname = true);
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('nickname', isEqualTo: nickname)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        setState(() {
+          _isNicknameChecked = true;
+          _isNicknameAvailable = true;
+          _nicknameCheckMessage = '사용 가능한 닉네임입니다';
+        });
+      } else {
+        setState(() {
+          _isNicknameChecked = true;
+          _isNicknameAvailable = false;
+          _nicknameCheckMessage = '이미 사용 중인 닉네임입니다';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isNicknameChecked = true;
+        _isNicknameAvailable = false;
+        _nicknameCheckMessage = '닉네임 확인 중 오류가 발생했습니다';
+      });
+    } finally {
+      setState(() => _checkingNickname = false);
+    }
   }
 
   Future<void> _signup() async {
@@ -51,6 +173,15 @@ class _UserJoinState extends State<UserJoin> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('모든 항목을 입력해주세요.')),
+      );
+      return;
+    }
+
+    // ✅ 아이디 중복확인 필수 체크
+    if (!_isIdChecked || !_isIdAvailable) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('아이디 중복확인을 해주세요.')),
       );
       return;
     }
@@ -78,7 +209,6 @@ class _UserJoinState extends State<UserJoin> {
 
       final uid = user.uid;
 
-      // ✅ users/{uid} 문서 생성 (firebase.txt 최신 구조: loginId 포함)
       await _fs.createUser(
         userId: uid,
         loginId: loginId,
@@ -87,13 +217,18 @@ class _UserJoinState extends State<UserJoin> {
         provider: 'email',
         nickname: nickname,
         profileImageUrl: null,
-        gender: _gender
+        gender: _gender,
       );
 
-      // follows 문서 초기화
       await _fs.initFollowDoc(uid);
 
       if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('회원가입이 완료되었습니다!'),
+          backgroundColor: Colors.green,
+        ),
+      );
       context.go('/userLogin');
     } on FirebaseAuthException catch (e) {
       final msg = switch (e.code) {
@@ -172,7 +307,6 @@ class _UserJoinState extends State<UserJoin> {
                   ],
                 ),
 
-
                 const SizedBox(height: 16),
 
                 const Text('이메일', style: TextStyle(color: Colors.black, fontSize: 12)),
@@ -205,27 +339,174 @@ class _UserJoinState extends State<UserJoin> {
 
                 const Text('닉네임', style: TextStyle(color: Colors.black, fontSize: 12)),
                 const SizedBox(height: 8),
-                _InputField(
-                  controller: _nickname,
-                  hintText: '닉네임 입력',
-                  icon: Icons.person_outline,
-                  borderColor: border,
-                  hintColor: textGrey,
-                  textColor: Colors.white,
+                Row(
+                  children: [
+                    Expanded(
+                      child: _InputField(
+                        controller: _nickname,
+                        hintText: '닉네임 입력 (2자 이상)',
+                        icon: Icons.person_outline,
+                        borderColor: border,
+                        hintColor: textGrey,
+                        textColor: Colors.white,
+                        onChanged: (value) {
+                          // 닉네임이 변경되면 중복확인 초기화
+                          if (_isNicknameChecked) {
+                            setState(() {
+                              _isNicknameChecked = false;
+                              _isNicknameAvailable = false;
+                              _nicknameCheckMessage = '';
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 90,
+                      height: 44,
+                      child: ElevatedButton(
+                        onPressed: _checkingNickname ? null : _checkNickname,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: purple,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: EdgeInsets.zero,
+                        ),
+                        child: _checkingNickname
+                            ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                            : const Text(
+                          '중복확인',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+
+                // 닉네임 중복확인 결과 메시지
+                if (_nicknameCheckMessage.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6, left: 4),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _isNicknameAvailable ? Icons.check_circle : Icons.cancel,
+                          size: 14,
+                          color: _isNicknameAvailable ? Colors.green : Colors.red,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _nicknameCheckMessage,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: _isNicknameAvailable ? Colors.green : Colors.red,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
                 const SizedBox(height: 16),
 
+                // ✅ 아이디 입력 필드 + 중복확인 버튼
                 const Text('아이디', style: TextStyle(color: Colors.black, fontSize: 12)),
                 const SizedBox(height: 8),
-                _InputField(
-                  controller: _loginId,
-                  hintText: '아이디 입력',
-                  icon: Icons.account_circle_outlined,
-                  borderColor: border,
-                  hintColor: textGrey,
-                  textColor: Colors.white,
+                Row(
+                  children: [
+                    Expanded(
+                      child: _InputField(
+                        controller: _loginId,
+                        hintText: '아이디 입력 (4자 이상)',
+                        icon: Icons.account_circle_outlined,
+                        borderColor: border,
+                        hintColor: textGrey,
+                        textColor: Colors.white,
+                        onChanged: (value) {
+                          // 아이디가 변경되면 중복확인 초기화
+                          if (_isIdChecked) {
+                            setState(() {
+                              _isIdChecked = false;
+                              _isIdAvailable = false;
+                              _idCheckMessage = '';
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 90,
+                      height: 44,
+                      child: ElevatedButton(
+                        onPressed: _checkingId ? null : _checkLoginId,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: purple,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: EdgeInsets.zero,
+                        ),
+                        child: _checkingId
+                            ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                            : const Text(
+                          '중복확인',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+
+                // ✅ 중복확인 결과 메시지
+                if (_idCheckMessage.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6, left: 4),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _isIdAvailable ? Icons.check_circle : Icons.cancel,
+                          size: 14,
+                          color: _isIdAvailable ? Colors.green : Colors.red,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _idCheckMessage,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: _isIdAvailable ? Colors.green : Colors.red,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
                 const SizedBox(height: 16),
 
@@ -294,10 +575,9 @@ class _UserJoinState extends State<UserJoin> {
                     Text(
                       '이미 계정이 있으신가요? ',
                       style: TextStyle(
-                        color: Colors.black.withOpacity(0.65),
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold
-                      ),
+                          color: Colors.black.withOpacity(0.65),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold),
                     ),
                     GestureDetector(
                       onTap: () => context.go('/userLogin'),
@@ -332,6 +612,7 @@ class _InputField extends StatelessWidget {
   final Color textColor;
   final bool obscureText;
   final TextInputType? keyboardType;
+  final ValueChanged<String>? onChanged;
 
   const _InputField({
     required this.controller,
@@ -342,6 +623,7 @@ class _InputField extends StatelessWidget {
     required this.textColor,
     this.obscureText = false,
     this.keyboardType,
+    this.onChanged,
   });
 
   @override
@@ -352,6 +634,7 @@ class _InputField extends StatelessWidget {
         controller: controller,
         obscureText: obscureText,
         keyboardType: keyboardType,
+        onChanged: onChanged,
         style: const TextStyle(
           color: Colors.black,
           fontSize: 14,
@@ -416,9 +699,7 @@ class _GenderSelectItem extends StatelessWidget {
           color: selected ? const Color(0xFFEDE7FF) : const Color(0xFFF2F2F2),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: selected
-                ? const Color(0xFF7B64D6)
-                : Colors.transparent,
+            color: selected ? const Color(0xFF7B64D6) : Colors.transparent,
             width: 1.4,
           ),
         ),
@@ -427,9 +708,7 @@ class _GenderSelectItem extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: selected
-                ? const Color(0xFF7B64D6)
-                : Colors.black87,
+            color: selected ? const Color(0xFF7B64D6) : Colors.black87,
           ),
         ),
       ),

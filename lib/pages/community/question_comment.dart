@@ -20,7 +20,7 @@ class _QuestionCommentState extends State<QuestionComment> {
   List<Map<String, dynamic>> comments = [];
   bool isLoading = true;
   late String postId;
-  late String postAuthorId; // 게시글 주인의 아이디
+  late String postAuthorId;
   String currentUserId = '';
   int commentCount = 0;
 
@@ -30,7 +30,7 @@ class _QuestionCommentState extends State<QuestionComment> {
     final extra = GoRouterState.of(context).extra as Map<String, dynamic>?;
     if (extra != null) {
       postId = extra['postId'];
-      _loadPostAuthor(); // 게시글 작성자 조회
+      _loadPostAuthor();
       _getComments();
     }
   }
@@ -97,7 +97,7 @@ class _QuestionCommentState extends State<QuestionComment> {
           'authorNickname': authorNickname,
           'authorProfileImageUrl': profileImageUrl,
           'comment': data['comment'] ?? '',
-          'commentImgUrl': data['commentImg'] ?? '', // 이미지 URL 포함
+          'commentImgUrl': data['commentImg'] ?? '',
           'likeCount': likesSnapshot.size,
           'isLiked': isLiked,
           'createdAt': data['createdAt'],
@@ -402,6 +402,291 @@ class _QuestionCommentState extends State<QuestionComment> {
     }
   }
 
+  /// 신고 바텀시트
+  void _showReportBottomSheet(String commentId, String commentAuthorId) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (bottomSheetContext) {
+        return Container(
+          margin: const EdgeInsets.all(16),
+          child: SafeArea(
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pop(bottomSheetContext);
+                _showReportDialog(commentId, commentAuthorId);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+              child: const Text(
+                'report',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// 신고 다이얼로그
+  void _showReportDialog(String commentId, String commentAuthorId) {
+    String? selectedReason;
+    final TextEditingController detailController = TextEditingController();
+
+    final List<String> reportReasons = [
+      '스팸/광고',
+      '욕설/혐오 발언',
+      '음란물',
+      '허위 정보',
+      '저작권 침해',
+      '기타',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            elevation: 8,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+            contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+            title: const Text(
+              '댓글 신고',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '신고 사유를 선택해주세요',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ...reportReasons.map((reason) {
+                      return RadioListTile<String>(
+                        title: Text(reason),
+                        value: reason,
+                        groupValue: selectedReason,
+                        activeColor: const Color(0xFFCAD83B),
+                        contentPadding: EdgeInsets.zero,
+                        onChanged: (value) {
+                          setDialogState(() {
+                            selectedReason = value;
+                          });
+                        },
+                      );
+                    }).toList(),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: detailController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        hintText: '상세 내용을 입력해주세요 (선택사항)',
+                        hintStyle: TextStyle(color: Colors.grey[400]),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFCAD83B),
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.black,
+                        side: const BorderSide(color: Colors.black),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        '취소',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: selectedReason == null
+                          ? null
+                          : () async {
+                        Navigator.pop(dialogContext);
+                        await _submitReport(
+                          commentId,
+                          commentAuthorId,
+                          selectedReason!,
+                          detailController.text.trim(),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: selectedReason == null
+                            ? Colors.grey
+                            : Colors.redAccent,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        '신고',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// 신고 제출
+  Future<void> _submitReport(
+      String commentId,
+      String reportedUserId,
+      String reason,
+      String detail,
+      ) async {
+    // 현재 사용자 확인
+    if (currentUserId.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('로그인이 필요합니다'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // 자기 자신을 신고하는 경우 방지
+    if (currentUserId == reportedUserId) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('자신의 댓글은 신고할 수 없습니다'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      // 이미 신고한 댓글인지 확인
+      final existingReport = await fs
+          .collection('reports')
+          .where('type', isEqualTo: 'comment')
+          .where('commentId', isEqualTo: commentId)
+          .where('reporterId', isEqualTo: currentUserId)
+          .get();
+
+      if (existingReport.docs.isNotEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('이미 신고한 댓글입니다'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      // 신고 데이터 저장
+      final reportData = {
+        'type': 'comment',
+        'postId': postId,
+        'commentId': commentId,
+        'reporterId': currentUserId,
+        'reportedUserId': reportedUserId,
+        'reason': reason,
+        'detail': detail.isNotEmpty ? detail : '',
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+        'platform': 'qna', // QnA 댓글임을 명시
+      };
+
+      debugPrint('신고 데이터: $reportData');
+
+      await fs.collection('reports').add(reportData);
+
+      debugPrint('신고가 성공적으로 저장되었습니다');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('신고가 접수되었습니다. 검토 후 조치하겠습니다.'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('신고 제출 실패: $e');
+      debugPrint('에러 상세: ${e.toString()}');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('신고 접수 중 오류가 발생했습니다: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final String currentPath = GoRouterState.of(context).uri.path;
@@ -547,7 +832,6 @@ class _QuestionCommentState extends State<QuestionComment> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  /// 📷 이미지 버튼 (추가)
                   GestureDetector(
                     onTap: () {
                       if (postAuthorId.isEmpty) return;
@@ -555,8 +839,8 @@ class _QuestionCommentState extends State<QuestionComment> {
                       context.push(
                         '/questionCloset',
                         extra: {
-                          'userId': postAuthorId, // 게시글 주인 ID
-                          'postId': postId,       // 게시글 ID
+                          'userId': postAuthorId,
+                          'postId': postId,
                         },
                       );
                     },
@@ -573,10 +857,9 @@ class _QuestionCommentState extends State<QuestionComment> {
                       ),
                     ),
                   ),
-
                   const SizedBox(width: 10),
                   GestureDetector(
-                    onTap: () => _addComment(), // 여기서 바로 댓글 업로드
+                    onTap: () => _addComment(),
                     child: Container(
                       width: 48,
                       height: 48,
@@ -669,7 +952,8 @@ class _QuestionCommentState extends State<QuestionComment> {
                 backgroundImage: profileImageUrl.isNotEmpty
                     ? NetworkImage(profileImageUrl)
                     : null,
-                child: profileImageUrl.isEmpty ? const Icon(Icons.person) : null,
+                child:
+                profileImageUrl.isEmpty ? const Icon(Icons.person) : null,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -698,34 +982,49 @@ class _QuestionCommentState extends State<QuestionComment> {
                   ],
                 ),
               ),
-              if (isAuthor)
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_horiz),
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      _editComment(commentId, content);
-                    } else if (value == 'delete') {
-                      _showDeleteConfirmDialog(commentId);
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: Text('수정'),
+              // 작성자일 경우 수정/삭제, 아닐 경우 신고 메뉴
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_horiz),
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    _editComment(commentId, content);
+                  } else if (value == 'delete') {
+                    _showDeleteConfirmDialog(commentId);
+                  } else if (value == 'report') {
+                    _showReportBottomSheet(commentId, authorId);
+                  }
+                },
+                itemBuilder: (context) => isAuthor
+                    ? [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Text('수정'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Text('삭제'),
+                  ),
+                ]
+                    : [
+                  const PopupMenuItem(
+                    value: 'report',
+                    child: Row(
+                      children: [
+                        Icon(Icons.report_outlined, color: Colors.red, size: 20),
+                        SizedBox(width: 8),
+                        Text('신고', style: TextStyle(color: Colors.red)),
+                      ],
                     ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Text('삭제'),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
+              ),
               Column(
                 children: [
                   IconButton(
                     onPressed: () => _toggleLike(commentId, isLiked),
                     icon: Icon(
                       isLiked ? Icons.thumb_up : Icons.thumb_up_alt_outlined,
-                      color: isLiked ? Colors.black : Colors.black,
+                      color: Colors.black,
                     ),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -739,7 +1038,6 @@ class _QuestionCommentState extends State<QuestionComment> {
               ),
             ],
           ),
-          // 댓글 이미지
           if (commentImgUrl != null && commentImgUrl.isNotEmpty) ...[
             const SizedBox(height: 8),
             ClipRRect(
