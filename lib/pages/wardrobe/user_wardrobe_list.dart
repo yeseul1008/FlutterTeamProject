@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../widgets/common/main_btn.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
+
 import '../wardrobe/user_wardrobe_category.dart';
 
 class UserWardrobeList extends StatefulWidget {
@@ -15,10 +14,10 @@ class UserWardrobeList extends StatefulWidget {
 
 class _UserWardrobeListState extends State<UserWardrobeList> {
   final FirebaseFirestore fs = FirebaseFirestore.instance;
-  final userId = FirebaseAuth.instance.currentUser?.uid;
+  final String? userId = FirebaseAuth.instance.currentUser?.uid;
 
   // 검색
-  TextEditingController searchController = TextEditingController();
+  final TextEditingController searchController = TextEditingController();
   String searchText = '';
 
   // 선택된 카테고리 ID
@@ -31,34 +30,31 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
 
   // 사용자 정보 가져오기
   Future<void> _getUserInfo() async {
+    if (userId == null) return;
     final snapshot = await fs.collection('users').doc(userId).get();
     if (snapshot.exists) {
       setState(() {
         userInfo = snapshot.data()!;
       });
-      // print(userInfo);
-    } else {
-      print('User not found');
     }
   }
+
   void _openCategoryModal(BuildContext context) {
     showDialog(
       context: context,
-      barrierDismissible: true, // ⭐ 바깥 터치 시 닫힘
-      barrierColor: Colors.black54, // 배경 어둡게
+      barrierDismissible: true,
+      barrierColor: Colors.black54,
       builder: (dialogContext) {
         return GestureDetector(
-          onTap: () => Navigator.pop(dialogContext), // ⭐ 바깥 클릭
+          onTap: () => Navigator.pop(dialogContext),
           child: Material(
             color: Colors.transparent,
             child: GestureDetector(
-              onTap: () {}, // ⭐ 모달 내부 클릭 방지
+              onTap: () {},
               child: Center(
                 child: UserWardrobeCategory(
                   onSelect: (categoryId) {
-                    setState(() {
-                      selectedCategoryId = categoryId;
-                    });
+                    setState(() => selectedCategoryId = categoryId);
                     Navigator.pop(dialogContext);
                   },
                 ),
@@ -70,12 +66,11 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
     );
   }
 
-
   // wardrobe 컬렉션 스트림
   Stream<QuerySnapshot<Map<String, dynamic>>> _wardrobeStream() {
     if (userId == null) return const Stream.empty();
 
-    var ref = fs
+    Query<Map<String, dynamic>> ref = fs
         .collection('users')
         .doc(userId)
         .collection('wardrobe')
@@ -94,7 +89,6 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
     return ref.snapshots();
   }
 
-
   @override
   void initState() {
     super.initState();
@@ -102,7 +96,16 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
   }
 
   @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // 현재 페이지: closet
+    const int selectedIndex = 0;
+
     return Scaffold(
       backgroundColor: Colors.white,
 
@@ -131,97 +134,24 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
           ),
         ),
       ),
+
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
               const SizedBox(height: 10),
-              // 상단 버튼 3개
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: () => context.go('/userWardrobeList'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFCAD83B),
-                          foregroundColor: Colors.black,
-                          elevation: 0,
-                          padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                            side: const BorderSide(color: Colors.black),
-                          ),
-                        ),
-                        child: const Text(
-                          'closet',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: () => context.go('/userLookbook'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          elevation: 0,
-                          padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                            side: const BorderSide(color: Colors.black),
-                          ),
-                        ),
-                        child: const Text(
-                          'lookbooks',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: () => context.go('/userScrap'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          elevation: 0,
-                          padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                            side: const BorderSide(color: Colors.black),
-                          ),
-                        ),
-                        child: const Text(
-                          'scrap',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+
+              // ✅ 세련된 상단탭 (슬라이딩 인디케이터 + 아이콘/텍스트)
+              _SleekTopTabs(
+                selectedIndex: selectedIndex,
+                onTapCloset: () => context.go('/userWardrobeList'),
+                onTapLookbooks: () => context.go('/userLookbook'),
+                onTapScrap: () => context.go('/userScrap'),
               ),
-        
+
               const SizedBox(height: 12),
-        
+
               // 검색 바 영역
               Row(
                 children: [
@@ -241,9 +171,7 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                       child: TextField(
                         controller: searchController,
                         onChanged: (value) {
-                          setState(() {
-                            searchText = value.trim();
-                          });
+                          setState(() => searchText = value.trim());
                         },
                         decoration: const InputDecoration(
                           hintText: 'search...',
@@ -253,9 +181,8 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                       ),
                     ),
                   ),
-
                   const SizedBox(width: 12),
-        
+
                   // ❤️ 하트 필터 버튼
                   IconButton(
                     icon: Icon(
@@ -263,16 +190,14 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                       color: Colors.black,
                     ),
                     onPressed: () {
-                      setState(() {
-                        showLikedOnly = !showLikedOnly;
-                      });
+                      setState(() => showLikedOnly = !showLikedOnly);
                     },
                   ),
                 ],
               ),
-        
+
               const SizedBox(height: 16),
-        
+
               // 옷 그리드
               Expanded(
                 child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -282,9 +207,7 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                       return const Center(child: CircularProgressIndicator());
                     }
 
-                    // 전체 옷장 문서
                     final allDocs = snapshot.data?.docs ?? [];
-
                     if (allDocs.isEmpty) {
                       return const Center(child: Text('옷장이 비어있습니다.'));
                     }
@@ -292,21 +215,21 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                     // 검색 필터 적용
                     final filteredDocs = allDocs.where((doc) {
                       final data = doc.data();
-                      final productName = (data['productName'] ?? '').toString().toLowerCase();
+                      final productName =
+                      (data['productName'] ?? '').toString().toLowerCase();
 
                       if (searchText.isEmpty) return true;
-
                       return productName.contains(searchText.toLowerCase());
                     }).toList();
 
-                    // 검색 결과 없을 경우
                     if (filteredDocs.isEmpty) {
                       return const Center(child: Text('검색 결과가 없습니다.'));
                     }
 
                     return GridView.builder(
                       itemCount: filteredDocs.length,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
                         crossAxisSpacing: 8,
                         mainAxisSpacing: 12,
@@ -314,8 +237,9 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                       ),
                       itemBuilder: (context, index) {
                         final data = filteredDocs[index].data();
-                        final imageUrl = data['imageUrl'] ?? '';
-                        final docId = filteredDocs[index].id;
+                        final String imageUrl =
+                        (data['imageUrl'] ?? '').toString();
+                        final String docId = filteredDocs[index].id;
 
                         return GestureDetector(
                           onTap: () => context.push(
@@ -326,14 +250,13 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                             children: [
                               Container(
                                 decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.grey), // 테두리 유지
+                                  border: Border.all(color: Colors.grey),
                                   color: Colors.white,
                                 ),
                                 child: ClipRRect(
-                                  // 테두리 안에서 사진만 자르기
                                   child: imageUrl.isNotEmpty
                                       ? Transform.scale(
-                                    scale: 1.3, // 사진 10% 확대
+                                    scale: 1.3,
                                     child: Image.network(
                                       imageUrl,
                                       fit: BoxFit.cover,
@@ -349,19 +272,22 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                                 right: 1,
                                 child: IconButton(
                                   onPressed: () async {
+                                    if (userId == null) return;
                                     final docRef = fs
                                         .collection('users')
                                         .doc(userId)
                                         .collection('wardrobe')
                                         .doc(docId);
 
-                                    final currentLiked = data['liked'] == true;
-                                    await docRef.update({'liked': !currentLiked});
+                                    final bool currentLiked =
+                                        data['liked'] == true;
+                                    await docRef
+                                        .update({'liked': !currentLiked});
                                   },
                                   icon: data['liked'] == true
                                       ? const Icon(
                                     Icons.favorite,
-                                    color: const Color(0xFFCAD83B),
+                                    color: Color(0xFFE74C3C),
                                     size: 22,
                                   )
                                       : Stack(
@@ -369,12 +295,12 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                                     children: const [
                                       Icon(
                                         Icons.favorite,
-                                        color: Colors.white, // 하얀색 채움
+                                        color: Colors.white,
                                         size: 22,
                                       ),
                                       Icon(
                                         Icons.favorite_border,
-                                        color: Colors.black, // 테두리
+                                        color: Colors.black,
                                         size: 22,
                                       ),
                                     ],
@@ -384,14 +310,170 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                             ],
                           ),
                         );
-
-
                       },
                     );
                   },
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// ===============================
+/// ✅ 가장 무난하고 “세련되게” 보이는: 슬라이딩 인디케이터 탭
+/// - 전체는 얇은 테두리/라운드
+/// - 선택은 내부 인디케이터(살짝 떠 보이는 느낌)
+/// - 아이콘+텍스트(가독성/완성도 좋음)
+/// ===============================
+class _SleekTopTabs extends StatelessWidget {
+  const _SleekTopTabs({
+    required this.selectedIndex,
+    required this.onTapCloset,
+    required this.onTapLookbooks,
+    required this.onTapScrap,
+  });
+
+  final int selectedIndex;
+  final VoidCallback onTapCloset;
+  final VoidCallback onTapLookbooks;
+  final VoidCallback onTapScrap;
+
+  Alignment _indicatorAlign() {
+    if (selectedIndex == 0) return Alignment.centerLeft;
+    if (selectedIndex == 1) return Alignment.center;
+    return Alignment.centerRight;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const double height = 46;
+
+    return SizedBox(
+      height: height,
+      child: LayoutBuilder(
+        builder: (context, c) {
+          final double w = c.maxWidth;
+          final double segmentW = w / 3;
+
+          return Stack(
+            children: [
+              // 바탕(테두리만)
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.black, width: 1.2),
+                  borderRadius: BorderRadius.circular(26),
+                ),
+              ),
+
+              // 선택 인디케이터(슬라이드)
+              AnimatedAlign(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                alignment: _indicatorAlign(),
+                child: Container(
+                  width: segmentW,
+                  height: height,
+                  padding: const EdgeInsets.all(4),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCAD83B), // 기존 감성 유지
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: Colors.black, width: 1.2),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // 탭 버튼들
+              Row(
+                children: [
+                  Expanded(
+                    child: _TabButton(
+                      selected: selectedIndex == 0,
+                      icon: Icons.checkroom,
+                      label: 'closet',
+                      onTap: onTapCloset,
+                    ),
+                  ),
+                  Expanded(
+                    child: _TabButton(
+                      selected: selectedIndex == 1,
+                      icon: Icons.auto_awesome_mosaic,
+                      label: 'lookbooks',
+                      onTap: onTapLookbooks,
+                    ),
+                  ),
+                  Expanded(
+                    child: _TabButton(
+                      selected: selectedIndex == 2,
+                      icon: Icons.bookmark,
+                      label: 'scrap',
+                      onTap: onTapScrap,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _TabButton extends StatelessWidget {
+  const _TabButton({
+    required this.selected,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final bool selected;
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle textStyle = TextStyle(
+      fontWeight: FontWeight.w900,
+      fontSize: 17,
+      color: Colors.black,
+      letterSpacing: 0.2,
+    );
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(26),
+        onTap: onTap,
+        splashColor: Colors.black.withOpacity(0.05),
+        highlightColor: Colors.black.withOpacity(0.03),
+        child: Center(
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 160),
+            opacity: selected ? 1.0 : 0.85,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 18, color: Colors.black),
+                const SizedBox(width: 6),
+                Text(label, style: textStyle),
+              ],
+            ),
           ),
         ),
       ),
