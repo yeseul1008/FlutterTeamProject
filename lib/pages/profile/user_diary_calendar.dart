@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
@@ -19,17 +21,192 @@ class _CalendarPageState extends State<CalendarPage> {
   DateTime? _selectedDay;
   final FirebaseFirestore fs = FirebaseFirestore.instance;
 
+  // GlobalKeys for tutorial targets
+  final GlobalKey _monthNavigationKey = GlobalKey();
+  final GlobalKey _calendarKey = GlobalKey();
+  final GlobalKey _writeEntryKey = GlobalKey();
+
+  TutorialCoachMark? tutorialCoachMark;
+
   // Store lookbooks by date
   Map<DateTime, Map<String, dynamic>> _lookbooksByDate = {};
-
-  // final isToday = isSameDay(day, DateTime.now());
-  // final isSelected = isSameDay(day, _selectedDay);
-
 
   @override
   void initState() {
     super.initState();
-    _loadLookbooks();
+    _loadLookbooks().then((_) {
+      _checkAndShowTutorial();
+    });
+  }
+
+  // Check if this is the user's first time on calendar page
+  Future<void> _checkAndShowTutorial() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool hasSeenCalendarTutorial = prefs.getBool('hasSeenCalendarTutorial') ?? false;
+
+    if (!hasSeenCalendarTutorial) {
+      Future.delayed(Duration(milliseconds: 800), () {
+        _showTutorial();
+        prefs.setBool('hasSeenCalendarTutorial', true);
+      });
+    }
+  }
+
+  void _createTutorial() {
+    tutorialCoachMark = TutorialCoachMark(
+      targets: _createTargets(),
+      colorShadow: Colors.black,
+      textSkip: "Skip",
+      paddingFocus: 10,
+      opacityShadow: 0.8,
+      onFinish: () {
+        print("Calendar tutorial finished");
+      },
+      onClickTarget: (target) {
+        print('Clicked on ${target.identify}');
+      },
+      onSkip: () {
+        print("Calendar tutorial skipped");
+        return true;
+      },
+    );
+  }
+
+  List<TargetFocus> _createTargets() {
+    List<TargetFocus> targets = [];
+
+    // Target 1: Month Navigation
+    targets.add(
+      TargetFocus(
+        identify: "month-navigation",
+        keyTarget: _monthNavigationKey,
+        alignSkip: Alignment.topRight,
+        shape: ShapeLightFocus.RRect,
+        radius: 8,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            builder: (context, controller) {
+              return Container(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.calendar_month, color: Color(0xFFCAD83B), size: 40),
+                    SizedBox(height: 10),
+                    Text(
+                      "Month Navigation",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 20.0,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      "좌우 화살표로 다른 달을 탐색할 수 있습니다",
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+
+    // Target 2: Calendar Grid
+    targets.add(
+      TargetFocus(
+        identify: "calendar-grid",
+        keyTarget: _calendarKey,
+        alignSkip: Alignment.topRight,
+        shape: ShapeLightFocus.RRect,
+        radius: 8,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            builder: (context, controller) {
+              return Container(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.view_module, color: Color(0xFFCAD83B), size: 40),
+                    SizedBox(height: 10),
+                    Text(
+                      "Calendar View",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 20.0,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      "캘린더에서 룩북이 등록된 날짜를 확인할 수 있습니다. 날짜를 탭해서 선택하세요",
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+
+    // Target 3: Write Entry Button
+    targets.add(
+      TargetFocus(
+        identify: "write-entry",
+        keyTarget: _writeEntryKey,
+        alignSkip: Alignment.topRight,
+        shape: ShapeLightFocus.RRect,
+        radius: 30,
+        contents: [
+          TargetContent(
+            align: ContentAlign.top,
+            builder: (context, controller) {
+              return Container(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.edit, color: Color(0xFFCAD83B), size: 40),
+                    SizedBox(height: 10),
+                    Text(
+                      "Write Entry",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 20.0,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      "날짜를 선택한 후 이 버튼을 눌러 다이어리를 작성하세요",
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+
+    return targets;
+  }
+
+  void _showTutorial() {
+    _createTutorial();
+    tutorialCoachMark?.show(context: context);
   }
 
   Future<void> _loadLookbooks() async {
@@ -41,7 +218,6 @@ class _CalendarPageState extends State<CalendarPage> {
     }
 
     try {
-      // Get all calendar entries for the logged-in user
       final calendarSnapshot = await fs
           .collection('users')
           .doc(uid)
@@ -136,6 +312,7 @@ class _CalendarPageState extends State<CalendarPage> {
 
           // Custom Header
           Padding(
+            key: _monthNavigationKey,  // ADD KEY
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Row(
               children: [
@@ -185,148 +362,151 @@ class _CalendarPageState extends State<CalendarPage> {
           ),
           SizedBox(height: 20),
 
-          TableCalendar(
-            firstDay: DateTime.utc(2023, 1, 1),
-            lastDay: DateTime.utc(2030, 12, 31),
-            focusedDay: _focusedDay,
-            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-            daysOfWeekHeight: 30,
-            rowHeight: 90,
-            onDaySelected: (selectedDay, focusedDay) {
-              setState(() {
-                _selectedDay = selectedDay;
-                _focusedDay = focusedDay;
-              });
-            },
-            headerVisible: false,  // Hide the default header
-            calendarStyle: CalendarStyle(
-              selectedDecoration: BoxDecoration(
-                color: Colors.transparent,
-                shape: BoxShape.rectangle,
-                border: Border.all(color: Colors.purple)
-              ),
-              todayDecoration: BoxDecoration(
-                color: Colors.transparent,
-                shape: BoxShape.circle,
-                // border: Border.all(color: Colors.grey, width: 2),
-              ),
-            ),
-            calendarBuilders: CalendarBuilders(
-              todayBuilder: (context, day, focusedDay) {
-                final imageUrl = _getOutfitImage(day);
-
-                return Container(
-                  margin: EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Color(0xFFA88AF7), width: 2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        '${day.day}',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                      Expanded(
-                        child: imageUrl != null
-                            ? ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                          ),
-                        )
-                            : const SizedBox.expand(),
-                      ),
-                    ],
-                  ),
-                );
+          Container(
+            key: _calendarKey,  // ADD KEY
+            child: TableCalendar(
+              firstDay: DateTime.utc(2023, 1, 1),
+              lastDay: DateTime.utc(2030, 12, 31),
+              focusedDay: _focusedDay,
+              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+              daysOfWeekHeight: 30,
+              rowHeight: 90,
+              onDaySelected: (selectedDay, focusedDay) {
+                setState(() {
+                  _selectedDay = selectedDay;
+                  _focusedDay = focusedDay;
+                });
               },
+              headerVisible: false,
+              calendarStyle: CalendarStyle(
+                selectedDecoration: BoxDecoration(
+                    color: Colors.transparent,
+                    shape: BoxShape.rectangle,
+                    border: Border.all(color: Colors.purple)
+                ),
+                todayDecoration: BoxDecoration(
+                  color: Colors.transparent,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              calendarBuilders: CalendarBuilders(
+                todayBuilder: (context, day, focusedDay) {
+                  final imageUrl = _getOutfitImage(day);
 
-              selectedBuilder: (context, day, focusedDay) {
-                final imageUrl = _getOutfitImage(day);
-
-                return Container(
-                  margin: EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: const Color(0xFFCAD83B), width: 2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        '${day.day}',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                      Expanded(
-                        child: imageUrl != null
-                            ? ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                          ),
-                        )
-                            : const SizedBox.expand(),
-                      ),
-                    ],
-                  ),
-                );
-              },
-
-              defaultBuilder: (context, day, focusedDay) {
-                final imageUrl = _getOutfitImage(day);
-
-                return Container(
-                  margin: EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: isSameDay(day, _selectedDay)
-                          ? const Color(0xFFCAD83B)
-                          : isSameDay(day, DateTime.now())
-                          ? Colors.grey
-                          : Colors.transparent,
-                      width: 2,
+                  return Container(
+                    margin: EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Color(0xFFA88AF7), width: 2),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        '${day.day}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                    child: Column(
+                      children: [
+                        Text(
+                          '${day.day}',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                         ),
+                        Expanded(
+                          child: imageUrl != null
+                              ? ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                            ),
+                          )
+                              : const SizedBox.expand(),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+
+                selectedBuilder: (context, day, focusedDay) {
+                  final imageUrl = _getOutfitImage(day);
+
+                  return Container(
+                    margin: EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: const Color(0xFFCAD83B), width: 2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          '${day.day}',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                        Expanded(
+                          child: imageUrl != null
+                              ? ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                            ),
+                          )
+                              : const SizedBox.expand(),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+
+                defaultBuilder: (context, day, focusedDay) {
+                  final imageUrl = _getOutfitImage(day);
+
+                  return Container(
+                    margin: EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: isSameDay(day, _selectedDay)
+                            ? const Color(0xFFCAD83B)
+                            : isSameDay(day, DateTime.now())
+                            ? Colors.grey
+                            : Colors.transparent,
+                        width: 2,
                       ),
-                      Expanded(
-                        child: imageUrl != null
-                            ? ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Colors.grey[300],
-                                child: Icon(Icons.image, size: 16),
-                              );
-                            },
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          '${day.day}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
                           ),
-                        )
-                            : SizedBox.expand(),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                        ),
+                        Expanded(
+                          child: imageUrl != null
+                              ? ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey[300],
+                                  child: Icon(Icons.image, size: 16),
+                                );
+                              },
+                            ),
+                          )
+                              : SizedBox.expand(),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
           ),
           SizedBox(height: 20),
           SizedBox(
+            key: _writeEntryKey,  // ADD KEY
             width: 180,
             height: 50,
             child: ElevatedButton(
