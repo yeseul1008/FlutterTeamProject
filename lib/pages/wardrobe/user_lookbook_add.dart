@@ -15,7 +15,11 @@ class UserLookbookAdd extends StatefulWidget {
   State<UserLookbookAdd> createState() => _UserLookbookAddState();
 }
 
-class _UserLookbookAddState extends State<UserLookbookAdd> {
+class _UserLookbookAddState extends State<UserLookbookAdd>
+    with AutomaticKeepAliveClientMixin { // ✅ 상태 유지 위해 mixin 추가
+  @override
+  bool get wantKeepAlive => true;
+
   final FirebaseFirestore fs = FirebaseFirestore.instance;
   final String? userId = FirebaseAuth.instance.currentUser?.uid;
 
@@ -25,6 +29,8 @@ class _UserLookbookAddState extends State<UserLookbookAdd> {
   // ✅ 선택 상태
   final Set<String> selectedClothesIds = {};
   final Map<String, String> selectedImageUrls = {};
+
+  final ScrollController _scrollController = ScrollController();
 
   void _openCategoryModal(BuildContext context) {
     showModalBottomSheet(
@@ -93,6 +99,8 @@ class _UserLookbookAddState extends State<UserLookbookAdd> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // ✅ AutomaticKeepAlive 적용
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -191,6 +199,8 @@ class _UserLookbookAddState extends State<UserLookbookAdd> {
                         final docs = snapshot.data!.docs;
 
                         return GridView.builder(
+                          key: const PageStorageKey('wardrobeGrid'), // ✅ 스크롤 위치 저장
+                          controller: _scrollController,
                           padding: const EdgeInsets.only(bottom: 120),
                           itemCount: docs.length,
                           gridDelegate:
