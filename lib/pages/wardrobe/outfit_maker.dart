@@ -125,20 +125,22 @@ class _AiOutfitMakerState extends State<AiOutfitMaker> {
                             return;
                           }
 
-                          // 1. 타입을 List<String>으로 명확히 지정하여 추출
                           final List<String> selectedUrls = snapshot.data!.docs
                               .where((doc) => selectedWardrobeIds.contains(doc.id))
-                              .map((doc) => doc.data()['imageUrl']?.toString() ?? '') // 안전하게 String으로 변환
+                              .map((doc) => doc.data()['imageUrl']?.toString() ?? '')
                               .where((url) => url.isNotEmpty)
                               .toList();
 
-                          print('선택된 옷 URL: $selectedUrls');
+                          final List<String> selectedIds = selectedWardrobeIds.toList();
 
-                          // 2. extra에 전달할 때 List<String>임을 확실히 함
                           context.push(
                             '/aiOutfitMakerScreen',
-                            extra: selectedUrls,
+                            extra: {
+                              'imageUrls': selectedUrls,
+                              'clothesIds': selectedIds,
+                            },
                           );
+
                         },
 
 
