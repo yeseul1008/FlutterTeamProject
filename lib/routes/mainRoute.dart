@@ -365,7 +365,7 @@ class RootLayout extends StatelessWidget {
     bool hideBottom = false;
     if(
     state.uri.path.startsWith('/page2')
-    || state.uri.path.startsWith('/userLogin')
+    || state.uri.path.startsWith('/userLogin') || state.uri.path == '/'
     || state.uri.path.startsWith('/findId') || state.uri.path.startsWith('/findPwd')
     || state.uri.path.startsWith('/googleLogin') || state.uri.path.startsWith('/userJoin')
 
