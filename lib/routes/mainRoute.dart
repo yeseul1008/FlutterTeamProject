@@ -7,10 +7,6 @@ import 'package:team_project_flutter/pages/schedule/schedule_lookbook.dart';
 import 'package:team_project_flutter/pages/wardrobe/user_wardrobe_edit.dart';
 
 // import '../pages/profile/user_schedule_edit.dart';
-import '../routePage1.dart';
-import '../routePage2.dart';
-
-import '../mainPage.dart';
 import '../pages/admin/admin_page.dart';
 import '../pages/auth/user_google_login.dart';
 import '../pages/auth/user_join.dart';
