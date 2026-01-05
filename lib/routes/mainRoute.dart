@@ -317,18 +317,26 @@ final GoRouter router = GoRouter(
         GoRoute(
           path: '/aiOutfitMakerScreen',
           builder: (context, state) {
-            // state.extra를 List<String>으로 형변환
-            final List<String>? extra = state.extra as List<String>?;
+            final extra = state.extra as Map<String, dynamic>?;
 
-            if (extra != null) {
-              return AiOutfitMakerScreen(selectedImageUrls: extra);
-            } else {
+            if (extra == null) {
               return const Scaffold(
                 body: Center(child: Text('선택된 옷이 없습니다.')),
               );
             }
+
+            final List<String> imageUrls =
+            List<String>.from(extra['imageUrls'] ?? []);
+            final List<String> clothesIds =
+            List<String>.from(extra['clothesIds'] ?? []);
+
+            return AiOutfitMakerScreen(
+              selectedImageUrls: imageUrls,
+              clothesIds: clothesIds,
+            );
           },
         ),
+
 
 
       ],
@@ -353,7 +361,7 @@ class RootLayout extends StatelessWidget {
     bool hideBottom = false;
     if(
     state.uri.path.startsWith('/page2')
-    || state.uri.path.startsWith('/userLogin')
+    || state.uri.path.startsWith('/userLogin') || state.uri.path == '/'
     || state.uri.path.startsWith('/findId') || state.uri.path.startsWith('/findPwd')
     || state.uri.path.startsWith('/googleLogin') || state.uri.path.startsWith('/userJoin')
 

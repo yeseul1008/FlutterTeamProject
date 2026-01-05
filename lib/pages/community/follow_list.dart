@@ -159,7 +159,7 @@ class _FollowListState extends State<FollowList> with SingleTickerProviderStateM
                 indicatorWeight: 3,
                 labelStyle: const TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w900,
                 ),
                 tabs: [
                   Tab(text: 'Followers (${followers.length})'),
@@ -238,7 +238,7 @@ class _FollowListState extends State<FollowList> with SingleTickerProviderStateM
           child: Text(
             text,
             style: const TextStyle(
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w900,
               fontSize: 18,
             ),
           ),
@@ -270,7 +270,7 @@ class _FollowListState extends State<FollowList> with SingleTickerProviderStateM
         ),
         title: Text(
           user['nickname'] ?? 'Unknown',
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.w900),
         ),
         subtitle: Text(
           '@${user['loginId'] ?? 'unknown'}',

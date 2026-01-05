@@ -479,7 +479,7 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
                       ),
                     ),
                     child: Text(
-                      '저장',
+                      'Save',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,

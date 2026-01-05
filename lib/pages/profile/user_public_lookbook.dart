@@ -501,124 +501,127 @@ class _PublicLookBookState extends State<PublicLookBook> {
 
   @override
   Widget build(BuildContext context) {
-    final topPad = MediaQuery.of(context).padding.top;
     final isOwnProfile = targetUserId == currentUserId;
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            height: 180,
-            color: Colors.black,
-            child: Stack(
-              children: [
-                Positioned(
-                  left: 15,
-                  top: 40,
-                  child: GestureDetector(
-                    onTap: isOwnProfile && !isProcessingImage ? _pickImage : null,
+    return Container(
+        color: Colors.black,  // This makes the safe area black
+        child: SafeArea(
+            bottom: false,
+            child: Scaffold(
+              backgroundColor: Colors.white,
+              body: Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    height: 180,
+                    color: Colors.black,
                     child: Stack(
                       children: [
-                        CircleAvatar(
-                          radius: 40,
-                          backgroundColor: Colors.grey[300],
-                          backgroundImage: profileImageUrl != null
-                              ? NetworkImage(profileImageUrl!)
-                              : null,
-                          child: profileImageUrl == null
-                              ? Icon(Icons.person, size: 40, color: Colors.grey[600])
-                              : null,
-                        ),
-                        if (isProcessingImage)
-                          const Positioned.fill(
-                            child: CircleAvatar(
-                              radius: 40,
-                              backgroundColor: Colors.black54,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
+                        Positioned(
+                          left: 15,
+                          top: 25,
+                          child: GestureDetector(
+                            onTap: isOwnProfile && !isProcessingImage ? _pickImage : null,
+                            child: Stack(
+                              children: [
+                                CircleAvatar(
+                                  radius: 40,
+                                  backgroundColor: Colors.grey[300],
+                                  backgroundImage: profileImageUrl != null
+                                      ? NetworkImage(profileImageUrl!)
+                                      : null,
+                                  child: profileImageUrl == null
+                                      ? Icon(Icons.person, size: 40, color: Colors.grey[600])
+                                      : null,
+                                ),
+                                if (isProcessingImage)
+                                  const Positioned.fill(
+                                    child: CircleAvatar(
+                                      radius: 40,
+                                      backgroundColor: Colors.black54,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  ),
+                                if (isOwnProfile)
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: Colors.black, width: 1),
+                                      ),
+                                      child: const Icon(Icons.camera_alt, size: 16, color: Colors.black),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
+                        ),
+                        Positioned(
+                          top: 15,
+                          left: 130,
+                          right: 70,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                "${userInfo['nickname'] ?? 'UID'} \n@${userInfo['loginId'] ?? 'user ID'}",
+                                style: const TextStyle(color: Colors.white),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text("$itemCnt \nitems", textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
+                                  const SizedBox(width: 15),
+                                  Text("$lookbookCnt \nlookbook", textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
+                                  const SizedBox(width: 15),
+                                  GestureDetector(
+                                    onTap: () => context.go('/followList${targetUserId != null ? '?userId=$targetUserId' : ''}'),
+                                    child: Text("$followerCnt \nfollowers", textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              if (!isOwnProfile)
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    minimumSize: const Size(140, 32),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    backgroundColor: isFollowing ? Colors.grey[300] : Colors.white,
+                                  ),
+                                  onPressed: _toggleFollow,
+                                  child: Text(
+                                    isFollowing ? "following" : "follow",
+                                    style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 14),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                         if (isOwnProfile)
                           Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.black, width: 1),
+                            top: 2,
+                            right: 8,
+                            child: SizedBox(
+                              width: 56,
+                              height: 56,
+                              child: IconButton(
+                                onPressed: _openMoreMenu,
+                                icon: const Icon(Icons.more_horiz, color: Colors.white, size: 40),
                               ),
-                              child: const Icon(Icons.camera_alt, size: 16, color: Colors.black),
                             ),
                           ),
                       ],
                     ),
                   ),
-                ),
-                Positioned(
-                  top: 25,
-                  left: 130,
-                  right: 70,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        "${userInfo['nickname'] ?? 'UID'} \n@${userInfo['loginId'] ?? 'user ID'}",
-                        style: const TextStyle(color: Colors.white),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text("$itemCnt \nitems", textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
-                          const SizedBox(width: 15),
-                          Text("$lookbookCnt \nlookbook", textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
-                          const SizedBox(width: 15),
-                          GestureDetector(
-                            onTap: () => context.go('/followList${targetUserId != null ? '?userId=$targetUserId' : ''}'),
-                            child: Text("$followerCnt \nfollowers", textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      if (!isOwnProfile)
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(140, 32),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            backgroundColor: isFollowing ? Colors.grey[300] : Colors.white,
-                          ),
-                          onPressed: _toggleFollow,
-                          child: Text(
-                            isFollowing ? "following" : "follow",
-                            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 14),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                if (isOwnProfile)
-                  Positioned(
-                    top: topPad + 2,
-                    right: 8,
-                    child: SizedBox(
-                      width: 56,
-                      height: 56,
-                      child: IconButton(
-                        onPressed: _openMoreMenu,
-                        icon: const Icon(Icons.more_horiz, color: Colors.white, size: 40),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
 
           const SizedBox(height: 10),
 
@@ -775,6 +778,8 @@ class _PublicLookBookState extends State<PublicLookBook> {
           ),
         ],
       ),
+            )
+        )
     );
   }
 }

@@ -237,7 +237,7 @@ class _CalendarPageState extends State<CalendarPage> {
                             width: double.infinity,
                           ),
                         )
-                            : const SizedBox.shrink(),
+                            : const SizedBox.expand(),
                       ),
                     ],
                   ),
@@ -317,7 +317,7 @@ class _CalendarPageState extends State<CalendarPage> {
                             },
                           ),
                         )
-                            : SizedBox.shrink(),
+                            : SizedBox.expand(),
                       ),
                     ],
                   ),
@@ -344,12 +344,22 @@ class _CalendarPageState extends State<CalendarPage> {
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: Text('알림'),
-                      content: Text('캘린더에서 먼저 룩북을 등록해주세요'),
+                      backgroundColor: Colors.white,
+                      title: Text('알림', style: TextStyle(fontWeight: FontWeight.bold),),
+                      content: Text('캘린더에서 먼저 룩북을 등록해주세요.'),
                       actions: [
-                        TextButton(
+                        ElevatedButton(
                           onPressed: () => Navigator.pop(context),
                           child: Text('확인'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFCAD83B),
+                            foregroundColor: Colors.black,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                         ),
                       ],
                     ),

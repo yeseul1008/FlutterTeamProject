@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'user_login.dart'; // 로그인 화면 import
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -28,24 +29,23 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // 2초 후 로그인 화면으로 전환
-    Future.delayed(const Duration(seconds: 2), () {
-      if (!mounted) return;
+    _moveNext();
+  }
 
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (_, __, ___) => const UserLogin(),
-          transitionDuration: const Duration(milliseconds: 800),
-          transitionsBuilder: (_, animation, __, child) {
-            // 로그인 화면 서서히 나타나도록 페이드
-            return FadeTransition(
-              opacity: animation,
-              child: child,
-            );
-          },
-        ),
-      );
-    });
+  Future<void> _moveNext() async {
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (!mounted) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      // ✅ 이미 로그인됨 → 메인 화면
+      context.go('/userWardrobeList');
+    } else {
+      // ❌ 로그인 안됨 → 로그인 화면
+      context.go('/login');
+    }
   }
 
   @override

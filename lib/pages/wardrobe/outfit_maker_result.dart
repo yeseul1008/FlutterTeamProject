@@ -13,7 +13,13 @@ import 'package:image/image.dart' as img;
 
 class AiOutfitMakerScreen extends StatefulWidget {
   final List<String> selectedImageUrls;
-  const AiOutfitMakerScreen({super.key, required this.selectedImageUrls});
+  final List<String> clothesIds;
+
+  const AiOutfitMakerScreen({
+    super.key,
+    required this.selectedImageUrls,
+    required this.clothesIds,
+  });
 
   @override
   State<AiOutfitMakerScreen> createState() => _AiOutfitMakerScreenState();
@@ -44,6 +50,8 @@ class _AiOutfitMakerScreenState extends State<AiOutfitMakerScreen> {
   @override
   void initState() {
     super.initState();
+    print('DEBUG imageUrls: ${widget.selectedImageUrls}');
+    print('DEBUG clothesIds: ${widget.clothesIds}');
     _generateCombinedImage();
     _getUserInfo();
   }
@@ -238,6 +246,7 @@ class _AiOutfitMakerScreenState extends State<AiOutfitMakerScreen> {
           .add({
         'userId': uid,
         'resultImageUrl': downloadUrl,
+        'clothesIds': widget.clothesIds,
         'type': 'ai_generated',
         'sourceImages': widget.selectedImageUrls,
         'createdAt': FieldValue.serverTimestamp(),
