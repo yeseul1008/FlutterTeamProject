@@ -30,8 +30,8 @@
 | 분류 | 링크 |
 |------|------|
 | 📝 회의록 | 📅 [1회차 회의록](https://docs.google.com/document/d/1xQXNfiVdnWR8__4PAtTqPMBrZyrpG0Kw6K73RPqs-4k/edit?tab=t.7y908es3yuq) <br> 📅 [2회차 회의록](https://docs.google.com/document/d/1ba9YWrBuRw63KOHbEYD_QMjfeJkOcVIqZQJ92tcYr6s/edit?tab=t.0) <br> 📅 [3회차 회의록](https://docs.google.com/document/d/1vq4wwx3afmFLc00ERxrCCkcfRcPvciKWhzbkY7umeyQ/edit?tab=t.0) <br> 📅 [4회차 회의록](https://docs.google.com/document/d/1xJ1OdjF5AHMCv0iy4lhsbJz4yekFyEjKbr3CK_puW6Y/edit?tab=t.0) |
-| 🏗 설계 자료 | 🎨 [Figma 설계 보기](https://www.figma.com/board/juNUf8MP9yGI9F7JTSs2Xt/%EC%8A%A4%ED%94%84%EB%A7%81%ED%8C%80-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8?node-id=0-1&p=f&t=6LaQWhwB5UERVeYt-0) |
-| 📚 공통 문서 | 📁 [공통 문서 폴더 보기](https://drive.google.com/drive/folders/1NU8Ee9OwcgXFoat8LBS6yKJDuQ7ZoHTF) |
+| 🏗 설계 자료 | 🎨 [Figma 설계 보기](https://www.figma.com/design/xIKwyhMPDhbnGMi1fLVoVU/%ED%94%8C%EB%9F%AC%ED%84%B0-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-%ED%99%94%EB%A9%B4%EA%B5%AC%EC%84%B1?node-id=0-1&p=f&t=7U7g0LV7wZ1mGv9K-0) |
+| 📚 공통 문서 | 📁 [공통 문서 폴더 보기](https://drive.google.com/drive/u/0/folders/16c1vWnDJNyonibTgSbnFPx56UtfGC8ld) |
 
 <br>
 
