@@ -26,6 +26,15 @@
 
 <br>
 
+## 📂 프로젝트 자료 모음
+| 분류 | 링크 |
+|------|------|
+| 📝 회의록 | 📅 [1회차 회의록](https://docs.google.com/document/d/1xQXNfiVdnWR8__4PAtTqPMBrZyrpG0Kw6K73RPqs-4k/edit?tab=t.7y908es3yuq) <br> 📅 [2회차 회의록](https://docs.google.com/document/d/1ba9YWrBuRw63KOHbEYD_QMjfeJkOcVIqZQJ92tcYr6s/edit?tab=t.0) <br> 📅 [3회차 회의록](https://docs.google.com/document/d/1vq4wwx3afmFLc00ERxrCCkcfRcPvciKWhzbkY7umeyQ/edit?tab=t.0) <br> 📅 [4회차 회의록](https://docs.google.com/document/d/1xJ1OdjF5AHMCv0iy4lhsbJz4yekFyEjKbr3CK_puW6Y/edit?tab=t.0) |
+| 🏗 설계 자료 | 🎨 [Figma 설계 보기](https://www.figma.com/board/juNUf8MP9yGI9F7JTSs2Xt/%EC%8A%A4%ED%94%84%EB%A7%81%ED%8C%80-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8?node-id=0-1&p=f&t=6LaQWhwB5UERVeYt-0) |
+| 📚 공통 문서 | 📁 [공통 문서 폴더 보기](https://drive.google.com/drive/folders/1NU8Ee9OwcgXFoat8LBS6yKJDuQ7ZoHTF) |
+
+<br>
+
 ## 🎨 차별점
 - 외출 기록 중심: 단순 코디 전시가 아닌 일상 기록 및 히스토리 관리
 - 커뮤니티 서포트: 사용자 옷장 기반 맞춤형 코디 추천
