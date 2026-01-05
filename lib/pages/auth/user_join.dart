@@ -271,7 +271,7 @@ class _UserJoinState extends State<UserJoin> {
                 Center(
                   child: Image.asset(
                     'assets/applogo.png',
-                    width: 220,
+                    width: 150,
                     fit: BoxFit.contain,
                   ),
                 ),

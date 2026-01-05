@@ -205,35 +205,82 @@ class UserWardrobeDetail extends StatelessWidget {
                       barrierDismissible: false,
                       builder: (BuildContext context) {
                         return AlertDialog(
-                          title: const Text('삭제 확인'),
-                          content: const Text('삭제하시겠습니까?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () {
-                                Navigator.pop(context, false); // 취소
-                              },
-                              style: TextButton.styleFrom(
-                                backgroundColor: Colors.white, // 흰 배경
-                                foregroundColor: Colors.black, // 검정 글씨
-                                side: const BorderSide(
-                                  color: Colors.black,
-                                ), // 검정 테두리
-                              ),
-                              child: const Text('취소'),
+                          backgroundColor: Colors.white,
+                          elevation: 8,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                          contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                          actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+
+                          title: const Text(
+                            'Confirm',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
                             ),
-                            TextButton(
-                              onPressed: () {
-                                Navigator.pop(context, true); // 확인(삭제)
-                              },
-                              style: TextButton.styleFrom(
-                                backgroundColor: const Color(0xFFCAD83B),
-                                // 초록 배경
-                                foregroundColor: Colors.black,
-                              ),
-                              child: const Text('삭제'),
+                          ),
+
+                          content: const Text(
+                            '삭제하시겠습니까?\n삭제 후에는 되돌릴 수 없습니다.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.black87,
+                              height: 1.4,
+                            ),
+                          ),
+
+                          actions: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () {
+                                      Navigator.pop(context, false);
+                                    },
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.black,
+                                      side: const BorderSide(color: Colors.black),
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Cancel',
+                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.pop(context, true);
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFCAD83B),
+                                      foregroundColor: Colors.black,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Delete',
+                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         );
+
+
                       },
                     );
 
@@ -252,7 +299,7 @@ class UserWardrobeDetail extends StatelessWidget {
                     ),
                   ),
                   child: const Text(
-                    '삭제',
+                    'Delete',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -280,7 +327,7 @@ class UserWardrobeDetail extends StatelessWidget {
                     ),
                   ),
                   child: const Text(
-                    '수정',
+                    'Edit',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

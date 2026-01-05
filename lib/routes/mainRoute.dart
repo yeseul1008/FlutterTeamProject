@@ -7,14 +7,11 @@ import 'package:team_project_flutter/pages/schedule/schedule_lookbook.dart';
 import 'package:team_project_flutter/pages/wardrobe/user_wardrobe_edit.dart';
 
 // import '../pages/profile/user_schedule_edit.dart';
-import '../routePage1.dart';
-import '../routePage2.dart';
-
-import '../mainPage.dart';
 import '../pages/admin/admin_page.dart';
 import '../pages/auth/user_google_login.dart';
 import '../pages/auth/user_join.dart';
 import '../pages/auth/user_login.dart';
+import '../pages/auth/SplashScreen.dart';
 import '../pages/auth/find_id.dart';
 import '../pages/auth/find_pwd.dart';
 import '../pages/community/follow_list.dart';
@@ -61,7 +58,7 @@ final GoRouter router = GoRouter(
         // 메인(mainPage.dart) 페이지!!!! 앱 첫 실행시 이 페이지가 뜸!! (나중에 옷장이 메인페이지가 되도록 바꿀것임. 지금은 ㄴㄴ)
         GoRoute(
           path: '/',
-          builder: (context, state) => const StartPage(),
+          builder: (context, state) => const SplashScreen(),
         ),
         // auth 폴더 속 파일 이동
         GoRoute(
@@ -97,11 +94,21 @@ final GoRouter router = GoRouter(
         ),
         GoRoute(
           path: '/followList',
-          builder: (context, state) => const FollowList(),
+          pageBuilder: (context, state) {
+            return NoTransitionPage(
+              key: state.pageKey,
+              child: const FollowList(),
+            );
+          },
         ),
         GoRoute(
           path: '/communityMainFeed',
-          builder: (context, state) => const CommunityMainFeed(),
+          pageBuilder: (context, state) {
+            return NoTransitionPage(
+              key: state.pageKey,
+              child: const CommunityMainFeed(),
+            );
+          },
         ),
         GoRoute(
           path: '/questionAdd',
@@ -113,7 +120,12 @@ final GoRouter router = GoRouter(
         ),
         GoRoute(
           path: '/questionFeed',
-          builder: (context, state) => const QuestionFeed(),
+          pageBuilder: (context, state) {
+            return NoTransitionPage(
+              key: state.pageKey,
+              child: const QuestionFeed(),
+            );
+          },
         ),
 
         //카카오 지도
@@ -162,12 +174,24 @@ final GoRouter router = GoRouter(
         ),
         GoRoute(
           path: '/userDiaryCards',
-          builder: (context, state) => const UserDiaryCards(),
+          pageBuilder: (context, state) {
+            return NoTransitionPage(
+              key: state.pageKey,
+              child: const UserDiaryCards(),
+            );
+          },
         ),
+
         GoRoute(
           path: '/diaryMap',
-          builder: (context, state) => const DiaryMap(),
+          pageBuilder: (context, state) {
+            return NoTransitionPage(
+              key: state.pageKey,
+              child: const DiaryMap(),
+            );
+          },
         ),
+
         GoRoute(
           path: '/profileEdit',
           builder: (context, state) => const ProfileEdit(),
@@ -320,18 +344,26 @@ final GoRouter router = GoRouter(
         GoRoute(
           path: '/aiOutfitMakerScreen',
           builder: (context, state) {
-            // state.extra를 List<String>으로 형변환
-            final List<String>? extra = state.extra as List<String>?;
+            final extra = state.extra as Map<String, dynamic>?;
 
-            if (extra != null) {
-              return AiOutfitMakerScreen(selectedImageUrls: extra);
-            } else {
+            if (extra == null) {
               return const Scaffold(
                 body: Center(child: Text('선택된 옷이 없습니다.')),
               );
             }
+
+            final List<String> imageUrls =
+            List<String>.from(extra['imageUrls'] ?? []);
+            final List<String> clothesIds =
+            List<String>.from(extra['clothesIds'] ?? []);
+
+            return AiOutfitMakerScreen(
+              selectedImageUrls: imageUrls,
+              clothesIds: clothesIds,
+            );
           },
         ),
+
 
 
       ],
@@ -356,7 +388,7 @@ class RootLayout extends StatelessWidget {
     bool hideBottom = false;
     if(
     state.uri.path.startsWith('/page2')
-    || state.uri.path.startsWith('/userLogin')
+    || state.uri.path.startsWith('/userLogin') || state.uri.path == '/'
     || state.uri.path.startsWith('/findId') || state.uri.path.startsWith('/findPwd')
     || state.uri.path.startsWith('/googleLogin') || state.uri.path.startsWith('/userJoin')
 

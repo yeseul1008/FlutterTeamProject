@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'location_picker_map.dart';
 
 class UserDiaryAdd extends StatefulWidget {
@@ -19,9 +21,18 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
   String? imageUrl;
   String? locationText;
   GeoPoint? selectedLocation;
-  bool isDiaryAlreadyExists = false;  // This serves as our edit mode flag
+  bool isDiaryAlreadyExists = false;
   bool _hasShownDialog = false;
   String? existingDiaryId;
+
+  // GlobalKeys for tutorial targets
+  final GlobalKey _imageKey = GlobalKey();
+  final GlobalKey _dateKey = GlobalKey();
+  final GlobalKey _locationKey = GlobalKey();
+  final GlobalKey _commentKey = GlobalKey();
+  final GlobalKey _saveButtonKey = GlobalKey();
+
+  TutorialCoachMark? tutorialCoachMark;
 
   final FirebaseFirestore fs = FirebaseFirestore.instance;
   final TextEditingController _commentController = TextEditingController();
@@ -42,8 +53,263 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
       print('Received selectedDay: $selectedDay');
 
       _loadImage();
-      _checkIfDiaryExists();
+      _checkIfDiaryExists().then((_) {
+        _checkAndShowTutorial();
+      });
     }
+  }
+
+  // Check if this is the user's first time on diary add page
+  Future<void> _checkAndShowTutorial() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool hasSeenDiaryAddTutorial = prefs.getBool('hasSeenDiaryAddTutorial') ?? false;
+
+    if (!hasSeenDiaryAddTutorial && !isDiaryAlreadyExists) {
+      // Only show tutorial when creating new diary, not editing
+      Future.delayed(Duration(milliseconds: 800), () {
+        _showTutorial();
+        prefs.setBool('hasSeenDiaryAddTutorial', true);
+      });
+    }
+  }
+
+  void _createTutorial() {
+    tutorialCoachMark = TutorialCoachMark(
+      targets: _createTargets(),
+      colorShadow: Colors.black,
+      textSkip: "Skip",
+      paddingFocus: 10,
+      opacityShadow: 0.8,
+      onFinish: () {
+        print("Diary add tutorial finished");
+      },
+      onClickTarget: (target) {
+        print('Clicked on ${target.identify}');
+      },
+      onSkip: () {
+        print("Diary add tutorial skipped");
+        return true;
+      },
+    );
+  }
+
+  List<TargetFocus> _createTargets() {
+    List<TargetFocus> targets = [];
+
+    // Target 1: Image
+    targets.add(
+      TargetFocus(
+        identify: "outfit-image",
+        keyTarget: _imageKey,
+        alignSkip: Alignment.topRight,
+        shape: ShapeLightFocus.RRect,
+        radius: 8,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            builder: (context, controller) {
+              return Container(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.photo_camera, color: Color(0xFFCAD83B), size: 40),
+                    SizedBox(height: 10),
+                    Text(
+                      "Outfit Image",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 20.0,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      "선택한 날짜의 룩북 이미지가 여기에 표시됩니다",
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+
+    // Target 2: Date
+    targets.add(
+      TargetFocus(
+        identify: "diary-date",
+        keyTarget: _dateKey,
+        alignSkip: Alignment.topRight,
+        shape: ShapeLightFocus.RRect,
+        radius: 5,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            builder: (context, controller) {
+              return Container(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Date",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 20.0,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      "다이어리 작성 날짜가 표시됩니다",
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+
+    // Target 3: Location Button
+    targets.add(
+      TargetFocus(
+        identify: "add-location",
+        keyTarget: _locationKey,
+        alignSkip: Alignment.topRight,
+        shape: ShapeLightFocus.RRect,
+        radius: 30,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            builder: (context, controller) {
+              return Container(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.location_on, color: Color(0xFFCAD83B), size: 40),
+                    SizedBox(height: 10),
+                    Text(
+                      "Add Location",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 20.0,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      "이 옷을 입었던 위치를 추가하세요. 지도에서 표시됩니다!",
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+
+    // Target 4: Comment Field
+    targets.add(
+      TargetFocus(
+        identify: "write-comment",
+        keyTarget: _commentKey,
+        alignSkip: Alignment.topRight,
+        shape: ShapeLightFocus.RRect,
+        radius: 8,
+        contents: [
+          TargetContent(
+            align: ContentAlign.top,
+            builder: (context, controller) {
+              return Container(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.edit_note, color: Color(0xFFCAD83B), size: 40),
+                    SizedBox(height: 10),
+                    Text(
+                      "Write Comment",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 20.0,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      "오늘의 코디에 대한 생각이나 기분을 자유롭게 작성하세요",
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+
+    // Target 5: Save Button
+    targets.add(
+      TargetFocus(
+        identify: "save-diary",
+        keyTarget: _saveButtonKey,
+        alignSkip: Alignment.topRight,
+        shape: ShapeLightFocus.RRect,
+        radius: 30,
+        contents: [
+          TargetContent(
+            align: ContentAlign.top,
+            builder: (context, controller) {
+              return Container(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.check_circle, color: Color(0xFFCAD83B), size: 40),
+                    SizedBox(height: 10),
+                    Text(
+                      "Save Entry",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 20.0,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      "모든 내용을 작성했다면 저장 버튼을 눌러 다이어리를 완성하세요!",
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+
+    return targets;
+  }
+
+  void _showTutorial() {
+    _createTutorial();
+    tutorialCoachMark?.show(context: context);
   }
 
   Future<void> _checkIfDiaryExists() async {
@@ -71,9 +337,7 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
         final diaryId = calendarData['diaryId'] as String?;
         final imageUrl = calendarData['imageUrl'] as String?;
 
-        // If inDiary is true, we're in edit mode
         if (inDiary == true && diaryId != null) {
-          // Load the existing diary data
           final diaryDoc = await fs
               .collection('users')
               .doc(uid)
@@ -85,10 +349,9 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
             final diaryData = diaryDoc.data()!;
 
             setState(() {
-              isDiaryAlreadyExists = true;  // This means we're in edit mode
+              isDiaryAlreadyExists = true;
               existingDiaryId = diaryId;
 
-              // Load existing data into the form
               _commentController.text = diaryData['comment'] ?? '';
               locationText = diaryData['locationText'];
               selectedLocation = diaryData['location'] as GeoPoint?;
@@ -184,9 +447,7 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
     try {
       print('Attempting to save to Firestore...');
 
-      // Use isDiaryAlreadyExists to determine if we're updating or creating
       if (isDiaryAlreadyExists && existingDiaryId != null) {
-        // UPDATE EXISTING DIARY
         print('Updating existing diary: $existingDiaryId');
 
         await fs
@@ -213,7 +474,6 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
         );
 
       } else {
-        // CREATE NEW DIARY
         final diaryDocRef = fs
             .collection('users')
             .doc(uid)
@@ -235,7 +495,6 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
 
         print('Diary saved with ID: $diaryId');
 
-        // UPDATE CALENDAR ENTRY
         if (selectedDay != null) {
           final startOfDay = DateTime(selectedDay!.year, selectedDay!.month, selectedDay!.day, 0, 0, 0);
           final endOfDay = DateTime(selectedDay!.year, selectedDay!.month, selectedDay!.day, 23, 59, 59);
@@ -361,6 +620,7 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
             children: [
               // Image section
               Container(
+                key: _imageKey,  // ADD KEY
                 width: double.infinity,
                 height: 300,
                 decoration: BoxDecoration(
@@ -409,6 +669,7 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
                 children: [
                   // Date section with calendar icon
                   Row(
+                    key: _dateKey,  // ADD KEY
                     children: [
                       Icon(Icons.calendar_today, size: 24),
                       SizedBox(width: 8),
@@ -421,6 +682,7 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
 
                   // Location button
                   SizedBox(
+                    key: _locationKey,  // ADD KEY
                     width: 150,
                     height: 40,
                     child: ElevatedButton.icon(
@@ -448,6 +710,7 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
 
               // Comment text field
               TextField(
+                key: _commentKey,  // ADD KEY
                 controller: _commentController,
                 maxLines: 8,
                 decoration: InputDecoration(
@@ -465,6 +728,7 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
               Align(
                 alignment: Alignment.centerRight,
                 child: SizedBox(
+                  key: _saveButtonKey,  // ADD KEY
                   width: 120,
                   height: 50,
                   child: ElevatedButton(
@@ -479,7 +743,7 @@ class _UserDiaryAddState extends State<UserDiaryAdd> {
                       ),
                     ),
                     child: Text(
-                      '저장',
+                      'Save',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,

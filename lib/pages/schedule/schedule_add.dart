@@ -254,7 +254,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
     }
 
     setState(() {
-      // ✅ wardrobe/combine 수정 시: 룩북 선택값 해제
+      // wardrobe/combine 수정 시: 룩북 선택값 해제
       _selectedLookbookId = null;
       _previewImageUrl = null;
 
@@ -707,7 +707,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
                       label: '목적지',
                       value: _placeName == null ? '없음' : _placeName!,
                       onAdd: _onPickPlace,
-                      actionText: isEdit ? '수정' : '추가',
+                      actionText: isEdit ? 'Edit' : 'Add',
                     ),
                     const SizedBox(height: 12),
                     _labelValueRow(
@@ -716,7 +716,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
                           ? '없음'
                           : _scheduleText!,
                       onAdd: _onAddScheduleText,
-                      actionText: isEdit ? '수정' : '추가',
+                      actionText: isEdit ? 'Edit' : 'Add',
                     ),
                   ],
                 ),

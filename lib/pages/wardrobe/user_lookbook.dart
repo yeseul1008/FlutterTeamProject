@@ -10,9 +10,17 @@ class UserLookbook extends StatefulWidget {
   State<UserLookbook> createState() => _UserLookbookState();
 }
 
+enum LookbookFilter {
+  all,
+  normal,
+  ai,
+}
+
 class _UserLookbookState extends State<UserLookbook> {
   final FirebaseFirestore fs = FirebaseFirestore.instance;
   final userId = FirebaseAuth.instance.currentUser?.uid;
+
+  LookbookFilter currentFilter = LookbookFilter.all;
 
   List<Map<String, dynamic>> lookbooks = []; // 모든 문서 저장
   bool loading = true;
@@ -20,6 +28,39 @@ class _UserLookbookState extends State<UserLookbook> {
   // 검색
   TextEditingController searchController = TextEditingController();
   String searchText = '';
+
+  Widget _filterItem({
+    required String title,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFFCAD83B) : Colors.white,
+            border: Border.all(color: Colors.black),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: selected ? Colors.black : Colors.black87,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+
 
   // 사용자 룩북 불러오기
   Future<void> _getUserLookbook() async {
@@ -46,6 +87,78 @@ class _UserLookbookState extends State<UserLookbook> {
       print('Error fetching user lookbooks: $e');
     }
   }
+
+  Future<void> _showFilterDialog() async {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          elevation: 8,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Filter',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                _filterItem(
+                  title: '전체 보기',
+                  selected: currentFilter == LookbookFilter.all,
+                  onTap: () {
+                    setState(() {
+                      currentFilter = LookbookFilter.all;
+                    });
+                    Navigator.pop(ctx);
+                  },
+                ),
+
+                const SizedBox(height: 12),
+
+                _filterItem(
+                  title: '일반 룩북',
+                  selected: currentFilter == LookbookFilter.normal,
+                  onTap: () {
+                    setState(() {
+                      currentFilter = LookbookFilter.normal;
+                    });
+                    Navigator.pop(ctx);
+                  },
+                ),
+
+                const SizedBox(height: 12),
+
+                _filterItem(
+                  title: 'AI 룩북',
+                  selected: currentFilter == LookbookFilter.ai,
+                  onTap: () {
+                    setState(() {
+                      currentFilter = LookbookFilter.ai;
+                    });
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+
 
 // 클릭시 모달
   Future<void> _showLookbookModal(Map<String, dynamic> item) async {
@@ -105,21 +218,73 @@ class _UserLookbookState extends State<UserLookbook> {
                           context: context,
                           builder: (ctx) {
                             return AlertDialog(
-                              title: const Text('피드 게시'),
+                              backgroundColor: Colors.white,
+                              elevation: 8,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                              contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                              actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+
+                              title: const Text(
+                                '피드 게시',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
+
                               content: const Text(
                                 '한 번 게시하면 취소할 수 없습니다.\n그래도 게시하시겠습니까?',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(ctx).pop(false),
-                                  child: const Text('취소'),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.black87,
+                                  height: 1.4,
                                 ),
-                                TextButton(
-                                  onPressed: () => Navigator.of(ctx).pop(true),
-                                  child: const Text(
-                                    '게시',
-                                    style: TextStyle(color: Colors.red),
-                                  ),
+                              ),
+
+                              actions: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        onPressed: () => Navigator.of(ctx).pop(false),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: Colors.black,
+                                          side: const BorderSide(color: Colors.black),
+                                          padding: const EdgeInsets.symmetric(vertical: 14),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          '취소',
+                                          style: TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: ElevatedButton(
+                                        onPressed: () => Navigator.of(ctx).pop(true),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFFCAD83B),
+                                          foregroundColor: Colors.black,
+                                          elevation: 0,
+                                          padding: const EdgeInsets.symmetric(vertical: 14),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          '게시',
+                                          style: TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             );
@@ -147,7 +312,7 @@ class _UserLookbookState extends State<UserLookbook> {
                       },
 
                       child: Text(
-                        published ? '게시중' : 'community 게시',
+                        published ? 'Posting...' : 'Community',
                       ),
                     ),
 
@@ -163,22 +328,77 @@ class _UserLookbookState extends State<UserLookbook> {
                           context: context,
                           builder: (ctx) {
                             return AlertDialog(
-                              title: const Text('삭제 확인'),
-                              content: const Text('정말 삭제하시겠습니까?'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(ctx).pop(false),
-                                  child: const Text('취소'),
+                              backgroundColor: Colors.white,
+                              elevation: 8,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                              contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                              actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+
+                              title: const Text(
+                                'Confirm',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
                                 ),
-                                TextButton(
-                                  onPressed: () => Navigator.of(ctx).pop(true),
-                                  child: const Text(
-                                    '삭제',
-                                    style: TextStyle(color: Colors.red),
-                                  ),
+                              ),
+
+                              content: const Text(
+                                '정말 삭제하시겠습니까?\n삭제 후에는 되돌릴 수 없습니다.',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.black87,
+                                  height: 1.4,
+                                ),
+                              ),
+
+                              actions: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        onPressed: () => Navigator.of(ctx).pop(false),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: Colors.black,
+                                          side: const BorderSide(color: Colors.black),
+                                          padding: const EdgeInsets.symmetric(vertical: 14),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'Cancel',
+                                          style: TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: ElevatedButton(
+                                        onPressed: () => Navigator.of(ctx).pop(true),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFFCAD83B),
+                                          foregroundColor: Colors.black,
+                                          elevation: 0,
+                                          padding: const EdgeInsets.symmetric(vertical: 14),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'Delete',
+                                          style: TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             );
+
                           },
                         );
 
@@ -200,7 +420,7 @@ class _UserLookbookState extends State<UserLookbook> {
                           }
                         }
                       },
-                      child: const Text('삭제'),
+                      child: const Text('Delete'),
                     ),
 
                     /// 닫기 버튼
@@ -212,7 +432,7 @@ class _UserLookbookState extends State<UserLookbook> {
                       onPressed: () {
                         Navigator.of(ctx).pop();
                       },
-                      child: const Text('닫기'),
+                      child: const Text('Cancel'),
                     ),
                   ],
                 ),
@@ -236,13 +456,29 @@ class _UserLookbookState extends State<UserLookbook> {
     // 검색 적용
     final filteredLookbooks = lookbooks.where((item) {
       final alias = (item['alias'] ?? '').toString().toLowerCase();
-      return alias.contains(searchText.toLowerCase());
+      final type = item['type'];
+
+      // 검색어
+      if (!alias.contains(searchText.toLowerCase())) return false;
+
+      // 필터
+      if (currentFilter == LookbookFilter.ai) {
+        return type == 'ai_generated';
+      }
+
+      if (currentFilter == LookbookFilter.normal) {
+        return type == null;
+      }
+
+      return true; // 전체
     }).toList();
+
+
 
     return Scaffold(
       backgroundColor: Colors.white,
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 100),
+        padding: const EdgeInsets.only(bottom: 110),
         child: SizedBox(
           height: 44,
           child: FloatingActionButton.extended(
@@ -259,7 +495,7 @@ class _UserLookbookState extends State<UserLookbook> {
               color: Colors.black,
             ),
             label: const Text(
-              'add lookbook',
+              'Add',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
@@ -353,11 +589,17 @@ class _UserLookbookState extends State<UserLookbook> {
                 ],
               ),
 
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
 
               // 검색 바
               Row(
                 children: [
+                  GestureDetector(
+                    onTap: _showFilterDialog,
+                    child: const Icon(Icons.menu),
+                  ),
+
+
                   // const Icon(Icons.menu),
                   const SizedBox(width: 8),
                   Expanded(
@@ -384,7 +626,7 @@ class _UserLookbookState extends State<UserLookbook> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Icon(Icons.search, size: 28),
+                  // Icon(Icons.search, size: 28),
                 ],
               ),
 
