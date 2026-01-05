@@ -237,7 +237,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
             ),
             title: Text(
               item['authorNickname'],
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: FontWeight.w900),
             ),
             subtitle: Text('@${item['authorLoginId']}'),
             trailing: IconButton(
@@ -468,7 +468,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                     child: const Text(
                       'edit',
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w900,
                         fontSize: 16,
                       ),
                     ),
@@ -477,20 +477,9 @@ class _QuestionFeedState extends State<QuestionFeed> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () async {
+                    onPressed: () {
                       Navigator.pop(bottomSheetContext);
-                      try {
-                        await fs.collection('questions').doc(postId).delete();
-                        if (mounted) {
-                          _getQuestions();
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('삭제 중 오류가 발생했습니다')),
-                          );
-                        }
-                      }
+                      _showDeleteConfirmDialog(postId);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFB39DDB),
@@ -503,7 +492,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                     child: const Text(
                       'delete',
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w900,
                         fontSize: 16,
                       ),
                     ),
@@ -514,6 +503,98 @@ class _QuestionFeedState extends State<QuestionFeed> {
           ),
         );
       },
+    );
+  }
+
+  /// 삭제 확인 다이얼로그
+  void _showDeleteConfirmDialog(String postId) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        elevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+        contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+        title: const Text(
+          '삭제 확인',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+        content: const Text(
+          '삭제하시겠습니까?\n삭제 후에는 되돌릴 수 없습니다.',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.black87,
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.black,
+                    side: const BorderSide(color: Colors.black),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    '취소',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(dialogContext);
+                    try {
+                      await fs.collection('questions').doc(postId).delete();
+                      if (mounted) {
+                        _getQuestions();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('게시글이 삭제되었습니다')),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('삭제 중 오류가 발생했습니다')),
+                        );
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFCAD83B),
+                    foregroundColor: Colors.black,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    '삭제',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -538,7 +619,22 @@ class _QuestionFeedState extends State<QuestionFeed> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: const Text('질문 수정'),
+            backgroundColor: Colors.white,
+            elevation: 8,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+            contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+            title: const Text(
+              '질문 수정',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
             content: SizedBox(
               width: double.maxFinite,
               child: SingleChildScrollView(
@@ -550,21 +646,38 @@ class _QuestionFeedState extends State<QuestionFeed> {
                     TextField(
                       controller: controller,
                       maxLines: 5,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: '질문을 입력하세요...',
-                        border: OutlineInputBorder(),
+                        hintStyle: TextStyle(color: Colors.grey[400]),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFCAD83B), width: 2),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
 
                     // 이미지
-                    const Text('이미지', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text(
+                      '이미지',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     if (newImageFile != null)
                       Stack(
                         children: [
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
                             child: Image.file(
                               newImageFile!,
                               height: 150,
@@ -573,16 +686,21 @@ class _QuestionFeedState extends State<QuestionFeed> {
                             ),
                           ),
                           Positioned(
-                            top: 4,
-                            right: 4,
-                            child: IconButton(
-                              icon: const Icon(Icons.close, color: Colors.white),
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.black54,
+                            top: 8,
+                            right: 8,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black54,
+                                shape: BoxShape.circle,
                               ),
-                              onPressed: () {
-                                setDialogState(() => newImageFile = null);
-                              },
+                              child: IconButton(
+                                icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: () {
+                                  setDialogState(() => newImageFile = null);
+                                },
+                              ),
                             ),
                           ),
                         ],
@@ -591,7 +709,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                       Stack(
                         children: [
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
                             child: Image.network(
                               currentImageUrl,
                               height: 150,
@@ -599,22 +717,30 @@ class _QuestionFeedState extends State<QuestionFeed> {
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => Container(
                                 height: 150,
-                                color: Colors.grey[300],
-                                child: const Icon(Icons.broken_image),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[300],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(Icons.broken_image, size: 40),
                               ),
                             ),
                           ),
                           Positioned(
-                            top: 4,
-                            right: 4,
-                            child: IconButton(
-                              icon: const Icon(Icons.close, color: Colors.white),
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.black54,
+                            top: 8,
+                            right: 8,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black54,
+                                shape: BoxShape.circle,
                               ),
-                              onPressed: () {
-                                setDialogState(() => currentImageUrl = '');
-                              },
+                              child: IconButton(
+                                icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: () {
+                                  setDialogState(() => currentImageUrl = '');
+                                },
+                              ),
                             ),
                           ),
                         ],
@@ -623,99 +749,147 @@ class _QuestionFeedState extends State<QuestionFeed> {
                       Container(
                         height: 100,
                         decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey[300]!, width: 1.5),
                         ),
-                        child: const Center(
-                          child: Text('이미지 없음', style: TextStyle(color: Colors.grey)),
+                        child: Center(
+                          child: Text(
+                            '이미지 없음',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
                       ),
-                    const SizedBox(height: 8),
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        final XFile? pickedFile = await picker.pickImage(
-                          source: ImageSource.gallery,
-                        );
-                        if (pickedFile != null) {
-                          setDialogState(() {
-                            newImageFile = File(pickedFile.path);
-                          });
-                        }
-                      },
-                      icon: const Icon(Icons.photo_library),
-                      label: const Text('이미지 변경'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFCAD83B),
-                        foregroundColor: Colors.black,
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final XFile? pickedFile = await picker.pickImage(
+                            source: ImageSource.gallery,
+                          );
+                          if (pickedFile != null) {
+                            setDialogState(() {
+                              newImageFile = File(pickedFile.path);
+                            });
+                          }
+                        },
+                        icon: const Icon(Icons.photo_library, size: 20),
+                        label: const Text(
+                          '이미지 변경',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.black,
+                          side: BorderSide(color: Colors.grey[400]!),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
                     ),
-
                   ],
                 ),
               ),
             ),
             actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('취소'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  final newText = controller.text.trim();
-                  Navigator.pop(dialogContext);
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.black,
+                        side: const BorderSide(color: Colors.black),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        '취소',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final newText = controller.text.trim();
+                        Navigator.pop(dialogContext);
 
-                  if (newText.isEmpty) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('내용을 입력해주세요')),
-                      );
-                    }
-                    return;
-                  }
+                        if (newText.isEmpty) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('내용을 입력해주세요')),
+                            );
+                          }
+                          return;
+                        }
 
-                  try {
-                    String? uploadedImageUrl = currentImageUrl.isNotEmpty ? currentImageUrl : null;
-                    String? uploadedResultImageUrl = currentResultImageUrl.isNotEmpty ? currentResultImageUrl : null;
+                        try {
+                          String? uploadedImageUrl = currentImageUrl.isNotEmpty ? currentImageUrl : null;
+                          String? uploadedResultImageUrl = currentResultImageUrl.isNotEmpty ? currentResultImageUrl : null;
 
-                    // 새 메인 이미지 업로드
-                    if (newImageFile != null) {
-                      final ref = FirebaseStorage.instance
-                          .ref()
-                          .child('questions/${postId}_${DateTime.now().millisecondsSinceEpoch}.jpg');
-                      await ref.putFile(newImageFile!);
-                      uploadedImageUrl = await ref.getDownloadURL();
-                    }
+                          // 새 메인 이미지 업로드
+                          if (newImageFile != null) {
+                            final ref = FirebaseStorage.instance
+                                .ref()
+                                .child('questions/${postId}_${DateTime.now().millisecondsSinceEpoch}.jpg');
+                            await ref.putFile(newImageFile!);
+                            uploadedImageUrl = await ref.getDownloadURL();
+                          }
 
-                    // 새 결과 이미지 업로드
-                    if (newResultImageFile != null) {
-                      final ref = FirebaseStorage.instance
-                          .ref()
-                          .child('questions/${postId}_result_${DateTime.now().millisecondsSinceEpoch}.jpg');
-                      await ref.putFile(newResultImageFile!);
-                      uploadedResultImageUrl = await ref.getDownloadURL();
-                    }
+                          // 새 결과 이미지 업로드
+                          if (newResultImageFile != null) {
+                            final ref = FirebaseStorage.instance
+                                .ref()
+                                .child('questions/${postId}_result_${DateTime.now().millisecondsSinceEpoch}.jpg');
+                            await ref.putFile(newResultImageFile!);
+                            uploadedResultImageUrl = await ref.getDownloadURL();
+                          }
 
-                    await fs.collection('questions').doc(postId).update({
-                      'text': newText,
-                      'imageUrl': uploadedImageUrl ?? '',
-                      'resultImageUrl': uploadedResultImageUrl ?? '',
-                    });
+                          await fs.collection('questions').doc(postId).update({
+                            'text': newText,
+                            'imageUrl': uploadedImageUrl ?? '',
+                            'resultImageUrl': uploadedResultImageUrl ?? '',
+                          });
 
-                    if (mounted) {
-                      _getQuestions();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('수정이 완료되었습니다')),
-                      );
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('수정 중 오류가 발생했습니다')),
-                      );
-                    }
-                  }
-                },
-                child: const Text('수정'),
+                          if (mounted) {
+                            _getQuestions();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('수정이 완료되었습니다')),
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('수정 중 오류가 발생했습니다')),
+                            );
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFCAD83B),
+                        foregroundColor: Colors.black,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        '수정',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           );
@@ -838,7 +1012,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
           ),
           child: Text(
             text,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
           ),
         ),
       ),

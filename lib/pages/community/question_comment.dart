@@ -146,19 +146,102 @@ class _QuestionCommentState extends State<QuestionComment> {
     }
   }
 
-  /// 댓글 삭제
-  Future<void> _deleteComment(String commentId) async {
-    try {
-      await fs
-          .collection('questions')
-          .doc(postId)
-          .collection('qna_comments')
-          .doc(commentId)
-          .delete();
-      _getComments();
-    } catch (e) {
-      debugPrint('댓글 삭제 실패: $e');
-    }
+  /// 댓글 삭제 확인 다이얼로그
+  void _showDeleteConfirmDialog(String commentId) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        elevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+        contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+        title: const Text(
+          '삭제 확인',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+        content: const Text(
+          '삭제하시겠습니까?\n삭제 후에는 되돌릴 수 없습니다.',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.black87,
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.black,
+                    side: const BorderSide(color: Colors.black),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    '취소',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(dialogContext);
+                    try {
+                      await fs
+                          .collection('questions')
+                          .doc(postId)
+                          .collection('qna_comments')
+                          .doc(commentId)
+                          .delete();
+                      _getComments();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('댓글이 삭제되었습니다')),
+                        );
+                      }
+                    } catch (e) {
+                      debugPrint('댓글 삭제 실패: $e');
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('삭제 중 오류가 발생했습니다')),
+                        );
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFCAD83B),
+                    foregroundColor: Colors.black,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    '삭제',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   /// 댓글 수정
@@ -170,40 +253,106 @@ class _QuestionCommentState extends State<QuestionComment> {
       builder: (dialogContext) {
         return AlertDialog(
           backgroundColor: Colors.white,
-          title: const Text('댓글 수정'),
+          elevation: 8,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+          contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+          actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          title: const Text(
+            '댓글 수정',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
           content: TextField(
             controller: editController,
-            decoration: const InputDecoration(hintText: '수정할 댓글 입력'),
             maxLines: 3,
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('취소'),
+            decoration: InputDecoration(
+              hintText: '수정할 댓글 입력',
+              hintStyle: TextStyle(color: Colors.grey[400]),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFCAD83B), width: 2),
+              ),
             ),
-            ElevatedButton(
-              onPressed: () async {
-                if (editController.text.trim().isEmpty) return;
-                Navigator.pop(dialogContext);
-                try {
-                  await fs
-                      .collection('questions')
-                      .doc(postId)
-                      .collection('qna_comments')
-                      .doc(commentId)
-                      .update({
-                    'comment': editController.text.trim(),
-                  });
-                  _getComments();
-                } catch (e) {
-                  debugPrint('댓글 수정 실패: $e');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('댓글 수정 중 오류가 발생했습니다')),
-                  );
-                }
-              },
-              child: const Text('수정'),
+          ),
+          actions: [
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.black,
+                      side: const BorderSide(color: Colors.black),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      '취소',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      if (editController.text.trim().isEmpty) return;
+                      Navigator.pop(dialogContext);
+                      try {
+                        await fs
+                            .collection('questions')
+                            .doc(postId)
+                            .collection('qna_comments')
+                            .doc(commentId)
+                            .update({
+                          'comment': editController.text.trim(),
+                        });
+                        _getComments();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('댓글이 수정되었습니다')),
+                          );
+                        }
+                      } catch (e) {
+                        debugPrint('댓글 수정 실패: $e');
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('댓글 수정 중 오류가 발생했습니다')),
+                          );
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFCAD83B),
+                      foregroundColor: Colors.black,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      '수정',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -305,7 +454,7 @@ class _QuestionCommentState extends State<QuestionComment> {
                     'COMMENTS',
                     style: TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -320,7 +469,7 @@ class _QuestionCommentState extends State<QuestionComment> {
                       '$commentCount',
                       style: const TextStyle(
                         color: Colors.black,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
@@ -473,7 +622,7 @@ class _QuestionCommentState extends State<QuestionComment> {
           child: Text(
             text,
             style: const TextStyle(
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w900,
               fontSize: 18,
             ),
           ),
@@ -530,7 +679,7 @@ class _QuestionCommentState extends State<QuestionComment> {
                     Text(
                       nickname,
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w900,
                         fontSize: 15,
                       ),
                     ),
@@ -556,7 +705,7 @@ class _QuestionCommentState extends State<QuestionComment> {
                     if (value == 'edit') {
                       _editComment(commentId, content);
                     } else if (value == 'delete') {
-                      _deleteComment(commentId);
+                      _showDeleteConfirmDialog(commentId);
                     }
                   },
                   itemBuilder: (context) => [

@@ -195,7 +195,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
             ),
             title: Text(
               item['authorNickname'],
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: FontWeight.w900),
             ),
             subtitle: Text('@${item['authorLoginId']}'),
           ),
@@ -471,7 +471,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
           child: Text(
             text,
             style: const TextStyle(
-                fontWeight: FontWeight.bold, fontSize: 18),
+                fontWeight: FontWeight.w900, fontSize: 18),
           ),
         ),
       ),
