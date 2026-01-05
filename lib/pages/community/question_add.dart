@@ -141,7 +141,7 @@ class _QuestionAddState extends State<QuestionAdd> {
                         child: const Text(
                           'Feed',
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w900,
                             fontSize: 20,
                           ),
                         ),
@@ -169,7 +169,7 @@ class _QuestionAddState extends State<QuestionAdd> {
                         child: const Text(
                           'QnA',
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w900,
                             fontSize: 18,
                           ),
                         ),
@@ -197,7 +197,7 @@ class _QuestionAddState extends State<QuestionAdd> {
                         child: const Text(
                           'Follow',
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w900,
                             fontSize: 20,
                           ),
                         ),
@@ -229,7 +229,7 @@ class _QuestionAddState extends State<QuestionAdd> {
                       child: Text(
                         'ASK A QUESTION',
                         style: TextStyle(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w900,
                           fontSize: 18,
                         ),
                       ),
@@ -309,7 +309,7 @@ class _QuestionAddState extends State<QuestionAdd> {
                         child: const Text(
                           'post',
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w900,
                             fontSize: 18,
                           ),
                         ),
