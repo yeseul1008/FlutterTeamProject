@@ -50,6 +50,7 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
     if (userId == null) return;
 
     final key = _normalize(day);
+    // ✅ 선택 날짜는 항상 최신 보장 위해 "있어도" 다시 읽고 싶으면 아래 줄 주석 처리
     if (_calendarCache.containsKey(key)) return;
 
     final docId = _dateKey(day);
@@ -84,7 +85,7 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
         if (ts is! Timestamp) continue;
 
         final day = _normalize(ts.toDate());
-        _calendarCache[day] = data; // 있으면 data
+        _calendarCache[day] = data;
       }
     });
   }
@@ -129,7 +130,6 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
 
   // ======================================================
   // ✅ 룩북 옷 리스트 모달
-  // calendar.lookbookId -> lookbooks.clothesIds -> users/{uid}/wardrobe/{id}.productName
   // ======================================================
   Future<List<String>> _loadClothesNamesForLookbook(String lookbookId) async {
     if (userId == null) return [];
@@ -142,17 +142,10 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
     if (clothesIds.isEmpty) return [];
 
     final names = await Future.wait<String>(clothesIds.map((cid) async {
-      final wDoc = await fs
-          .collection('users')
-          .doc(userId)
-          .collection('wardrobe')
-          .doc(cid)
-          .get();
-
+      final wDoc =
+      await fs.collection('users').doc(userId).collection('wardrobe').doc(cid).get();
       final w = wDoc.data();
       final n = (w?['productName'] as String?)?.trim();
-
-      // productName이 비어있거나 null이면 대체
       return (n != null && n.isNotEmpty) ? n : '이름 없음';
     }));
 
@@ -216,7 +209,8 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
                     if (items.isEmpty) {
                       return const Padding(
                         padding: EdgeInsets.symmetric(vertical: 16),
-                        child: Text('등록된 옷 정보가 없습니다.', style: TextStyle(color: Colors.black54)),
+                        child:
+                        Text('등록된 옷 정보가 없습니다.', style: TextStyle(color: Colors.black54)),
                       );
                     }
 
@@ -254,15 +248,91 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
     );
   }
 
+  // ======================================================
+  // ✅ 삭제 처리 (페이지에서 직접 삭제: schedules + calendar)
+  // ======================================================
+  Future<void> _deleteScheduleAndCalendar({
+    required String scheduleId,
+    required DateTime date,
+  }) async {
+    if (userId == null) return;
+
+    final dateKey = _dateKey(date);
+
+    await Future.wait([
+      fs.collection('users').doc(userId).collection('schedules').doc(scheduleId).delete(),
+      fs.collection('users').doc(userId).collection('calendar').doc(dateKey).delete(),
+    ]);
+  }
+
+  // ======================================================
+  // ✅ 삭제 확인 다이얼로그 + 삭제 실행
+  // ======================================================
+  void _confirmDeleteSchedule() {
+    final cal = _getCalendar(_selectedDay);
+
+    if (userId == null || cal == null) {
+      _showTempSnack('삭제할 일정이 없습니다.');
+      return;
+    }
+
+    final scheduleId = (cal['scheduleId'] ?? '').toString().trim();
+    if (scheduleId.isEmpty) {
+      _showTempSnack('스케줄 정보가 없습니다.');
+      return;
+    }
+
+    showDialog(
+      context: context,
+      useRootNavigator: true,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('일정 삭제'),
+        content: const Text('해당 일정을 삭제하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext, rootNavigator: true).pop(),
+            child: const Text('NO'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(dialogContext, rootNavigator: true).pop();
+
+              try {
+                await _deleteScheduleAndCalendar(
+                  scheduleId: scheduleId,
+                  date: _selectedDay,
+                );
+
+                if (!mounted) return;
+
+                setState(() {
+                  _calendarCache.remove(_normalize(_selectedDay));
+                });
+
+                // ✅ 당일 캐시를 다시 확정 (없음을 반영)
+                await _loadCalendarForDay(_selectedDay);
+
+                _showTempSnack('일정이 삭제되었습니다.');
+              } catch (e) {
+                if (!mounted) return;
+                _showTempSnack('삭제 실패: $e');
+              }
+            },
+            child: const Text('YES', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cal = _getCalendar(_selectedDay);
     final selectedThumb = _getThumb(_selectedDay);
 
-    final hasSchedule = cal != null; // 문서 존재 여부(스케쥴 들어가기 전 버튼 요소)
+    final hasSchedule = cal != null;
     final btnText = hasSchedule ? 'Edit' : 'Add';
 
-    // 목적지/일정(없으면 '없음')
     final destinationText = _safeText(cal?['destinationName']);
     final planText = _safeText(cal?['planText']);
 
@@ -296,7 +366,6 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
         child: Column(
           children: [
             const SizedBox(height: 6),
-
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Row(
@@ -345,9 +414,7 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
                 ],
               ),
             ),
-
             const SizedBox(height: 6),
-
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 18),
               child: Row(
@@ -363,9 +430,7 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
                 ],
               ),
             ),
-
             const SizedBox(height: 8),
-
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: TableCalendar(
@@ -381,6 +446,7 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
                     _selectedDay = selectedDay;
                     _focusedDay = focusedDay;
                   });
+                  // ✅ 선택한 날은 무조건 최신 읽기 원하면 캐시 체크 로직을 주석처리하세요.
                   await _loadCalendarForDay(selectedDay);
                 },
                 calendarBuilders: CalendarBuilders(
@@ -394,9 +460,7 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
                 ),
               ),
             ),
-
             const SizedBox(height: 6),
-
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18),
               child: Row(
@@ -460,10 +524,7 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
                       ),
                       child: Text(
                         btnText,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 12,
-                        ),
+                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
                       ),
                     ),
                   ),
@@ -471,7 +532,6 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
               ),
             ),
 
-            // ✅ 목적지 / 일정 표시
             const SizedBox(height: 6),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -504,18 +564,17 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
                     ),
                   )
                       : Stack(
+                    fit: StackFit.expand,
                     children: [
-                      Positioned.fill(
-                        child: Image.network(
-                          selectedThumb,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Center(
-                            child: Icon(Icons.image_not_supported),
-                          ),
+                      Image.network(
+                        selectedThumb,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Center(
+                          child: Icon(Icons.image_not_supported),
                         ),
                       ),
 
-                      // ✅ 인포 버튼(모달)
+                      // ✅ 인포 버튼(좌측 상단)
                       Positioned(
                         left: 10,
                         top: 10,
@@ -533,6 +592,30 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
                                 size: 18,
                                 color: Colors.black87,
                               ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // ✅ 삭제(X) 버튼(우측 상단) - 작게(22) + 터치 강제 인식
+                      Positioned(
+                        right: 10,
+                        top: 10,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onTap: _confirmDeleteSchedule,
+                          child: Container(
+                            width: 22,
+                            height: 22,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(0xFFE11D48),
+                            ),
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.close,
+                              size: 13,
+                              color: Colors.white,
                             ),
                           ),
                         ),
