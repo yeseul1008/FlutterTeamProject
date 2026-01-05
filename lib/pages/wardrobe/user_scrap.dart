@@ -233,38 +233,38 @@ class _UserScrapState extends State<UserScrap> {
               const SizedBox(height: 18),
 
               // 검색 바
-              Row(
-                children: [
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Container(
-                      height: 36,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.black),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: TextField(
-                        controller: searchController,
-                        onChanged: (value) {
-                          setState(() {
-                            searchText = value.trim();
-                          });
-                        },
-                        decoration: const InputDecoration(
-                          hintText: 'search...',
-                          border: InputBorder.none,
-                          isDense: true,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Icon(Icons.search, size: 28),
-                ],
-              ),
+              // Row(
+              //   children: [
+              //     const SizedBox(width: 8),
+              //     Expanded(
+              //       child: Container(
+              //         height: 36,
+              //         padding: const EdgeInsets.symmetric(horizontal: 12),
+              //         decoration: BoxDecoration(
+              //           border: Border.all(color: Colors.black),
+              //           borderRadius: BorderRadius.circular(20),
+              //         ),
+              //         child: TextField(
+              //           controller: searchController,
+              //           onChanged: (value) {
+              //             setState(() {
+              //               searchText = value.trim();
+              //             });
+              //           },
+              //           decoration: const InputDecoration(
+              //             hintText: 'search...',
+              //             border: InputBorder.none,
+              //             isDense: true,
+              //           ),
+              //         ),
+              //       ),
+              //     ),
+              //     const SizedBox(width: 12),
+              //     const Icon(Icons.search, size: 28),
+              //   ],
+              // ),
 
-              const SizedBox(height: 16),
+              // const SizedBox(height: 16),
 
               // 스크랩 그리드
               Expanded(

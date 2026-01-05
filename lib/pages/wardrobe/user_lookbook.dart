@@ -10,9 +10,17 @@ class UserLookbook extends StatefulWidget {
   State<UserLookbook> createState() => _UserLookbookState();
 }
 
+enum LookbookFilter {
+  all,
+  normal,
+  ai,
+}
+
 class _UserLookbookState extends State<UserLookbook> {
   final FirebaseFirestore fs = FirebaseFirestore.instance;
   final userId = FirebaseAuth.instance.currentUser?.uid;
+
+  LookbookFilter currentFilter = LookbookFilter.all;
 
   List<Map<String, dynamic>> lookbooks = []; // 모든 문서 저장
   bool loading = true;
@@ -20,6 +28,39 @@ class _UserLookbookState extends State<UserLookbook> {
   // 검색
   TextEditingController searchController = TextEditingController();
   String searchText = '';
+
+  Widget _filterItem({
+    required String title,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFFCAD83B) : Colors.white,
+            border: Border.all(color: Colors.black),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: selected ? Colors.black : Colors.black87,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+
 
   // 사용자 룩북 불러오기
   Future<void> _getUserLookbook() async {
@@ -46,6 +87,78 @@ class _UserLookbookState extends State<UserLookbook> {
       print('Error fetching user lookbooks: $e');
     }
   }
+
+  Future<void> _showFilterDialog() async {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          elevation: 8,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Filter',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                _filterItem(
+                  title: '전체 보기',
+                  selected: currentFilter == LookbookFilter.all,
+                  onTap: () {
+                    setState(() {
+                      currentFilter = LookbookFilter.all;
+                    });
+                    Navigator.pop(ctx);
+                  },
+                ),
+
+                const SizedBox(height: 12),
+
+                _filterItem(
+                  title: '일반 룩북',
+                  selected: currentFilter == LookbookFilter.normal,
+                  onTap: () {
+                    setState(() {
+                      currentFilter = LookbookFilter.normal;
+                    });
+                    Navigator.pop(ctx);
+                  },
+                ),
+
+                const SizedBox(height: 12),
+
+                _filterItem(
+                  title: 'AI 룩북',
+                  selected: currentFilter == LookbookFilter.ai,
+                  onTap: () {
+                    setState(() {
+                      currentFilter = LookbookFilter.ai;
+                    });
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+
 
 // 클릭시 모달
   Future<void> _showLookbookModal(Map<String, dynamic> item) async {
@@ -343,8 +456,24 @@ class _UserLookbookState extends State<UserLookbook> {
     // 검색 적용
     final filteredLookbooks = lookbooks.where((item) {
       final alias = (item['alias'] ?? '').toString().toLowerCase();
-      return alias.contains(searchText.toLowerCase());
+      final type = item['type'];
+
+      // 검색어
+      if (!alias.contains(searchText.toLowerCase())) return false;
+
+      // 필터
+      if (currentFilter == LookbookFilter.ai) {
+        return type == 'ai_generated';
+      }
+
+      if (currentFilter == LookbookFilter.normal) {
+        return type == null;
+      }
+
+      return true; // 전체
     }).toList();
+
+
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -366,7 +495,7 @@ class _UserLookbookState extends State<UserLookbook> {
               color: Colors.black,
             ),
             label: const Text(
-              'add lookbook',
+              'Add',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
@@ -460,11 +589,17 @@ class _UserLookbookState extends State<UserLookbook> {
                 ],
               ),
 
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
 
               // 검색 바
               Row(
                 children: [
+                  GestureDetector(
+                    onTap: _showFilterDialog,
+                    child: const Icon(Icons.menu),
+                  ),
+
+
                   // const Icon(Icons.menu),
                   const SizedBox(width: 8),
                   Expanded(
@@ -491,7 +626,7 @@ class _UserLookbookState extends State<UserLookbook> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Icon(Icons.search, size: 28),
+                  // Icon(Icons.search, size: 28),
                 ],
               ),
 

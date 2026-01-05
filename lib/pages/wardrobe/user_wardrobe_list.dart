@@ -41,25 +41,35 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
       print('User not found');
     }
   }
-
   void _openCategoryModal(BuildContext context) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) {
-        return UserWardrobeCategory(
-          onSelect: (categoryId) {
-            // print('선택된 카테고리 ID: $categoryId');
-            setState(() {
-              selectedCategoryId = categoryId; // 상태에 저장
-            });
-            Navigator.pop(context); // 모달 닫기
-          },
+      barrierDismissible: true, // ⭐ 바깥 터치 시 닫힘
+      barrierColor: Colors.black54, // 배경 어둡게
+      builder: (dialogContext) {
+        return GestureDetector(
+          onTap: () => Navigator.pop(dialogContext), // ⭐ 바깥 클릭
+          child: Material(
+            color: Colors.transparent,
+            child: GestureDetector(
+              onTap: () {}, // ⭐ 모달 내부 클릭 방지
+              child: Center(
+                child: UserWardrobeCategory(
+                  onSelect: (categoryId) {
+                    setState(() {
+                      selectedCategoryId = categoryId;
+                    });
+                    Navigator.pop(dialogContext);
+                  },
+                ),
+              ),
+            ),
+          ),
         );
       },
     );
   }
+
 
   // wardrobe 컬렉션 스트림
   Stream<QuerySnapshot<Map<String, dynamic>>> _wardrobeStream() {
@@ -210,7 +220,7 @@ class _UserWardrobeListState extends State<UserWardrobeList> {
                 ],
               ),
         
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
         
               // 검색 바 영역
               Row(
