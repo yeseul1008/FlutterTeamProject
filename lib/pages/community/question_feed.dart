@@ -8,6 +8,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class QuestionFeed extends StatefulWidget {
   const QuestionFeed({super.key});
@@ -27,6 +29,15 @@ class _QuestionFeedState extends State<QuestionFeed> {
 
   bool isLoading = true;
   String errorMessage = '';
+
+  // Tutorial keys
+  final GlobalKey _tabsKey = GlobalKey();
+  final GlobalKey _postButtonKey = GlobalKey();
+  final GlobalKey _likeKey = GlobalKey();
+  final GlobalKey _commentKey = GlobalKey();
+  final GlobalKey _shareKey = GlobalKey();
+
+  TutorialCoachMark? tutorialCoachMark;
 
   /// 로그인 유저 정보
   Future<void> _loadUserInfo() async {
@@ -102,10 +113,263 @@ class _QuestionFeedState extends State<QuestionFeed> {
     }
   }
 
+  // Check if this is the user's first time
+  Future<void> _checkAndShowTutorial() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool hasSeenTutorial = prefs.getBool('hasSeenQuestionFeedTutorial') ?? false;
+
+    if (!hasSeenTutorial && questions.isNotEmpty) {
+      Future.delayed(Duration(milliseconds: 800), () {
+        _showTutorial();
+        prefs.setBool('hasSeenQuestionFeedTutorial', true);
+      });
+    }
+  }
+
+  void _createTutorial() {
+    tutorialCoachMark = TutorialCoachMark(
+      targets: _createTargets(),
+      colorShadow: Colors.black,
+      textSkip: "Skip",
+      paddingFocus: 10,
+      opacityShadow: 0.8,
+      onFinish: () {
+        print("Tutorial finished");
+      },
+      onClickTarget: (target) {
+        print('Clicked on ${target.identify}');
+      },
+      onSkip: () {
+        print("Tutorial skipped");
+        return true;
+      },
+    );
+  }
+
+  List<TargetFocus> _createTargets() {
+    List<TargetFocus> targets = [];
+
+    // Target 1: Tab Buttons
+    targets.add(
+      TargetFocus(
+        identify: "tabs",
+        keyTarget: _tabsKey,
+        alignSkip: Alignment.topRight,
+        shape: ShapeLightFocus.RRect,
+        radius: 30,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            builder: (context, controller) {
+              return Container(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "탭 메뉴",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 20.0,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      "Feed, QnA, Follow 탭을 전환할 수 있습니다",
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+
+    // Target 2: Post Button
+    targets.add(
+      TargetFocus(
+        identify: "post-button",
+        keyTarget: _postButtonKey,
+        alignSkip: Alignment.topRight,
+        shape: ShapeLightFocus.RRect,
+        radius: 30,
+        contents: [
+          TargetContent(
+            align: ContentAlign.top,
+            builder: (context, controller) {
+              return Container(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.edit, color: Color(0xFFCAD83B), size: 40),
+                    SizedBox(height: 10),
+                    Text(
+                      "새 게시글 작성",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 20.0,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      "여기를 탭해서 새로운 패션 질문을 작성하세요!",
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+
+    // Target 3: Like Button (if questions exist)
+    if (questions.isNotEmpty) {
+      targets.add(
+        TargetFocus(
+          identify: "like",
+          keyTarget: _likeKey,
+          alignSkip: Alignment.topRight,
+          shape: ShapeLightFocus.Circle,
+          contents: [
+            TargetContent(
+              align: ContentAlign.top,
+              builder: (context, controller) {
+                return Container(
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.favorite, color: Colors.red, size: 40),
+                      SizedBox(height: 10),
+                      Text(
+                        "좋아요",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontSize: 20.0,
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      Text(
+                        "마음에 드는 게시글에 좋아요를 눌러보세요",
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      );
+
+      // Target 4: Comment Button
+      targets.add(
+        TargetFocus(
+          identify: "comment",
+          keyTarget: _commentKey,
+          alignSkip: Alignment.topRight,
+          shape: ShapeLightFocus.Circle,
+          contents: [
+            TargetContent(
+              align: ContentAlign.top,
+              builder: (context, controller) {
+                return Container(
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.chat_outlined, color: Color(0xFFCAD83B), size: 40),
+                      SizedBox(height: 10),
+                      Text(
+                        "댓글",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontSize: 20.0,
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      Text(
+                        "댓글을 작성하여 의견을 나눠보세요",
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      );
+
+      // Target 5: Share Button
+      targets.add(
+        TargetFocus(
+          identify: "share",
+          keyTarget: _shareKey,
+          alignSkip: Alignment.topRight,
+          shape: ShapeLightFocus.Circle,
+          contents: [
+            TargetContent(
+              align: ContentAlign.top,
+              builder: (context, controller) {
+                return Container(
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.share_outlined, color: Color(0xFFCAD83B), size: 40),
+                      SizedBox(height: 10),
+                      Text(
+                        "공유하기",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontSize: 20.0,
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      Text(
+                        "게시글을 SNS에 공유할 수 있습니다",
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    return targets;
+  }
+
+  void _showTutorial() {
+    _createTutorial();
+    tutorialCoachMark?.show(context: context);
+  }
+
   @override
   void initState() {
     super.initState();
-    _getQuestions();
+    _getQuestions().then((_) {
+      _checkAndShowTutorial();
+    });
   }
 
   @override
@@ -118,6 +382,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
         child: Column(
           children: [
             Padding(
+              key: _tabsKey,
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
@@ -156,7 +421,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
                         itemCount: questions.length,
                         itemBuilder: (context, index) {
-                          return _questionItem(questions[index]);
+                          return _questionItem(questions[index], index);
                         },
                       ),
 
@@ -165,6 +430,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                     bottom: 25,
                     right: 30,
                     child: Container(
+                      key: _postButtonKey,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(30),
                         boxShadow: [
@@ -188,7 +454,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                           ),
                         ),
                         child: const Text(
-                          'post a look',
+                          'Post a Look',
                           style: TextStyle(
                               fontWeight: FontWeight.w900, fontSize: 18),
                         ),
@@ -205,7 +471,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
   }
 
   /// Question Item
-  Widget _questionItem(Map<String, dynamic> item) {
+  Widget _questionItem(Map<String, dynamic> item, int index) {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
@@ -317,6 +583,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
             child: Row(
               children: [
                 InkWell(
+                  key: index == 0 ? _likeKey : null,
                   onTap: () => _toggleLike(item),
                   child: Row(
                     children: [
@@ -333,6 +600,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                 ),
                 const SizedBox(width: 16),
                 InkWell(
+                  key: index == 0 ? _commentKey : null,
                   onTap: () {
                     context.go('/questionComment', extra: {
                       'postId': item['docId'],
@@ -349,6 +617,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                 ),
                 const Spacer(),
                 InkWell(
+                  key: index == 0 ? _shareKey : null,
                   onTap: () => _showShareOptions(
                     context,
                     item['text'],
@@ -438,9 +707,9 @@ class _QuestionFeedState extends State<QuestionFeed> {
     }
   }
 
-  /// 게시글 옵션 메뉴 (수정/삭제 또는 신고)
+  /// 게시글 옵션 메뉴 (수정/삭제 또는 신고/튜토리얼)
   void _showPostOptionsMenu(String postId, String authorId, String content) {
-    // 본인 게시글인 경우 - 수정/삭제
+    // 본인 게시글인 경우 - 수정/삭제/튜토리얼
     if (authorId == userId) {
       showModalBottomSheet(
         context: context,
@@ -449,48 +718,78 @@ class _QuestionFeedState extends State<QuestionFeed> {
           return Container(
             margin: const EdgeInsets.all(16),
             child: SafeArea(
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(bottomSheetContext);
-                        _editPost(postId, content);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFCAD83B),
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(bottomSheetContext);
+                            _editPost(postId, content);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFCAD83B),
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                          child: const Text(
+                            'Edit',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                            ),
+                          ),
                         ),
                       ),
-                      child: const Text(
-                        'edit',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 16,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(bottomSheetContext);
+                            _showDeleteConfirmDialog(postId);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFB39DDB),
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                          child: const Text(
+                            'Delete',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.pop(bottomSheetContext);
-                        _showDeleteConfirmDialog(postId);
+                        _showTutorial();
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFB39DDB),
-                        foregroundColor: Colors.black,
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
                       ),
                       child: const Text(
-                        'delete',
+                        'Tutorial',
                         style: TextStyle(
                           fontWeight: FontWeight.w900,
                           fontSize: 16,
@@ -505,7 +804,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
         },
       );
     } else {
-      // 타인 게시글인 경우 - 신고
+      // 타인 게시글인 경우 - 신고/튜토리얼 (좌우로 배치)
       showModalBottomSheet(
         context: context,
         backgroundColor: Colors.transparent,
@@ -513,26 +812,56 @@ class _QuestionFeedState extends State<QuestionFeed> {
           return Container(
             margin: const EdgeInsets.all(16),
             child: SafeArea(
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(bottomSheetContext);
-                  _showReportDialog(postId, authorId);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(bottomSheetContext);
+                        _showReportDialog(postId, authorId);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: const Text(
+                        'Report',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                child: const Text(
-                  'report',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 16,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(bottomSheetContext);
+                        _showTutorial();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: const Text(
+                        'Tutorial',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           );
@@ -591,7 +920,6 @@ class _QuestionFeedState extends State<QuestionFeed> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // 신고 사유 선택
                     ...reportReasons.map((reason) {
                       return RadioListTile<String>(
                         title: Text(reason),
@@ -607,7 +935,6 @@ class _QuestionFeedState extends State<QuestionFeed> {
                       );
                     }).toList(),
                     const SizedBox(height: 16),
-                    // 상세 내용 입력
                     TextField(
                       controller: detailController,
                       maxLines: 3,
@@ -649,7 +976,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                         ),
                       ),
                       child: const Text(
-                        'cancel',
+                        'Cancel',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -680,7 +1007,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                         ),
                       ),
                       child: const Text(
-                        'report',
+                        'Report',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -702,15 +1029,14 @@ class _QuestionFeedState extends State<QuestionFeed> {
       String detail,
       ) async {
     try {
-      // reports 컬렉션에 신고 내용 저장
       await fs.collection('reports').add({
-        'type': 'question', // 게시글 타입
+        'type': 'question',
         'postId': postId,
-        'reporterId': userId, // 신고자
-        'reportedUserId': reportedUserId, // 신고당한 사람
+        'reporterId': userId,
+        'reportedUserId': reportedUserId,
         'reason': reason,
         'detail': detail,
-        'status': 'pending', // 처리 상태: pending, reviewed, resolved
+        'status': 'pending',
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -778,7 +1104,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                     ),
                   ),
                   child: const Text(
-                    'cancle',
+                    'Cancel',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -814,7 +1140,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                     ),
                   ),
                   child: const Text(
-                    'delete',
+                    'Delete',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -827,7 +1153,6 @@ class _QuestionFeedState extends State<QuestionFeed> {
   }
 
   void _editPost(String postId, String content) async {
-    // 현재 게시글 데이터 가져오기
     final doc = await fs.collection('questions').doc(postId).get();
     final data = doc.data();
 
@@ -870,7 +1195,6 @@ class _QuestionFeedState extends State<QuestionFeed> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 텍스트 입력
                     TextField(
                       controller: controller,
                       maxLines: 5,
@@ -891,8 +1215,6 @@ class _QuestionFeedState extends State<QuestionFeed> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // 이미지
                     const Text(
                       '이미지',
                       style: TextStyle(
@@ -1039,7 +1361,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                         ),
                       ),
                       child: const Text(
-                        'cancle',
+                        'Cancel',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -1064,7 +1386,6 @@ class _QuestionFeedState extends State<QuestionFeed> {
                           String? uploadedImageUrl = currentImageUrl.isNotEmpty ? currentImageUrl : null;
                           String? uploadedResultImageUrl = currentResultImageUrl.isNotEmpty ? currentResultImageUrl : null;
 
-                          // 새 메인 이미지 업로드
                           if (newImageFile != null) {
                             final ref = FirebaseStorage.instance
                                 .ref()
@@ -1073,7 +1394,6 @@ class _QuestionFeedState extends State<QuestionFeed> {
                             uploadedImageUrl = await ref.getDownloadURL();
                           }
 
-                          // 새 결과 이미지 업로드
                           if (newResultImageFile != null) {
                             final ref = FirebaseStorage.instance
                                 .ref()
@@ -1112,7 +1432,7 @@ class _QuestionFeedState extends State<QuestionFeed> {
                         ),
                       ),
                       child: const Text(
-                        'correction',
+                        'save',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),

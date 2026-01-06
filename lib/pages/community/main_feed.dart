@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CommunityMainFeed extends StatefulWidget {
   const CommunityMainFeed({super.key});
@@ -24,6 +26,13 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
 
   bool isLoading = true;
   String errorMessage = '';
+
+  // Tutorial keys
+  final GlobalKey _tabsKey = GlobalKey();
+  final GlobalKey _likeKey = GlobalKey();
+  final GlobalKey _shareKey = GlobalKey();
+
+  TutorialCoachMark? tutorialCoachMark;
 
   /// 로그인 유저 정보
   Future<void> _loadUserInfo() async {
@@ -99,10 +108,180 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
     }
   }
 
+  // Check if this is the user's first time
+  Future<void> _checkAndShowTutorial() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool hasSeenTutorial = prefs.getBool('hasSeenCommunityFeedTutorial') ?? false;
+
+    if (!hasSeenTutorial && lookbooks.isNotEmpty) {
+      Future.delayed(Duration(milliseconds: 800), () {
+        _showTutorial();
+        prefs.setBool('hasSeenCommunityFeedTutorial', true);
+      });
+    }
+  }
+
+  void _createTutorial() {
+    tutorialCoachMark = TutorialCoachMark(
+      targets: _createTargets(),
+      colorShadow: Colors.black,
+      textSkip: "Skip",
+      paddingFocus: 10,
+      opacityShadow: 0.8,
+      onFinish: () {
+        print("Tutorial finished");
+      },
+      onClickTarget: (target) {
+        print('Clicked on ${target.identify}');
+      },
+      onSkip: () {
+        print("Tutorial skipped");
+        return true;
+      },
+    );
+  }
+
+  List<TargetFocus> _createTargets() {
+    List<TargetFocus> targets = [];
+
+    // Target 1: Tab Buttons
+    targets.add(
+      TargetFocus(
+        identify: "tabs",
+        keyTarget: _tabsKey,
+        alignSkip: Alignment.topRight,
+        shape: ShapeLightFocus.RRect,
+        radius: 30,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            builder: (context, controller) {
+              return Container(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "탭 메뉴",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 20.0,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      "Feed, QnA, Follow 탭을 전환할 수 있습니다",
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+
+    // Target 2: Like Button (if lookbooks exist)
+    if (lookbooks.isNotEmpty) {
+      targets.add(
+        TargetFocus(
+          identify: "like",
+          keyTarget: _likeKey,
+          alignSkip: Alignment.topRight,
+          shape: ShapeLightFocus.Circle,
+          contents: [
+            TargetContent(
+              align: ContentAlign.top,
+              builder: (context, controller) {
+                return Container(
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.favorite, color: Colors.red, size: 40),
+                      SizedBox(height: 10),
+                      Text(
+                        "좋아요",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontSize: 20.0,
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      Text(
+                        "마음에 드는 룩북에 좋아요를 눌러보세요",
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      );
+
+      // Target 3: Share Button
+      targets.add(
+        TargetFocus(
+          identify: "share",
+          keyTarget: _shareKey,
+          alignSkip: Alignment.topRight,
+          shape: ShapeLightFocus.Circle,
+          contents: [
+            TargetContent(
+              align: ContentAlign.top,
+              builder: (context, controller) {
+                return Container(
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.share_outlined, color: Color(0xFFCAD83B), size: 40),
+                      SizedBox(height: 10),
+                      Text(
+                        "공유하기",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontSize: 20.0,
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      Text(
+                        "룩북을 SNS에 공유할 수 있습니다",
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    return targets;
+  }
+
+  void _showTutorial() {
+    _createTutorial();
+    tutorialCoachMark?.show(context: context);
+  }
+
   @override
   void initState() {
     super.initState();
-    _getLookbooks();
+    _getLookbooks().then((_) {
+      _checkAndShowTutorial();
+    });
   }
 
   @override
@@ -115,6 +294,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
         child: Column(
           children: [
             Padding(
+              key: _tabsKey,
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
@@ -151,7 +331,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
                 const EdgeInsets.fromLTRB(16, 0, 16, 100),
                 itemCount: lookbooks.length,
                 itemBuilder: (context, index) {
-                  return _lookbookItem(lookbooks[index]);
+                  return _lookbookItem(lookbooks[index], index);
                 },
               ),
             ),
@@ -162,7 +342,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
   }
 
   /// Lookbook Item
-  Widget _lookbookItem(Map<String, dynamic> item) {
+  Widget _lookbookItem(Map<String, dynamic> item, int index) {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
@@ -198,16 +378,13 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
               style: const TextStyle(fontWeight: FontWeight.w900),
             ),
             subtitle: Text('@${item['authorLoginId']}'),
-            // 신고 버튼 (자신의 게시물이 아닐 때만 표시)
-            trailing: item['authorId'] != userId
-                ? IconButton(
+            trailing: IconButton(
               icon: const Icon(Icons.more_horiz),
-              onPressed: () => _showReportBottomSheet(
+              onPressed: () => _showPostOptionsMenu(
                 item['docId'],
                 item['authorId'],
               ),
-            )
-                : null,
+            ),
           ),
 
           //  이미지 - 탭하면 전체 화면으로
@@ -243,6 +420,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
             child: Row(
               children: [
                 InkWell(
+                  key: index == 0 ? _likeKey : null,
                   onTap: () => _toggleLike(item),
                   child: Row(
                     children: [
@@ -261,6 +439,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
                 ),
                 const Spacer(),
                 InkWell(
+                  key: index == 0 ? _shareKey : null,
                   onTap: () => _showShareOptions(
                     context,
                     item['authorNickname'],
@@ -377,8 +556,8 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
     }
   }
 
-  /// 신고 바텀시트
-  void _showReportBottomSheet(String postId, String authorId) {
+  /// 게시글 옵션 메뉴 (신고/튜토리얼)
+  void _showPostOptionsMenu(String postId, String authorId) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -386,24 +565,81 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
         return Container(
           margin: const EdgeInsets.all(16),
           child: SafeArea(
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(bottomSheetContext);
-                _showReportDialog(postId, authorId);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+            child: authorId != userId
+                ? Row(
+              children: [
+                // 신고 버튼
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(bottomSheetContext);
+                      _showReportDialog(postId, authorId);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    child: const Text(
+                      'Report',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              child: const Text(
-                'report',
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 16,
+                const SizedBox(width: 12),
+                // 튜토리얼 버튼
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(bottomSheetContext);
+                      _showTutorial();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    child: const Text(
+                      'Tutorial',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            )
+                : SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(bottomSheetContext);
+                  _showTutorial();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                child: const Text(
+                  'Tutorial',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ),
@@ -552,7 +788,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
                         ),
                       ),
                       child: const Text(
-                        'report',
+                        'Report',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
