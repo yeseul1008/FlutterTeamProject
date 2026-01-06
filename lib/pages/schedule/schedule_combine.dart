@@ -1,9 +1,14 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../firebase/firestore_service.dart';
 
 final FirestoreService _firestoreService = FirestoreService();
@@ -30,6 +35,16 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
   bool _imagesReady = false;
   bool _isCapturing = false;
   bool _isSavingLookbook = false;
+
+  // 튜토리얼 타겟 키
+  final GlobalKey _tutorialCanvasKey = GlobalKey();
+  final GlobalKey _tutorialResetKey = GlobalKey();
+  final GlobalKey _tutorialSaveLookbookKey = GlobalKey();
+  final GlobalKey _tutorialCompleteKey = GlobalKey();
+  final GlobalKey _tutorialFirstDeleteKey = GlobalKey();
+  final GlobalKey _tutorialFirstResizeKey = GlobalKey();
+
+  TutorialCoachMark? _tutorialCoachMark;
 
   @override
   void initState() {
@@ -74,6 +89,301 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
 
     if (!mounted) return;
     setState(() => _imagesReady = true);
+
+    await _checkAndShowTutorialOnce();
+  }
+
+  Future<void> _checkAndShowTutorialOnce() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final hasSeen = prefs.getBool('hasSeenCombineTutorial') ?? false;
+      if (hasSeen) return;
+
+      if (!mounted) return;
+      await Future.delayed(const Duration(milliseconds: 250));
+      if (!mounted) return;
+
+      _showTutorial();
+      await prefs.setBool('hasSeenCombineTutorial', true);
+    } catch (_) {}
+  }
+
+  void _showTutorial() {
+    _tutorialCoachMark?.finish();
+
+    _tutorialCoachMark = TutorialCoachMark(
+      targets: _createTutorialTargets(),
+      colorShadow: Colors.black,
+      opacityShadow: 0.82,
+      paddingFocus: 10,
+      textSkip: "Skip",
+      onSkip: () {
+        return true;
+      },
+    );
+
+    _tutorialCoachMark?.show(context: context);
+  }
+
+  List<TargetFocus> _createTutorialTargets() {
+    final List<TargetFocus> targets = [];
+
+    targets.add(
+      TargetFocus(
+        identify: 'combine-canvas',
+        keyTarget: _tutorialCanvasKey,
+        shape: ShapeLightFocus.RRect,
+        radius: 14,
+        alignSkip: Alignment.topRight,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            builder: (context, controller) {
+              return Container(
+                padding: const EdgeInsets.all(18),
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '캔버스에서 옷 배치하기',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        fontSize: 18,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      '한 손가락으로 드래그해서 위치를 옮길 수 있어요.\n두 손가락으로 확대/축소도 가능해요.',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+
+    targets.add(
+      TargetFocus(
+        identify: 'combine-delete',
+        keyTarget: _tutorialFirstDeleteKey,
+        shape: ShapeLightFocus.Circle,
+        alignSkip: Alignment.topRight,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            builder: (context, controller) {
+              return Container(
+                padding: const EdgeInsets.all(18),
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '삭제 버튼',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        fontSize: 18,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'X를 누르면 해당 옷을 캔버스에서 제거합니다.\n실수로 지웠다면 초기화로 되돌릴 수 있어요.',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+
+    targets.add(
+      TargetFocus(
+        identify: 'combine-resize',
+        keyTarget: _tutorialFirstResizeKey,
+        shape: ShapeLightFocus.Circle,
+        alignSkip: Alignment.topRight,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            builder: (context, controller) {
+              return Container(
+                padding: const EdgeInsets.all(18),
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '사이즈 조절',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        fontSize: 18,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      '오른쪽 아래 아이콘을 드래그하면 크기를 조절할 수 있어요.',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+
+    targets.add(
+      TargetFocus(
+        identify: 'combine-reset',
+        keyTarget: _tutorialResetKey,
+        shape: ShapeLightFocus.Circle,
+        alignSkip: Alignment.topRight,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            builder: (context, controller) {
+              return Container(
+                padding: const EdgeInsets.all(18),
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '초기화',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        fontSize: 18,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      '배치가 엉켰다면 초기화로 기본 배치로 되돌릴 수 있어요.',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+
+    targets.add(
+      TargetFocus(
+        identify: 'combine-save-lookbook',
+        keyTarget: _tutorialSaveLookbookKey,
+        shape: ShapeLightFocus.RRect,
+        radius: 14,
+        alignSkip: Alignment.topRight,
+        contents: [
+          TargetContent(
+            align: ContentAlign.top,
+            builder: (context, controller) {
+              return Container(
+                padding: const EdgeInsets.all(18),
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '룩북 저장',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        fontSize: 18,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      '현재 코디를 룩북으로 저장할 수 있어요.\n이름을 입력하면 이미지가 저장됩니다.',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+
+    targets.add(
+      TargetFocus(
+        identify: 'combine-complete',
+        keyTarget: _tutorialCompleteKey,
+        shape: ShapeLightFocus.RRect,
+        radius: 14,
+        alignSkip: Alignment.topRight,
+        contents: [
+          TargetContent(
+            align: ContentAlign.top,
+            builder: (context, controller) {
+              return Container(
+                padding: const EdgeInsets.all(18),
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '코디 생성 완료',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        fontSize: 18,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      '완성되면 이 버튼을 눌러서 Add로 돌아가\n일정 등록을 이어서 진행합니다.',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+
+    return targets;
   }
 
   Future<Uint8List?> _captureCanvasPng() async {
@@ -95,7 +405,6 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
       if (mounted) setState(() => _isCapturing = false);
     }
   }
-
 
   void _resetLayout() {
     setState(() {
@@ -121,7 +430,7 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
     if (!_canvasItems.containsKey(id)) return;
     setState(() {
       final v = _canvasItems.remove(id)!;
-      _canvasItems[id] = v; // 맵 마지막 = 최상단
+      _canvasItems[id] = v;
     });
   }
 
@@ -251,11 +560,14 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
   Widget build(BuildContext context) {
     final bool hasAny = clothesIds.isNotEmpty;
 
+    final String? firstId = _canvasItems.isEmpty ? null : _canvasItems.keys.first;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        centerTitle: true,
         title: const Text(
           '조합하기',
           style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black),
@@ -266,6 +578,12 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
         ),
         actions: [
           IconButton(
+            tooltip: '사용법',
+            onPressed: hasAny ? _showTutorial : null,
+            icon: const Icon(Icons.help_outline, color: Colors.black),
+          ),
+          IconButton(
+            key: _tutorialResetKey,
             tooltip: '초기화',
             onPressed: hasAny ? _resetLayout : null,
             icon: const Icon(Icons.refresh, color: Colors.black),
@@ -280,6 +598,7 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
           child: RepaintBoundary(
             key: _canvasKey,
             child: Container(
+              key: _tutorialCanvasKey,
               height: 320,
               width: double.infinity,
               decoration: BoxDecoration(
@@ -287,7 +606,6 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
                 border: _isCapturing ? null : Border.all(color: Colors.black, width: 1.2),
                 borderRadius: BorderRadius.circular(14),
               ),
-
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(14),
                 child: Stack(
@@ -331,6 +649,8 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
                       final url = imageUrls[id] ?? '';
                       if (url.isEmpty) return const SizedBox.shrink();
 
+                      final bool isFirstTarget = (firstId != null && id == firstId);
+
                       return Positioned(
                         left: state.offset.dx,
                         top: state.offset.dy,
@@ -344,8 +664,7 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
                             setState(() {
                               final cur = _canvasItems[id];
                               if (cur == null) return;
-                              _canvasItems[id] =
-                                  cur.copyWith(offset: cur.offset + delta);
+                              _canvasItems[id] = cur.copyWith(offset: cur.offset + delta);
                             });
                           },
                           onScale: (nextScale) {
@@ -358,6 +677,8 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
                             });
                           },
                           onRemove: () => setState(() => _canvasItems.remove(id)),
+                          deleteKey: isFirstTarget ? _tutorialFirstDeleteKey : null,
+                          resizeKey: isFirstTarget ? _tutorialFirstResizeKey : null,
                         ),
                       );
                     }),
@@ -376,6 +697,7 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
             children: [
               Expanded(
                 child: OutlinedButton(
+                  key: _tutorialSaveLookbookKey,
                   onPressed: (_canvasItems.isEmpty || !_imagesReady || _isSavingLookbook)
                       ? null
                       : _saveToLookbook,
@@ -395,6 +717,7 @@ class _ScheduleCombineState extends State<ScheduleCombine> {
               const SizedBox(width: 10),
               Expanded(
                 child: ElevatedButton(
+                  key: _tutorialCompleteKey,
                   onPressed: (_canvasItems.isEmpty || !_imagesReady) ? null : _goToAddSchedule,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFCAD83B),
@@ -444,6 +767,8 @@ class _DraggableCanvasItem extends StatefulWidget {
     required this.onMove,
     required this.onScale,
     required this.onRemove,
+    this.deleteKey,
+    this.resizeKey,
   });
 
   final String id;
@@ -455,6 +780,9 @@ class _DraggableCanvasItem extends StatefulWidget {
   final void Function(Offset delta) onMove;
   final void Function(double nextScale) onScale;
   final VoidCallback onRemove;
+
+  final GlobalKey? deleteKey;
+  final GlobalKey? resizeKey;
 
   @override
   State<_DraggableCanvasItem> createState() => _DraggableCanvasItemState();
@@ -523,6 +851,7 @@ class _DraggableCanvasItemState extends State<_DraggableCanvasItem> {
                   height: 34,
                   child: Center(
                     child: InkWell(
+                      key: widget.deleteKey,
                       borderRadius: BorderRadius.circular(999),
                       onTap: widget.onRemove,
                       child: Container(
@@ -539,12 +868,13 @@ class _DraggableCanvasItemState extends State<_DraggableCanvasItem> {
                 ),
               ),
 
-            //캔버스에서 개별 사진 사이즈 조절 버튼
+            // 캔버스에서 개별 사진 사이즈 조절 버튼
             if (!widget.hideControls)
               Positioned(
                 right: -10,
                 bottom: -10,
                 child: GestureDetector(
+                  key: widget.resizeKey,
                   behavior: HitTestBehavior.opaque,
                   onPanStart: (_) => widget.onBringToFront(),
                   onPanUpdate: _onResizeDrag,
@@ -562,7 +892,7 @@ class _DraggableCanvasItemState extends State<_DraggableCanvasItem> {
                         ),
                         child: Center(
                           child: Transform.rotate(
-                            angle: 1.6, // 45도(↘ 느낌)
+                            angle: 1.6,
                             child: const Icon(
                               Icons.open_in_full,
                               size: 12,
@@ -581,3 +911,4 @@ class _DraggableCanvasItemState extends State<_DraggableCanvasItem> {
     );
   }
 }
+
