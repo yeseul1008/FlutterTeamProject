@@ -1413,7 +1413,7 @@ class _UserDiaryCardsState extends State<UserDiaryCards> with SingleTickerProvid
                 Icon(
                   isActive ? activeIcon : icon,
                   color: isActive ? Color(0xFFCAD83B) : Colors.black,
-                  size: 30,
+                  size: 35,
                 ),
                 SizedBox(height: 4),
                 Text(
