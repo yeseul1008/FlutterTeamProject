@@ -49,6 +49,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
       final snapshot = await fs
           .collection('lookbooks')
           .where('publishToCommunity', isEqualTo: true)
+          .orderBy('createdAt', descending: true)
           .get();
 
       lookbooks = await Future.wait(snapshot.docs.map((doc) async {
