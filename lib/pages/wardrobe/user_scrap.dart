@@ -134,6 +134,9 @@ class _UserScrapState extends State<UserScrap> {
 
   @override
   Widget build(BuildContext context) {
+
+    const int selectedIndex = 2;
+
     // 검색 필터링
     final filteredScraps = searchText.isEmpty
         ? scraps
@@ -154,80 +157,11 @@ class _UserScrapState extends State<UserScrap> {
               const SizedBox(height: 10),
 
               // 상단 버튼 3개
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: () => context.go('/userWardrobeList'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          elevation: 0,
-                          padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                            side: const BorderSide(color: Colors.black),
-                          ),
-                        ),
-                        child: const Text(
-                          'closet',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 20),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: () => context.go('/userLookbook'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          elevation: 0,
-                          padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                            side: const BorderSide(color: Colors.black),
-                          ),
-                        ),
-                        child: const Text(
-                          'lookbooks',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 18),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: () => context.go('/userScrap'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFCAD83B),
-                          foregroundColor: Colors.black,
-                          elevation: 0,
-                          padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                            side: const BorderSide(color: Colors.black),
-                          ),
-                        ),
-                        child: const Text(
-                          'scrap',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 20),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              _SleekTopTabs(
+                selectedIndex: selectedIndex,
+                onTapCloset: () => context.go('/userWardrobeList'),
+                onTapLookbooks: () => context.go('/userLookbook'),
+                onTapScrap: () => context.go('/userScrap'),
               ),
 
               const SizedBox(height: 18),
@@ -365,6 +299,158 @@ class _UserScrapState extends State<UserScrap> {
               ),
 
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SleekTopTabs extends StatelessWidget {
+  const _SleekTopTabs({
+    required this.selectedIndex,
+    required this.onTapCloset,
+    required this.onTapLookbooks,
+    required this.onTapScrap,
+  });
+
+  final int selectedIndex;
+  final VoidCallback onTapCloset;
+  final VoidCallback onTapLookbooks;
+  final VoidCallback onTapScrap;
+
+  Alignment _indicatorAlign() {
+    if (selectedIndex == 0) return Alignment.centerLeft;
+    if (selectedIndex == 1) return Alignment.center;
+    return Alignment.centerRight;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const double height = 50;
+
+    return SizedBox(
+      height: height,
+      child: LayoutBuilder(
+        builder: (context, c) {
+          final double w = c.maxWidth;
+          final double segmentW = w / 3;
+
+          return Stack(
+            children: [
+              // 바탕(테두리만)
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.black, width: 1.2),
+                  borderRadius: BorderRadius.circular(26),
+                ),
+              ),
+
+              // 선택 인디케이터(슬라이드)
+              AnimatedAlign(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                alignment: _indicatorAlign(),
+                child: Container(
+                  width: segmentW,
+                  height: height,
+                  padding: const EdgeInsets.all(4),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCAD83B), // 기존 감성 유지
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: Colors.black, width: 1.2),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // 탭 버튼들
+              Row(
+                children: [
+                  Expanded(
+                    child: _TabButton(
+                      selected: selectedIndex == 0,
+                      icon: Icons.checkroom,
+                      label: 'closet',
+                      onTap: onTapCloset,
+                    ),
+                  ),
+                  Expanded(
+                    child: _TabButton(
+                      selected: selectedIndex == 1,
+                      icon: Icons.auto_awesome_mosaic,
+                      label: 'lookbooks',
+                      onTap: onTapLookbooks,
+                    ),
+                  ),
+                  Expanded(
+                    child: _TabButton(
+                      selected: selectedIndex == 2,
+                      icon: Icons.bookmark,
+                      label: 'scrap',
+                      onTap: onTapScrap,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _TabButton extends StatelessWidget {
+  const _TabButton({
+    required this.selected,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final bool selected;
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle textStyle = TextStyle(
+      fontWeight: FontWeight.w900,
+      fontSize: 17,
+      color: Colors.black,
+      letterSpacing: 0.2,
+    );
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(26),
+        onTap: onTap,
+        splashColor: Colors.black.withOpacity(0.05),
+        highlightColor: Colors.black.withOpacity(0.03),
+        child: Center(
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 160),
+            opacity: selected ? 1.0 : 0.85,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 18, color: Colors.black),
+                const SizedBox(width: 6),
+                Text(label, style: textStyle),
+              ],
+            ),
           ),
         ),
       ),
