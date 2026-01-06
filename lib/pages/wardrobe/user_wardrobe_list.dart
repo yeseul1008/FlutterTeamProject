@@ -340,7 +340,7 @@ class _SleekTopTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double height = 46;
+    const double height = 50;
 
     return SizedBox(
       height: height,
