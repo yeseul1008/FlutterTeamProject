@@ -42,7 +42,8 @@ class _CalendarPageState extends State<CalendarPage> {
   // Check if this is the user's first time on calendar page
   Future<void> _checkAndShowTutorial() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    bool hasSeenCalendarTutorial = prefs.getBool('hasSeenCalendarTutorial') ?? false;
+    // bool hasSeenCalendarTutorial = prefs.getBool('hasSeenCalendarTutorial') ?? false;
+    bool hasSeenCalendarTutorial = false;
 
     if (!hasSeenCalendarTutorial) {
       Future.delayed(Duration(milliseconds: 800), () {
