@@ -1,4 +1,10 @@
-# Flutter_Team_Project
+# 🥼 MODE
+> My Outfits Daily Everyday
+<p align="center">
+  <img src="readmeIMG/applogo.png" alt="App Logo" width="300"/>
+</p>
+
+
 
 ## 📋 프로젝트 개요
 일상의 코디를 기록하고 관리하는 모바일 옷장 서비스입니다. 사용자는 보유한 옷을 체계적으로 관리하고, 외출 목적에 맞는 코디를 계획하며, 커뮤니티를 통해 스타일 조언을 받을 수 있습니다.
@@ -13,13 +19,23 @@
 
 <br>
 
+### 😀 팀원 구성
+| 이름 | GitHub |
+|------|--------|
+| 김예슬 | https://github.com/yeseul1008 |
+| 김동준 | https://github.com/jun-000224 |
+| 김반석 | https://github.com/KIMBANSEOK92 |
+| 아린 | https://github.com/aline-rousselinsiv |
+
+<br>
+
 ### ⏳ 개발 기간
 🗓️ **총 개발 기간:** 2025년 12월 23일 ~ 01월 08일 (약 3주간)
 |기간|주요 진행 내용|
 |------|----------------|
 |2025년 12월 23일 ~ 2025년 12월 26일 | 문서화(회의록) 및 피그마 설계 |
 |2025년 12월 29일 ~ 2025년 12월 30일| Flutter(설계 보완 및 파이어베이스 db설계) 역할분담 작업시작 |
-|2025년 12월 31일 ~ 2026년 01월 08일 | 역할페이지 작업 |
+|2025년 12월 31일 ~ 2026년 01월 08일 | 역할페이지 작업 및 테스트|
 
 <br>
 
@@ -140,6 +156,11 @@ lib/
 ### 이메일/아이디/전화번호 회원가입
 - 소셜 로그인 (Google)
 - 프로필 이미지 및 체형 선택 (선택사항)
+
+| Before | After |
+|------|------|
+|<img width="400" height="400" alt="로그인 화면" src="https://github.com/user-attachments/assets/c7926d2a-0e3f-4a00-95eb-5b424670e27f" />|<img width="400" height="400" alt="로그인 main" src="https://github.com/user-attachments/assets/cfacd401-3c3c-4425-aff1-77b159995fc5" />|
+
 
 <br>
 

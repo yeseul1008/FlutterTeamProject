@@ -261,7 +261,8 @@ class _UserWardrobeAddState extends State<UserWardrobeAdd> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text('add clothes', style: TextStyle(color: Colors.black)),
+        centerTitle: true,
+        title: const Text('Add clothes', style: TextStyle(color: Colors.black)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => context.pop(),

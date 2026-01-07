@@ -310,7 +310,7 @@ class _LookbookCombineState extends State<lookbookCombine> {
                 height: 320,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: Colors.transparent,
+                  color: Colors.white,
                   border: Border.all(color: Colors.black),
                   borderRadius: BorderRadius.circular(14),
                 ),

@@ -316,7 +316,7 @@ class _AiOutfitMakerState extends State<AiOutfitMaker> {
                                   icon: data['liked'] == true
                                       ? const Icon(
                                           Icons.favorite,
-                                          color: Colors.black,
+                                          color: Colors.red,
                                           size: 22,
                                         )
                                       : Stack(

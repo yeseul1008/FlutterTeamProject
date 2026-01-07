@@ -58,6 +58,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
       final snapshot = await fs
           .collection('lookbooks')
           .where('publishToCommunity', isEqualTo: true)
+          .orderBy('createdAt', descending: true)
           .get();
 
       lookbooks = await Future.wait(snapshot.docs.map((doc) async {
@@ -75,7 +76,8 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
           authorNickname = userDoc.data()?['nickname'] ?? 'Unknown';
           profileImageUrl =
               userDoc.data()?['profileImageUrl'] ?? '';
-          authorLoginId = userDoc.data()?['loginId'] ?? userDoc.data()?['email'] ?? '';
+          authorLoginId =
+              userDoc.data()?['loginId'] ?? userDoc.data()?['email'] ?? '';
         }
 
         final likesSnapshot = await fs
@@ -286,7 +288,11 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
 
   @override
   Widget build(BuildContext context) {
-    final String currentPath = GoRouterState.of(context).uri.path;
+    const int selectedIndex = 0;
+    final String currentPath = GoRouterState
+        .of(context)
+        .uri
+        .path;
 
     return Container(
       color: Colors.white,
@@ -294,28 +300,12 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
         child: Column(
           children: [
             Padding(
-              key: _tabsKey,
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  _topButton(
-                    text: 'Feed',
-                    active: currentPath == '/communityMainFeed',
-                    onTap: () => context.go('/communityMainFeed'),
-                  ),
-                  const SizedBox(width: 8),
-                  _topButton(
-                    text: 'QnA',
-                    active: currentPath == '/questionFeed',
-                    onTap: () => context.go('/questionFeed'),
-                  ),
-                  const SizedBox(width: 8),
-                  _topButton(
-                    text: 'Follow',
-                    active: currentPath == '/followList',
-                    onTap: () => context.go('/followList'),
-                  ),
-                ],
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: _SleekTopTabs(
+                selectedIndex: selectedIndex,
+                onTapCloset: () => context.go('/communityMainFeed'),
+                onTapLookbooks: () => context.go('/questionFeed'),
+                onTapScrap: () => context.go('/followList'),
               ),
             ),
 
@@ -359,6 +349,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+
           ///  프로필 클릭 시 해당 작성자의 userId를 쿼리 파라미터로 전달
           ListTile(
             onTap: () {
@@ -391,7 +382,8 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
           if (item['resultImageUrl'] != null &&
               item['resultImageUrl'].isNotEmpty)
             GestureDetector(
-              onTap: () => _showFullScreenImage(context, item['resultImageUrl']),
+              onTap: () =>
+                  _showFullScreenImage(context, item['resultImageUrl']),
               child: Container(
                 decoration: BoxDecoration(
                   border: Border(
@@ -406,7 +398,8 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
                     height: 280,
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const SizedBox(
+                    errorBuilder: (_, __, ___) =>
+                    const SizedBox(
                       height: 280,
                       child: Center(child: Icon(Icons.broken_image)),
                     ),
@@ -459,34 +452,35 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
   void _showFullScreenImage(BuildContext context, String imageUrl) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => Scaffold(
-          backgroundColor: Colors.black,
-          body: GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
-            child: Center(
-              child: Hero(
-                tag: imageUrl,
-                child: InteractiveViewer(
-                  panEnabled: true,
-                  minScale: 0.5,
-                  maxScale: 4.0,
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.contain,
+        builder: (context) =>
+            Scaffold(
+              backgroundColor: Colors.black,
+              body: GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Center(
+                  child: Hero(
+                    tag: imageUrl,
+                    child: InteractiveViewer(
+                      panEnabled: true,
+                      minScale: 0.5,
+                      maxScale: 4.0,
+                      child: Image.network(
+                        imageUrl,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
                   ),
                 ),
               ),
+              appBar: AppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                leading: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
             ),
-          ),
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -665,126 +659,133 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
 
     showDialog(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            elevation: 8,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-            contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-            actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-            title: const Text(
-              '게시글 신고',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '신고 사유를 선택해주세요',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.black87,
-                      ),
+      builder: (dialogContext) =>
+          StatefulBuilder(
+            builder: (context, setDialogState) {
+              return AlertDialog(
+                backgroundColor: Colors.white,
+                elevation: 8,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                title: const Text(
+                  '게시글 신고',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                content: SizedBox(
+                  width: double.maxFinite,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '신고 사유를 선택해주세요',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // 신고 사유 선택
+                        ...reportReasons.map((reason) {
+                          return RadioListTile<String>(
+                            title: Text(reason),
+                            value: reason,
+                            groupValue: selectedReason,
+                            activeColor: const Color(0xFFCAD83B),
+                            contentPadding: EdgeInsets.zero,
+                            onChanged: (value) {
+                              setDialogState(() {
+                                selectedReason = value;
+                              });
+                            },
+                          );
+                        }).toList(),
+                        const SizedBox(height: 16),
+                        // 상세 내용 입력
+                        TextField(
+                          controller: detailController,
+                          maxLines: 3,
+                          decoration: InputDecoration(
+                            hintText: '상세 내용을 입력해주세요 (선택사항)',
+                            hintStyle: TextStyle(color: Colors.grey[400]),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey[300]!),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFCAD83B),
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    // 신고 사유 선택
-                    ...reportReasons.map((reason) {
-                      return RadioListTile<String>(
-                        title: Text(reason),
-                        value: reason,
-                        groupValue: selectedReason,
-                        activeColor: const Color(0xFFCAD83B),
-                        contentPadding: EdgeInsets.zero,
-                        onChanged: (value) {
-                          setDialogState(() {
-                            selectedReason = value;
-                          });
-                        },
-                      );
-                    }).toList(),
-                    const SizedBox(height: 16),
-                    // 상세 내용 입력
-                    TextField(
-                      controller: detailController,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        hintText: '상세 내용을 입력해주세요 (선택사항)',
-                        hintStyle: TextStyle(color: Colors.grey[400]),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFCAD83B),
-                            width: 2,
+                  ),
+                ),
+                actions: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.black,
+                            side: const BorderSide(color: Colors.black),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'cancel',
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(dialogContext),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.black,
-                        side: const BorderSide(color: Colors.black),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'cancel',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: selectedReason == null
-                          ? null
-                          : () async {
-                        Navigator.pop(dialogContext);
-                        await _submitReport(
-                          postId,
-                          authorId,
-                          selectedReason!,
-                          detailController.text.trim(),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: selectedReason == null
-                            ? Colors.grey
-                            : Colors.redAccent,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: selectedReason == null
+                              ? null
+                              : () async {
+                            Navigator.pop(dialogContext);
+                            await _submitReport(
+                              postId,
+                              authorId,
+                              selectedReason!,
+                              detailController.text.trim(),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: selectedReason == null
+                                ? Colors.grey
+                                : Colors.redAccent,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'report',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
                       child: const Text(
@@ -794,21 +795,17 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
                     ),
                   ),
                 ],
-              ),
-            ],
-          );
-        },
-      ),
+              );
+            },
+          ),
     );
   }
 
   /// 신고 제출
-  Future<void> _submitReport(
-      String postId,
+  Future<void> _submitReport(String postId,
       String reportedUserId,
       String reason,
-      String detail,
-      ) async {
+      String detail,) async {
     try {
       // reports 컬렉션에 신고 내용 저장
       await fs.collection('reports').add({
@@ -843,8 +840,8 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
   }
 
   /// 공유 관련
-  void _showShareOptions(
-      BuildContext context, String content, String imageUrl) {
+  void _showShareOptions(BuildContext context, String content,
+      String imageUrl) {
     showModalBottomSheet(
       context: context,
       builder: (_) {
@@ -922,31 +919,152 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
       await launchUrl(uri);
     }
   }
+}
+class _SleekTopTabs extends StatelessWidget {
+  const _SleekTopTabs({
+    required this.selectedIndex,
+    required this.onTapCloset,
+    required this.onTapLookbooks,
+    required this.onTapScrap,
+  });
 
-  Widget _topButton({
-    required String text,
-    required bool active,
-    required VoidCallback onTap,
-  }) {
-    return Expanded(
-      child: SizedBox(
-        height: 50,
-        child: ElevatedButton(
-          onPressed: onTap,
-          style: ElevatedButton.styleFrom(
-            backgroundColor:
-            active ? const Color(0xFFCAD83B) : Colors.white,
-            foregroundColor: Colors.black,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30),
-              side: const BorderSide(color: Colors.black),
+  final int selectedIndex;
+  final VoidCallback onTapCloset;
+  final VoidCallback onTapLookbooks;
+  final VoidCallback onTapScrap;
+
+  Alignment _indicatorAlign() {
+    if (selectedIndex == 0) return Alignment.centerLeft;
+    if (selectedIndex == 1) return Alignment.center;
+    return Alignment.centerRight;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const double height = 50;
+
+    return SizedBox(
+      height: height,
+      child: LayoutBuilder(
+        builder: (context, c) {
+          final double w = c.maxWidth;
+          final double segmentW = w / 3;
+
+          return Stack(
+            children: [
+              // 바탕(테두리만)
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.black, width: 1.2),
+                  borderRadius: BorderRadius.circular(26),
+                ),
+              ),
+
+              // 선택 인디케이터(슬라이드)
+              AnimatedAlign(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                alignment: _indicatorAlign(),
+                child: Container(
+                  width: segmentW,
+                  height: height,
+                  padding: const EdgeInsets.all(4),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCAD83B), // 기존 감성 유지
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: Colors.black, width: 1.2),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // 탭 버튼들
+              Row(
+                children: [
+                  Expanded(
+                    child: _TabButton(
+                      selected: selectedIndex == 0,
+                      icon: Icons.feed_outlined,
+                      label: 'Feed',
+                      onTap: onTapCloset,
+                    ),
+                  ),
+                  Expanded(
+                    child: _TabButton(
+                      selected: selectedIndex == 1,
+                      icon: Icons.question_answer,
+                      label: 'QnA',
+                      onTap: onTapLookbooks,
+                    ),
+                  ),
+                  Expanded(
+                    child: _TabButton(
+                      selected: selectedIndex == 2,
+                      icon: Icons.face,
+                      label: 'Follow',
+                      onTap: onTapScrap,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _TabButton extends StatelessWidget {
+  const _TabButton({
+    required this.selected,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final bool selected;
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle textStyle = TextStyle(
+      fontWeight: FontWeight.w900,
+      fontSize: 17,
+      color: Colors.black,
+      letterSpacing: 0.2,
+    );
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(26),
+        onTap: onTap,
+        splashColor: Colors.black.withOpacity(0.05),
+        highlightColor: Colors.black.withOpacity(0.03),
+        child: Center(
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 160),
+            opacity: selected ? 1.0 : 0.85,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 18, color: Colors.black),
+                const SizedBox(width: 6),
+                Text(label, style: textStyle),
+              ],
             ),
-          ),
-          child: Text(
-            text,
-            style: const TextStyle(
-                fontWeight: FontWeight.w900, fontSize: 18),
           ),
         ),
       ),
