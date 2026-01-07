@@ -173,7 +173,7 @@
 
 | QnA | Qna 추가 | 댓글 | 다른 사용자 옷장 코디 |
 |------|------|------|------|
-|![캘린더](readmeIMG/QnA.jpg)||![캘린더](readmeIMG/질문등록.jpg)|![회원가입](readmeIMG/댓글.jpg)|![회원가입](readmeIMG/질문옷장.jpg)|
+|![캘린더](readmeIMG/QnA.jpg)|![캘린더](readmeIMG/질문등록.jpg)|![회원가입](readmeIMG/댓글.jpg)|![회원가입](readmeIMG/질문옷장.jpg)|
 
 <br>
 
