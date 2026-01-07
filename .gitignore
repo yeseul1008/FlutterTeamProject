@@ -1,6 +1,7 @@
 # Environment variables
 .env
 pubspec.yaml
+firebase_options
 # Miscellaneous
 *.class
 *.log
