@@ -27,7 +27,9 @@ class _QuestionCommentState extends State<QuestionComment> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final extra = GoRouterState.of(context).extra as Map<String, dynamic>?;
+    final extra = GoRouterState
+        .of(context)
+        .extra as Map<String, dynamic>?;
     if (extra != null) {
       postId = extra['postId'];
       _loadPostAuthor();
@@ -122,7 +124,9 @@ class _QuestionCommentState extends State<QuestionComment> {
 
   /// 댓글 추가
   Future<void> _addComment({String? commentImgUrl}) async {
-    if (_commentController.text.trim().isEmpty) return;
+    if (_commentController.text
+        .trim()
+        .isEmpty) return;
 
     final user = auth.currentUser;
     if (user == null) return;
@@ -150,97 +154,98 @@ class _QuestionCommentState extends State<QuestionComment> {
   void _showDeleteConfirmDialog(String commentId) {
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.white,
-        elevation: 8,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-        contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-        title: const Text(
-          '삭제 확인',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
-        ),
-        content: const Text(
-          '삭제하시겠습니까?\n삭제 후에는 되돌릴 수 없습니다.',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.black87,
-            height: 1.4,
-          ),
-        ),
-        actions: [
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(dialogContext),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.black,
-                    side: const BorderSide(color: Colors.black),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    '취소',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
+      builder: (dialogContext) =>
+          AlertDialog(
+            backgroundColor: Colors.white,
+            elevation: 8,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+            contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+            title: const Text(
+              '삭제 확인',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () async {
-                    Navigator.pop(dialogContext);
-                    try {
-                      await fs
-                          .collection('questions')
-                          .doc(postId)
-                          .collection('qna_comments')
-                          .doc(commentId)
-                          .delete();
-                      _getComments();
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('댓글이 삭제되었습니다')),
-                        );
-                      }
-                    } catch (e) {
-                      debugPrint('댓글 삭제 실패: $e');
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('삭제 중 오류가 발생했습니다')),
-                        );
-                      }
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFCAD83B),
-                    foregroundColor: Colors.black,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+            ),
+            content: const Text(
+              '삭제하시겠습니까?\n삭제 후에는 되돌릴 수 없습니다.',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.black87,
+                height: 1.4,
+              ),
+            ),
+            actions: [
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.black,
+                        side: const BorderSide(color: Colors.black),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        '취소',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
-                  child: const Text(
-                    '삭제',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        Navigator.pop(dialogContext);
+                        try {
+                          await fs
+                              .collection('questions')
+                              .doc(postId)
+                              .collection('qna_comments')
+                              .doc(commentId)
+                              .delete();
+                          _getComments();
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('댓글이 삭제되었습니다')),
+                            );
+                          }
+                        } catch (e) {
+                          debugPrint('댓글 삭제 실패: $e');
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('삭제 중 오류가 발생했습니다')),
+                            );
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFCAD83B),
+                        foregroundColor: Colors.black,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        '삭제',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
     );
   }
 
@@ -283,7 +288,8 @@ class _QuestionCommentState extends State<QuestionComment> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFCAD83B), width: 2),
+                borderSide: const BorderSide(
+                    color: Color(0xFFCAD83B), width: 2),
               ),
             ),
           ),
@@ -311,7 +317,9 @@ class _QuestionCommentState extends State<QuestionComment> {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {
-                      if (editController.text.trim().isEmpty) return;
+                      if (editController.text
+                          .trim()
+                          .isEmpty) return;
                       Navigator.pop(dialogContext);
                       try {
                         await fs
@@ -417,7 +425,7 @@ class _QuestionCommentState extends State<QuestionComment> {
                 _showReportDialog(commentId, commentAuthorId);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
+                backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
@@ -425,7 +433,7 @@ class _QuestionCommentState extends State<QuestionComment> {
                 ),
               ),
               child: const Text(
-                'report',
+                'Report',
                 style: TextStyle(
                   fontWeight: FontWeight.w900,
                   fontSize: 16,
@@ -454,148 +462,147 @@ class _QuestionCommentState extends State<QuestionComment> {
 
     showDialog(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            elevation: 8,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-            contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-            actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-            title: const Text(
-              '댓글 신고',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '신고 사유를 선택해주세요',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.black87,
-                      ),
+      builder: (dialogContext) =>
+          StatefulBuilder(
+            builder: (context, setDialogState) {
+              return AlertDialog(
+                backgroundColor: Colors.white,
+                elevation: 8,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                title: const Text(
+                  '댓글 신고',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                content: SizedBox(
+                  width: double.maxFinite,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '신고 사유를 선택해주세요',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ...reportReasons.map((reason) {
+                          return RadioListTile<String>(
+                            title: Text(reason),
+                            value: reason,
+                            groupValue: selectedReason,
+                            activeColor: const Color(0xFFCAD83B),
+                            contentPadding: EdgeInsets.zero,
+                            onChanged: (value) {
+                              setDialogState(() {
+                                selectedReason = value;
+                              });
+                            },
+                          );
+                        }).toList(),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: detailController,
+                          maxLines: 3,
+                          decoration: InputDecoration(
+                            hintText: '상세 내용을 입력해주세요 (선택사항)',
+                            hintStyle: TextStyle(color: Colors.grey[400]),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey[300]!),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFCAD83B),
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    ...reportReasons.map((reason) {
-                      return RadioListTile<String>(
-                        title: Text(reason),
-                        value: reason,
-                        groupValue: selectedReason,
-                        activeColor: const Color(0xFFCAD83B),
-                        contentPadding: EdgeInsets.zero,
-                        onChanged: (value) {
-                          setDialogState(() {
-                            selectedReason = value;
-                          });
-                        },
-                      );
-                    }).toList(),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: detailController,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        hintText: '상세 내용을 입력해주세요 (선택사항)',
-                        hintStyle: TextStyle(color: Colors.grey[400]),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFCAD83B),
-                            width: 2,
+                  ),
+                ),
+                actions: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.black,
+                            side: const BorderSide(color: Colors.black),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            '취소',
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(dialogContext),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.black,
-                        side: const BorderSide(color: Colors.black),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: selectedReason == null
+                              ? null
+                              : () async {
+                            Navigator.pop(dialogContext);
+                            await _submitReport(
+                              commentId,
+                              commentAuthorId,
+                              selectedReason!,
+                              detailController.text.trim(),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: selectedReason == null
+                                ? Colors.grey
+                                : Colors.redAccent,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            '신고',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
-                      child: const Text(
-                        '취소',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: selectedReason == null
-                          ? null
-                          : () async {
-                        Navigator.pop(dialogContext);
-                        await _submitReport(
-                          commentId,
-                          commentAuthorId,
-                          selectedReason!,
-                          detailController.text.trim(),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: selectedReason == null
-                            ? Colors.grey
-                            : Colors.redAccent,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        '신고',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
+                    ],
                   ),
                 ],
-              ),
-            ],
-          );
-        },
-      ),
+              );
+            },
+          ),
     );
   }
 
   /// 신고 제출
-  Future<void> _submitReport(
-      String commentId,
+  Future<void> _submitReport(String commentId,
       String reportedUserId,
       String reason,
-      String detail,
-      ) async {
+      String detail,) async {
     // 현재 사용자 확인
     if (currentUserId.isEmpty) {
       if (mounted) {
@@ -689,13 +696,17 @@ class _QuestionCommentState extends State<QuestionComment> {
 
   @override
   Widget build(BuildContext context) {
-    final String currentPath = GoRouterState.of(context).uri.path;
+    final String currentPath = GoRouterState
+        .of(context)
+        .uri
+        .path;
 
     return Container(
       color: Colors.white,
       child: SafeArea(
         child: Column(
           children: [
+
             /// 상단 탭 UI
             Padding(
               padding: const EdgeInsets.all(16),
@@ -983,40 +994,11 @@ class _QuestionCommentState extends State<QuestionComment> {
                 ),
               ),
               // 작성자일 경우 수정/삭제, 아닐 경우 신고 메뉴
-              PopupMenuButton<String>(
+              IconButton(
                 icon: const Icon(Icons.more_horiz),
-                onSelected: (value) {
-                  if (value == 'edit') {
-                    _editComment(commentId, content);
-                  } else if (value == 'delete') {
-                    _showDeleteConfirmDialog(commentId);
-                  } else if (value == 'report') {
-                    _showReportBottomSheet(commentId, authorId);
-                  }
-                },
-                itemBuilder: (context) => isAuthor
-                    ? [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: Text('수정'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Text('삭제'),
-                  ),
-                ]
-                    : [
-                  const PopupMenuItem(
-                    value: 'report',
-                    child: Row(
-                      children: [
-                        Icon(Icons.report_outlined, color: Colors.red, size: 20),
-                        SizedBox(width: 8),
-                        Text('신고', style: TextStyle(color: Colors.red)),
-                      ],
-                    ),
-                  ),
-                ],
+                onPressed: () =>
+                    _showCommentOptionsMenu(
+                        commentId, authorId, content, isAuthor),
               ),
               Column(
                 children: [
@@ -1055,5 +1037,142 @@ class _QuestionCommentState extends State<QuestionComment> {
         ],
       ),
     );
+  }
+
+  /// 댓글 옵션 메뉴 (수정/삭제 또는 신고)
+  void _showCommentOptionsMenu(String commentId, String authorId,
+      String content, bool isAuthor) {
+    if (isAuthor) {
+      // 본인 댓글인 경우 - 수정/삭제
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (bottomSheetContext) {
+          return Container(
+            margin: const EdgeInsets.all(16),
+            child: SafeArea(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(bottomSheetContext);
+                        _editComment(commentId, content);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFCAD83B),
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: const Text(
+                        'Edit',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(bottomSheetContext);
+                        _showDeleteConfirmDialog(commentId);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFB39DDB),
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: const Text(
+                        'Delete',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } else {
+      // 타인 댓글인 경우 - 신고 + 튜토리얼
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (bottomSheetContext) {
+          return Container(
+            margin: const EdgeInsets.all(16),
+            child: SafeArea(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(bottomSheetContext);
+                        _showReportDialog(commentId, authorId);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: const Text(
+                        'Report',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(bottomSheetContext);
+                        // 튜토리얼 기능이 있다면 여기에 추가
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('튜토리얼 기능은 준비 중입니다')),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: const Text(
+                        'Tutorial',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    }
   }
 }
