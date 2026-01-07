@@ -50,11 +50,19 @@ class UserWardrobeDetail extends StatelessWidget {
     if (docId == null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('상세보기', style: TextStyle(color: Colors.black)),
+          title: const Text(
+            '상세보기',
+            style: TextStyle(color: Colors.black),
+          ),
           backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white, // 🔴 핵심 (Material 3)
           iconTheme: const IconThemeData(color: Colors.black),
-          elevation: 1,
+
+          elevation: 0,                   // 그림자 제거
+          shadowColor: Colors.transparent, // 잔상 제거
+          scrolledUnderElevation: 0,       // 스크롤 시 색 변형 방지
         ),
+
         body: const Center(child: Text('문서 ID가 전달되지 않았습니다.')),
       );
     }
@@ -78,6 +86,7 @@ class UserWardrobeDetail extends StatelessWidget {
       appBar: AppBar(
         title: const Text('상세보기', style: TextStyle(color: Colors.black)),
         backgroundColor: Colors.white,
+        centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.black),
         elevation: 1,
       ),

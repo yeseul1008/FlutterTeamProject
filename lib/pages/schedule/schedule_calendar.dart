@@ -285,40 +285,98 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
     showDialog(
       context: context,
       useRootNavigator: true,
+      barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('일정 삭제'),
-        content: const Text('해당 일정을 삭제하시겠습니까?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext, rootNavigator: true).pop(),
-            child: const Text('NO'),
+        backgroundColor: Colors.white,
+        elevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+        contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+
+        title: const Text(
+          '삭제 확인',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
           ),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(dialogContext, rootNavigator: true).pop();
+        ),
 
-              try {
-                await _deleteScheduleAndCalendar(
-                  scheduleId: scheduleId,
-                  date: _selectedDay,
-                );
+        content: const Text(
+          '삭제하시겠습니까?\n삭제 후에는 되돌릴 수 없습니다.',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.black87,
+            height: 1.4,
+          ),
+        ),
 
-                if (!mounted) return;
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () =>
+                      Navigator.of(dialogContext, rootNavigator: true).pop(),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.black,
+                    side: const BorderSide(color: Colors.black),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    Navigator.of(dialogContext, rootNavigator: true).pop();
 
-                setState(() {
-                  _calendarCache.remove(_normalize(_selectedDay));
-                });
+                    try {
+                      await _deleteScheduleAndCalendar(
+                        scheduleId: scheduleId,
+                        date: _selectedDay,
+                      );
 
-                // ✅ 당일 캐시를 다시 확정 (없음을 반영)
-                await _loadCalendarForDay(_selectedDay);
+                      if (!mounted) return;
 
-                _showTempSnack('일정이 삭제되었습니다.');
-              } catch (e) {
-                if (!mounted) return;
-                _showTempSnack('삭제 실패: $e');
-              }
-            },
-            child: const Text('YES', style: TextStyle(color: Colors.red)),
+                      setState(() {
+                        _calendarCache.remove(_normalize(_selectedDay));
+                      });
+
+                      await _loadCalendarForDay(_selectedDay);
+
+                      _showTempSnack('일정이 삭제되었습니다.');
+                    } catch (e) {
+                      if (!mounted) return;
+                      _showTempSnack('삭제 실패: $e');
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFCAD83B),
+                    foregroundColor: Colors.black,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Delete',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

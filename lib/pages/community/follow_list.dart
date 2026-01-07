@@ -111,6 +111,7 @@ class _FollowListState extends State<FollowList> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
+    const int selectedIndex = 2;
     final String currentPath = GoRouterState.of(context).uri.path;
 
     return Scaffold(
@@ -120,27 +121,12 @@ class _FollowListState extends State<FollowList> with SingleTickerProviderStateM
           children: [
             /// Top navigation buttons
             Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  _topButton(
-                    text: 'Feed',
-                    active: currentPath == '/communityMainFeed',
-                    onTap: () => context.go('/communityMainFeed'),
-                  ),
-                  const SizedBox(width: 8),
-                  _topButton(
-                    text: 'QnA',
-                    active: currentPath == '/questionFeed',
-                    onTap: () => context.go('/questionFeed'),
-                  ),
-                  const SizedBox(width: 8),
-                  _topButton(
-                    text: 'Follow',
-                    active: currentPath == '/followList',
-                    onTap: () {},
-                  ),
-                ],
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: _SleekTopTabs(
+                selectedIndex: selectedIndex,
+                onTapCloset: () => context.go('/communityMainFeed'),
+                onTapLookbooks: () => context.go('/questionFeed'),
+                onTapScrap: () => context.go('/followList'),
               ),
             ),
 
@@ -281,6 +267,157 @@ class _FollowListState extends State<FollowList> with SingleTickerProviderStateM
           // Navigate to user's profile
           context.go('/publicLookBook?userId=${user['userId']}');
         },
+      ),
+    );
+  }
+}
+class _SleekTopTabs extends StatelessWidget {
+  const _SleekTopTabs({
+    required this.selectedIndex,
+    required this.onTapCloset,
+    required this.onTapLookbooks,
+    required this.onTapScrap,
+  });
+
+  final int selectedIndex;
+  final VoidCallback onTapCloset;
+  final VoidCallback onTapLookbooks;
+  final VoidCallback onTapScrap;
+
+  Alignment _indicatorAlign() {
+    if (selectedIndex == 0) return Alignment.centerLeft;
+    if (selectedIndex == 1) return Alignment.center;
+    return Alignment.centerRight;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const double height = 50;
+
+    return SizedBox(
+      height: height,
+      child: LayoutBuilder(
+        builder: (context, c) {
+          final double w = c.maxWidth;
+          final double segmentW = w / 3;
+
+          return Stack(
+            children: [
+              // 바탕(테두리만)
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.black, width: 1.2),
+                  borderRadius: BorderRadius.circular(26),
+                ),
+              ),
+
+              // 선택 인디케이터(슬라이드)
+              AnimatedAlign(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                alignment: _indicatorAlign(),
+                child: Container(
+                  width: segmentW,
+                  height: height,
+                  padding: const EdgeInsets.all(4),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCAD83B), // 기존 감성 유지
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: Colors.black, width: 1.2),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // 탭 버튼들
+              Row(
+                children: [
+                  Expanded(
+                    child: _TabButton(
+                      selected: selectedIndex == 0,
+                      icon: Icons.feed_outlined,
+                      label: 'Feed',
+                      onTap: onTapCloset,
+                    ),
+                  ),
+                  Expanded(
+                    child: _TabButton(
+                      selected: selectedIndex == 1,
+                      icon: Icons.question_answer,
+                      label: 'QnA',
+                      onTap: onTapLookbooks,
+                    ),
+                  ),
+                  Expanded(
+                    child: _TabButton(
+                      selected: selectedIndex == 2,
+                      icon: Icons.face,
+                      label: 'Follow',
+                      onTap: onTapScrap,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _TabButton extends StatelessWidget {
+  const _TabButton({
+    required this.selected,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final bool selected;
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle textStyle = TextStyle(
+      fontWeight: FontWeight.w900,
+      fontSize: 17,
+      color: Colors.black,
+      letterSpacing: 0.2,
+    );
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(26),
+        onTap: onTap,
+        splashColor: Colors.black.withOpacity(0.05),
+        highlightColor: Colors.black.withOpacity(0.03),
+        child: Center(
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 160),
+            opacity: selected ? 1.0 : 0.85,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 18, color: Colors.black),
+                const SizedBox(width: 6),
+                Text(label, style: textStyle),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
