@@ -159,23 +159,20 @@ lib/
 - 프로필 이미지 및 성별 선택
 
 | Splash | 회원가입 | 로그인 |
-|------|------|
-|![회원가입](readmeIMG/로그인.jpg)|![회원가입](readmeIMG/로그인.jpg)|![회원가입](readmeIMG/로그인.jpg)|
-
+|--------|----------|--------|
+| ![Splash](readmeIMG/스플래시.jpg) | ![회원가입](readmeIMG/회원가입.jpg) | ![로그인](readmeIMG/로그인.jpg) |
 
 <br>
 
-## 2. Closet
-### 옷 등록
-- 필수: 이미지, 카테고리(Outer/Top/Bottom/Dress/Shoes/Accessories), 계절, 제품명, 구매처
-- 선택: 재질, 코멘트
-- 좋아요 기능으로 즐겨찾기
-| 옷장 | 옷추가 |
-|------|------|
-|![옷장](readmeIMG/closet.jpg)|![회원가입](readmeIMG/로그인.jpg)|
+## 2. Closet (옷장/룩북/스크랩)
+### 2-1. 옷장
+- 사용자 전용 커스텀 카테고리 추가 가능
+- 옷 등록시 누끼 api (remove.bg 사용)
+- 옷 선택후 ai 착용사진 생성
 
-### 카테고리
-- 기본: 아우터, 상의, 하의, 원피스, 신발, 악세사리
+| 옷장 | 카테고리 | 옷 등록 | ai착용샷 |
+|------|------|------|------|
+|![옷장](readmeIMG/closet.jpg)|![회원가입](readmeIMG/카테고리.jpg)|![회원가입](readmeIMG/옷추가.jpg)|![회원가입](readmeIMG/카테고리.jpg)|우터, 상의, 하의, 원피스, 신발, 악세사리
 - 사용자 커스텀 카테고리 추가 가능
 
 <br>
