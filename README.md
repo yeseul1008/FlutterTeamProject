@@ -39,6 +39,155 @@
 
 <br>
 
+
+
+
+<br>
+
+## 🖥️ **기술 스택**
+|구분|기술|
+|------|----------------|
+|**Backend**|![Flutter](https://img.shields.io/badge/Flutter-%2302569B.svg?style=for-the-badge&logo=Flutter&logoColor=white)|
+|**Frontend**|![Android Studio](https://img.shields.io/badge/android%20studio-346ac1?style=for-the-badge&logo=android%20studio&logoColor=white) |
+|**Database**|![Firebase](https://img.shields.io/badge/firebase-a08021?style=for-the-badge&logo=firebase&logoColor=ffcd34)|
+|**Tools**|![Figma](https://img.shields.io/badge/figma-%23F24E1E.svg?style=for-the-badge&logo=figma&logoColor=white) ![GitHub](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white) ![Google Drive](https://img.shields.io/badge/Google%20Drive-4285F4?style=for-the-badge&logo=googledrive&logoColor=white) ![KakaoTalk](https://img.shields.io/badge/kakaotalk-ffcd00.svg?style=for-the-badge&logo=kakaotalk&logoColor=000000) ![Instagram](https://img.shields.io/badge/Instagram-%23E4405F.svg?style=for-the-badge&logo=Instagram&logoColor=white) ![Facebook](https://img.shields.io/badge/Facebook-%231877F2.svg?style=for-the-badge&logo=Facebook&logoColor=white) ![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)|
+|**Collaboration**|![Google Gemini](https://img.shields.io/badge/google%20gemini-8E75B2?style=for-the-badge&logo=google%20gemini&logoColor=white) ![ChatGPT](https://img.shields.io/badge/chatGPT-74aa9c?style=for-the-badge&logo=openai&logoColor=white) |
+
+<br>
+
+## 📂 프로젝트 자료 모음
+| 분류 | 링크 |
+|------|------|
+| 📝 회의록 | 📅 [1회차 회의록](https://docs.google.com/document/d/1xQXNfiVdnWR8__4PAtTqPMBrZyrpG0Kw6K73RPqs-4k/edit?tab=t.7y908es3yuq) <br> 📅 [2회차 회의록](https://docs.google.com/document/d/1ba9YWrBuRw63KOHbEYD_QMjfeJkOcVIqZQJ92tcYr6s/edit?tab=t.0) <br> 📅 [3회차 회의록](https://docs.google.com/document/d/1vq4wwx3afmFLc00ERxrCCkcfRcPvciKWhzbkY7umeyQ/edit?tab=t.0) <br> 📅 [4회차 회의록](https://docs.google.com/document/d/1xJ1OdjF5AHMCv0iy4lhsbJz4yekFyEjKbr3CK_puW6Y/edit?tab=t.0) |
+| 🏗 설계 자료 | 🎨 [Figma 설계 보기](https://www.figma.com/design/xIKwyhMPDhbnGMi1fLVoVU/%ED%94%8C%EB%9F%AC%ED%84%B0-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-%ED%99%94%EB%A9%B4%EA%B5%AC%EC%84%B1?node-id=0-1&p=f&t=7U7g0LV7wZ1mGv9K-0) |
+| 📚 공통 문서 | 📁 [공통 문서 폴더 보기](https://drive.google.com/drive/u/0/folders/16c1vWnDJNyonibTgSbnFPx56UtfGC8ld) |
+
+<br>
+
+## 🖍 차별점
+- 외출 기록 중심: 단순 코디 전시가 아닌 일상 기록 및 히스토리 관리
+- 커뮤니티 서포트: 사용자 옷장 기반 맞춤형 코디 추천
+- 한국 시장 특화: 소개팅, 결혼식 등 한국 문화 반영
+- 통합 경험: 옷장 관리 → 코디 계획 → 외출 기록 → 커뮤니티 공유의 원스톱 서비스
+
+<br>
+
+## 📱 화면 구성
+- 로그인/회원가입
+- 옷장 (목록/추가/수정/삭제)
+- 룩북 생성 도구
+- 캘린더
+- 일기 작성/조회
+- 커뮤니티 피드
+- QnA 게시판
+- 마이페이지
+
+<br>
+
+# 📽 주요 기능
+## 1. 로그인/회원가입
+- 소셜 로그인 (Google)
+- 아이디찾기/비밀번호찾기
+- 프로필 이미지 및 성별 선택
+
+| Splash | 회원가입 | 로그인 |
+|--------|----------|--------|
+| ![Splash](readmeIMG/스플래시.jpg) | ![회원가입](readmeIMG/회원가입.jpg) | ![로그인](readmeIMG/로그인.jpg) |
+
+<br>
+
+## 2. Closet (옷장/룩북/스크랩)
+### 2-1. 옷장
+- 사용자 전용 커스텀 카테고리 추가
+- 옷 등록시 누끼 api (remove.bg 사용)
+- 옷 선택후 ai 착용사진 생성 (Gemini api)
+
+| 옷장 | 카테고리 | 옷 등록 | ai착용샷 |
+|------|------|------|------|
+|![옷장](readmeIMG/closet.jpg)|![회원가입](readmeIMG/카테고리.jpg)|![회원가입](readmeIMG/옷추가.jpg)||
+
+### 2-2. 룩북
+- 옷장 조합으로 룩북 생성
+- ai 룩북/ 일반 룩북 필터링
+- 사진 조절 조작키로 자유자재 룩북 생성
+
+| 룩북 | 룩북 상세 화면 | 룩북 등록 |
+|------|------|------|
+|![옷장](readmeIMG/lookbooks.jpg)|![회원가입](readmeIMG/룩북상세.jpg)||
+
+### 2-3. 스크랩
+- 커뮤니티 Feed 에서 다른 유저의 코디 스크랩가능
+- 스크랩 후 해당 옷 정보 확인가능
+
+| 스크랩 | 스크랩 상세화면 | 
+|------|------|
+|![옷장](readmeIMG/scrap.jpg)||
+
+<br>
+
+## 2. Calendar (옷장/룩북/스크랩)
+- 날짜 선택 (날씨, 목적지, 일정 등록)
+- 룩북에서 옷 가져와서 등록 or 바로 룩북 생성
+
+| Calendar | 날짜 코디 등록 | 일정 옷 추가 | 옷 조합 |
+|------|------|------|------|
+|![캘린더](readmeIMG/calendar.jpg)|![회원가입](readmeIMG/일정추가.jpg)|![회원가입](readmeIMG/일정추가_옷추가.jpg)|![회원가입](readmeIMG/옷조합_가이드.jpg)|
+
+<br>
+
+## 3. Diary
+- 등록한 옷 개수, 룩북 수, 팔로워 확인
+- 지도 API 연동으로 위치 기록
+- 날씨 API 연동
+- 앞 calendar에서 날짜에 등록한 옷 기반 일기 등록
+- 룩북 이외의 다른 여러장의 사진 등록
+- Map 에서 내가 일기 기록한 장소 한눈에 확인
+
+| Diary | Map | 일기 상세 화면 | 일기 추가 | 일기 작성 |
+|------|------|------|------|------|
+|![다이어리](readmeIMG/다이어리.jpg)|![맵](readmeIMG/다이어리_맵.jpg)||![회원가입](readmeIMG/다이어리추가.jpg)||
+
+| 프로필 수정 |
+|------|
+|![캘린더](readmeIMG/커뮤니티.jpg)||
+
+## 4. Community
+### 4-1. Feed/Follow
+- 다른 유저의 룩북 확인
+- 스크랩 및 외부 sns 공유
+- 다른유저 프로필 확인
+- 내가 팔로우 한 사람, 내가 팔로잉 중인 사람 목록 확인
+
+| Cummunity | 다른 유저 프로필 | 공유하기 | Follow |
+|------|------|------|------|
+|![캘린더](readmeIMG/커뮤니티.jpg)|||![회원가입](readmeIMG/Follow.jpg)|
+
+### 4-2. QnA
+- 사진 여러 장 + 텍스트 업로드
+- 댓글로 코디 조언 받기
+- 다른 사용자의 옷장 열람 후 맞춤 추천
+
+| QnA | Qna 추가 | 댓글 | 다른 사용자 옷장 코디 |
+|------|------|------|------|
+|![캘린더](readmeIMG/QnA.jpg)||![회원가입](readmeIMG/댓글.jpg)|![회원가입](readmeIMG/질문옷장.jpg)|
+
+<br>
+
+## 6. 소셜 기능
+- 팔로우/언팔로우
+- 팔로잉 목록 확인
+- 사용자 프로필 조회
+
+<br>
+
+## 7. 마이페이지
+- 개인정보 수정
+- 작성한 게시글/댓글 관리
+- 좋아요 & 스크랩 목록
+- 회원 탈퇴
+
+<br>
+
 ## 📁 Project Structure
 
 ```text
@@ -107,153 +256,6 @@ lib/
         ├── weather_chip.dart
         └── purpose_chip.dart
 ```
-
-
-<br>
-
-## 🖥️ **기술 스택**
-|구분|기술|
-|------|----------------|
-|**Backend**|![Flutter](https://img.shields.io/badge/Flutter-%2302569B.svg?style=for-the-badge&logo=Flutter&logoColor=white)|
-|**Frontend**|![Android Studio](https://img.shields.io/badge/android%20studio-346ac1?style=for-the-badge&logo=android%20studio&logoColor=white) |
-|**Database**|![Firebase](https://img.shields.io/badge/firebase-a08021?style=for-the-badge&logo=firebase&logoColor=ffcd34)|
-|**Tools**|![Figma](https://img.shields.io/badge/figma-%23F24E1E.svg?style=for-the-badge&logo=figma&logoColor=white) ![GitHub](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white) ![Google Drive](https://img.shields.io/badge/Google%20Drive-4285F4?style=for-the-badge&logo=googledrive&logoColor=white) ![KakaoTalk](https://img.shields.io/badge/kakaotalk-ffcd00.svg?style=for-the-badge&logo=kakaotalk&logoColor=000000) ![Instagram](https://img.shields.io/badge/Instagram-%23E4405F.svg?style=for-the-badge&logo=Instagram&logoColor=white) ![Facebook](https://img.shields.io/badge/Facebook-%231877F2.svg?style=for-the-badge&logo=Facebook&logoColor=white) ![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)|
-|**Collaboration**|![Google Gemini](https://img.shields.io/badge/google%20gemini-8E75B2?style=for-the-badge&logo=google%20gemini&logoColor=white) ![ChatGPT](https://img.shields.io/badge/chatGPT-74aa9c?style=for-the-badge&logo=openai&logoColor=white) |
-
-<br>
-
-## 📂 프로젝트 자료 모음
-| 분류 | 링크 |
-|------|------|
-| 📝 회의록 | 📅 [1회차 회의록](https://docs.google.com/document/d/1xQXNfiVdnWR8__4PAtTqPMBrZyrpG0Kw6K73RPqs-4k/edit?tab=t.7y908es3yuq) <br> 📅 [2회차 회의록](https://docs.google.com/document/d/1ba9YWrBuRw63KOHbEYD_QMjfeJkOcVIqZQJ92tcYr6s/edit?tab=t.0) <br> 📅 [3회차 회의록](https://docs.google.com/document/d/1vq4wwx3afmFLc00ERxrCCkcfRcPvciKWhzbkY7umeyQ/edit?tab=t.0) <br> 📅 [4회차 회의록](https://docs.google.com/document/d/1xJ1OdjF5AHMCv0iy4lhsbJz4yekFyEjKbr3CK_puW6Y/edit?tab=t.0) |
-| 🏗 설계 자료 | 🎨 [Figma 설계 보기](https://www.figma.com/design/xIKwyhMPDhbnGMi1fLVoVU/%ED%94%8C%EB%9F%AC%ED%84%B0-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-%ED%99%94%EB%A9%B4%EA%B5%AC%EC%84%B1?node-id=0-1&p=f&t=7U7g0LV7wZ1mGv9K-0) |
-| 📚 공통 문서 | 📁 [공통 문서 폴더 보기](https://drive.google.com/drive/u/0/folders/16c1vWnDJNyonibTgSbnFPx56UtfGC8ld) |
-
-<br>
-
-## 🖍 차별점
-- 외출 기록 중심: 단순 코디 전시가 아닌 일상 기록 및 히스토리 관리
-- 커뮤니티 서포트: 사용자 옷장 기반 맞춤형 코디 추천
-- 한국 시장 특화: 소개팅, 결혼식 등 한국 문화 반영
-- 통합 경험: 옷장 관리 → 코디 계획 → 외출 기록 → 커뮤니티 공유의 원스톱 서비스
-
-<br>
-
-## 📱 화면 구성
-- 로그인/회원가입
-- 옷장 (목록/추가/수정/삭제)
-- 룩북 생성 도구
-- 캘린더
-- 일기 작성/조회
-- 커뮤니티 피드
-- QnA 게시판
-- 마이페이지
-
-<br>
-
-# 📽 주요 기능
-## 1. 로그인/회원가입
-### 이메일/아이디/전화번호 회원가입
-- 소셜 로그인 (Google)
-- 아이디찾기/비밀번호찾기
-- 프로필 이미지 및 성별 선택
-
-| Splash | 회원가입 | 로그인 |
-|--------|----------|--------|
-| ![Splash](readmeIMG/스플래시.jpg) | ![회원가입](readmeIMG/회원가입.jpg) | ![로그인](readmeIMG/로그인.jpg) |
-
-<br>
-
-## 2. Closet (옷장/룩북/스크랩)
-### 2-1. 옷장
-- 사용자 전용 커스텀 카테고리 추가 가능
-- 옷 등록시 누끼 api (remove.bg 사용)
-- 옷 선택후 ai 착용사진 생성 (Gemini api)
-
-| 옷장 | 카테고리 | 옷 등록 | ai착용샷 |
-|------|------|------|------|
-|![옷장](readmeIMG/closet.jpg)|![회원가입](readmeIMG/카테고리.jpg)|![회원가입](readmeIMG/옷추가.jpg)||
-
-### 2-2. 룩북
-- 옷장 조합으로 룩북 생성
-- ai 룩북/ 일반 룩북 필터링
-- 사진 조절 조작키로 자유자재 룩북 생성
-
-| 룩북 | 룩북 상세 화면 | 룩북 등록 |
-|------|------|------|
-|![옷장](readmeIMG/lookbooks.jpg)|![회원가입](readmeIMG/룩북상세.jpg)||
-
-### 2-3. 스크랩
-- 커뮤니티 Feed 에서 다른 유저의 코디 스크랩가능
-- 스크랩 후 해당 옷 정보 확인가능
-
-| 스크랩 | 스크랩 상세화면 | 
-|------|------|
-|![옷장](readmeIMG/scrap.jpg)||
-
-<br>
-
-## 2. Calendar (옷장/룩북/스크랩)
-- 날짜 선택 (날씨, 목적지, 일정 등록)
-- 룩북에서 옷 가져와서 등록 or 바로 룩북 생성
-
-| Calendar | 날짜 코디 등록 | 일정 옷 추가 | 옷 조합 |
-|------|------|------|------|
-|![캘린더](readmeIMG/calendar.jpg)|![회원가입](readmeIMG/일정추가.jpg)|![회원가입](readmeIMG/일정추가_옷추가.jpg)|![회원가입](readmeIMG/옷조합_가이드.jpg)|
-
-<br>
-
-## 2. Diary
-- 등록한 옷 개수, 룩북 수, 팔로워 확인
-- 지도 API 연동으로 위치 기록
-- 날씨 API 연동
-- 앞 calendar에서 날짜에 등록한 옷 기반 일기 등록
-- 룩북 이외의 다른 여러장의 사진 등록 가능
-- Map 에서 내가 일기 기록한 장소 한눈에 확인
-
-| Diary | Map | 일기 상세 화면 | 일기 추가 | 일기 작성 |
-|------|------|------|------|------|
-|![다이어리](readmeIMG/다이어리.jpg)|![맵](readmeIMG/다이어리_맵.jpg)||![회원가입](readmeIMG/다이어리추가.jpg)||
-
-
-## 4. 캘린더 & 외출 일기
-### 캘린더
-- 특정 날짜에 룩북 매칭
-- 일기 작성
-- 필수: 룩북 선택, 날짜, 위치, 날씨, 코멘트
-- 지도 API 연동으로 위치 기록
-- 날씨 API 연동
-
-<br>
-
-## 5. 커뮤니티
-- 피드
-- 룩북 게시 및 공유
-- 좋아요 & 스크랩 기능
-- 다른 사용자의 룩북 스크랩 모아보기
-### QnA 게시판
-- 사진 여러 장 + 텍스트 업로드
-- 댓글로 코디 조언 받기
-- 다른 사용자의 옷장 열람 후 맞춤 추천
-
-<br>
-
-## 6. 소셜 기능
-- 팔로우/언팔로우
-- 팔로잉 목록 확인
-- 사용자 프로필 조회
-
-<br>
-
-## 7. 마이페이지
-- 개인정보 수정
-- 작성한 게시글/댓글 관리
-- 좋아요 & 스크랩 목록
-- 회원 탈퇴
-
-<br>
-
-
 
 
 
