@@ -159,7 +159,7 @@ lib/
 
 | Before | After |
 |------|------|
-||<img width="400" height="400" alt="로그인 main" src="https://github.com/user-attachments/assets/cfacd401-3c3c-4425-aff1-77b159995fc5" />|
+|||
 
 
 <br>
