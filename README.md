@@ -153,7 +153,7 @@
 
 | 옵션 | 정보수정 |
 |------|------|
-|![캘린더](readmeIMG/점점점.jpg)||![캘린더](readmeIMG/프로필수정.jpg)|
+|![캘린더](readmeIMG/점점점.jpg)|![캘린더](readmeIMG/프로필수정.jpg)|
 
 ## 4. Community
 ### 4-1. Feed/Follow
@@ -164,7 +164,7 @@
 
 | Cummunity | 다른 유저 프로필 | 공유하기 | Follow |
 |------|------|------|------|
-|![캘린더](readmeIMG/커뮤니티.jpg)||![캘린더](readmeIMG/다른유저프로필.jpg)||![캘린더](readmeIMG/공유하기.jpg)|![회원가입](readmeIMG/Follow.jpg)|
+|![캘린더](readmeIMG/커뮤니티.jpg)|![캘린더](readmeIMG/다른유저프로필.jpg)|![캘린더](readmeIMG/공유하기.jpg)|![회원가입](readmeIMG/Follow.jpg)|
 
 ### 4-2. QnA
 - 사진 여러 장 + 텍스트 업로드
