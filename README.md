@@ -145,11 +145,15 @@
 
 | Diary | Map | 일기 상세 화면 | 일기 추가 | 일기 작성 |
 |------|------|------|------|------|
-|![다이어리](readmeIMG/다이어리.jpg)|![맵](readmeIMG/다이어리_맵.jpg)||![회원가입](readmeIMG/다이어리추가.jpg)||
+|![다이어리](readmeIMG/다이어리.jpg)|![맵](readmeIMG/다이어리_맵.jpg)|![맵](readmeIMG/다이어리상세.jpg)|![회원가입](readmeIMG/다이어리추가.jpg)|![회원가입](readmeIMG/다이어리작성중.jpg)|
 
-| 프로필 수정 |
-|------|
-|![캘린더](readmeIMG/커뮤니티.jpg)||
+- 사용방법 튜토리얼
+- 정보 수정
+- 탈퇴하기
+
+| 옵션 | 정보수정 |
+|------|------|
+|![캘린더](readmeIMG/점점점.jpg)||![캘린더](readmeIMG/프로필수정.jpg)|
 
 ## 4. Community
 ### 4-1. Feed/Follow
@@ -160,7 +164,7 @@
 
 | Cummunity | 다른 유저 프로필 | 공유하기 | Follow |
 |------|------|------|------|
-|![캘린더](readmeIMG/커뮤니티.jpg)|||![회원가입](readmeIMG/Follow.jpg)|
+|![캘린더](readmeIMG/커뮤니티.jpg)||![캘린더](readmeIMG/다른유저프로필.jpg)||![캘린더](readmeIMG/공유하기.jpg)|![회원가입](readmeIMG/Follow.jpg)|
 
 ### 4-2. QnA
 - 사진 여러 장 + 텍스트 업로드
@@ -169,22 +173,7 @@
 
 | QnA | Qna 추가 | 댓글 | 다른 사용자 옷장 코디 |
 |------|------|------|------|
-|![캘린더](readmeIMG/QnA.jpg)||![회원가입](readmeIMG/댓글.jpg)|![회원가입](readmeIMG/질문옷장.jpg)|
-
-<br>
-
-## 6. 소셜 기능
-- 팔로우/언팔로우
-- 팔로잉 목록 확인
-- 사용자 프로필 조회
-
-<br>
-
-## 7. 마이페이지
-- 개인정보 수정
-- 작성한 게시글/댓글 관리
-- 좋아요 & 스크랩 목록
-- 회원 탈퇴
+|![캘린더](readmeIMG/QnA.jpg)||![캘린더](readmeIMG/질문등록.jpg)|![회원가입](readmeIMG/댓글.jpg)|![회원가입](readmeIMG/질문옷장.jpg)|
 
 <br>
 
