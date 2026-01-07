@@ -1,4 +1,6 @@
-# Flutter_Team_Project
+# MODE
+> My Outfits Daily Everyday
+
 
 ## 📋 프로젝트 개요
 일상의 코디를 기록하고 관리하는 모바일 옷장 서비스입니다. 사용자는 보유한 옷을 체계적으로 관리하고, 외출 목적에 맞는 코디를 계획하며, 커뮤니티를 통해 스타일 조언을 받을 수 있습니다.
@@ -10,6 +12,16 @@
 단순한 코디 전시 앱이 아닌,
 옷장 관리 → 코디 구성 → 외출 기록 → 커뮤니티 공유까지 이어지는
 하나의 완성된 패션 라이프 사이클을 제공합니다.
+
+<br>
+
+### 😀 팀원 구성
+| 이름 | GitHub |
+|------|--------|
+| 김예슬 | https://github.com/yeseul1008 |
+| 김동준 | https://github.com/jun-000224 |
+| 김반석 | https://github.com/KIMBANSEOK92 |
+| 아린 | https://github.com/aline-rousselinsiv |
 
 <br>
 
