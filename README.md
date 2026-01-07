@@ -102,9 +102,9 @@
 - 옷 등록시 누끼 api (remove.bg 사용)
 - 옷 선택후 ai 착용사진 생성 (Gemini api)
 
-| 옷장 | 카테고리 | 옷 등록 | ai착용샷 |
-|------|------|------|------|
-|![옷장](readmeIMG/closet.jpg)|![회원가입](readmeIMG/카테고리.jpg)|![회원가입](readmeIMG/옷추가.jpg)||
+| 옷장 | 카테고리 | 옷 등록 | ai 옷 선택 | ai 생성결과 |
+|------|------|------|------|------|
+|![옷장](readmeIMG/closet.jpg)|![회원가입](readmeIMG/카테고리.jpg)|![회원가입](readmeIMG/옷추가.jpg)|![ai](readmeIMG/ai옷선택.jpg)|![ai](readmeIMG/ai결과.jpg)|
 
 ### 2-2. 룩북
 - 옷장 조합으로 룩북 생성
@@ -113,7 +113,7 @@
 
 | 룩북 | 룩북 상세 화면 | 룩북 등록 |
 |------|------|------|
-|![옷장](readmeIMG/lookbooks.jpg)|![회원가입](readmeIMG/룩북상세.jpg)||
+|![옷장](readmeIMG/lookbooks.jpg)|![회원가입](readmeIMG/룩북상세.jpg)|![회원가입](readmeIMG/룩북조합하기.jpg)|
 
 ### 2-3. 스크랩
 - 커뮤니티 Feed 에서 다른 유저의 코디 스크랩가능
@@ -121,7 +121,7 @@
 
 | 스크랩 | 스크랩 상세화면 | 
 |------|------|
-|![옷장](readmeIMG/scrap.jpg)||
+|![옷장](readmeIMG/scrap.jpg)|![옷장](readmeIMG/스크랩상세.jpg)|
 
 <br>
 
