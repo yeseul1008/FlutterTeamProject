@@ -1,6 +1,6 @@
 # Environment variables
 .env
-pubspec.yaml
+AndroidManifest.xml
 # Miscellaneous
 *.class
 *.log
