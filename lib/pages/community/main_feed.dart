@@ -783,16 +783,12 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
                             ),
                           ),
                           child: const Text(
-                            'report',
+                            'Report',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),
-                      child: const Text(
-                        'Report',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
+                    ],
                   ),
                 ],
               );
@@ -920,6 +916,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
     }
   }
 }
+
 class _SleekTopTabs extends StatelessWidget {
   const _SleekTopTabs({
     required this.selectedIndex,

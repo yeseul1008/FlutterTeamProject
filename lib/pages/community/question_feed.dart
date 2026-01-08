@@ -120,8 +120,10 @@ class _QuestionFeedState extends State<QuestionFeed> {
 
     if (!hasSeenTutorial && questions.isNotEmpty) {
       Future.delayed(Duration(milliseconds: 800), () {
-        _showTutorial();
-        prefs.setBool('hasSeenQuestionFeedTutorial', true);
+        if (mounted) {
+          _showTutorial();
+          prefs.setBool('hasSeenQuestionFeedTutorial', true);
+        }
       });
     }
   }
@@ -134,13 +136,13 @@ class _QuestionFeedState extends State<QuestionFeed> {
       paddingFocus: 10,
       opacityShadow: 0.8,
       onFinish: () {
-        print("Tutorial finished");
+        debugPrint("Tutorial finished");
       },
       onClickTarget: (target) {
-        print('Clicked on ${target.identify}');
+        debugPrint('Clicked on ${target.identify}');
       },
       onSkip: () {
-        print("Tutorial skipped");
+        debugPrint("Tutorial skipped");
         return true;
       },
     );
@@ -290,7 +292,8 @@ class _QuestionFeedState extends State<QuestionFeed> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.chat_outlined, color: Color(0xFFCAD83B), size: 40),
+                      Icon(Icons.chat_outlined,
+                          color: Color(0xFFCAD83B), size: 40),
                       SizedBox(height: 10),
                       Text(
                         "댓글",
@@ -331,7 +334,8 @@ class _QuestionFeedState extends State<QuestionFeed> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.share_outlined, color: Color(0xFFCAD83B), size: 40),
+                      Icon(Icons.share_outlined,
+                          color: Color(0xFFCAD83B), size: 40),
                       SizedBox(height: 10),
                       Text(
                         "공유하기",
@@ -361,7 +365,11 @@ class _QuestionFeedState extends State<QuestionFeed> {
 
   void _showTutorial() {
     _createTutorial();
-    tutorialCoachMark?.show(context: context);
+    Future.delayed(Duration(milliseconds: 100), () {
+      if (mounted && tutorialCoachMark != null) {
+        tutorialCoachMark?.show(context: context);
+      }
+    });
   }
 
   @override
@@ -375,14 +383,15 @@ class _QuestionFeedState extends State<QuestionFeed> {
   @override
   Widget build(BuildContext context) {
     const int selectedIndex = 1;
-    final String currentPath = GoRouterState.of(context).uri.path;
 
     return Container(
       color: Colors.white,
       child: SafeArea(
         child: Column(
           children: [
+            // 탭에 key 연결
             Padding(
+              key: _tabsKey,
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               child: _SleekTopTabs(
                 selectedIndex: selectedIndex,
@@ -429,7 +438,8 @@ class _QuestionFeedState extends State<QuestionFeed> {
                       child: ElevatedButton(
                         onPressed: () => context.go('/questionAdd'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFCAD83B).withOpacity(0.85),
+                          backgroundColor:
+                          const Color(0xFFCAD83B).withOpacity(0.85),
                           foregroundColor: Colors.black,
                           padding: const EdgeInsets.symmetric(
                               horizontal: 22, vertical: 12),
@@ -513,7 +523,8 @@ class _QuestionFeedState extends State<QuestionFeed> {
           // 일반 이미지 - 탭하면 전체 화면으로
           if (item['imageUrl'] != null && item['imageUrl'].isNotEmpty)
             GestureDetector(
-              onTap: () => _showFullScreenImage(context, item['imageUrl'], item['docId'], true),
+              onTap: () => _showFullScreenImage(
+                  context, item['imageUrl'], item['docId'], true),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: ClipRRect(
@@ -539,7 +550,8 @@ class _QuestionFeedState extends State<QuestionFeed> {
           if (item['resultImageUrl'] != null &&
               item['resultImageUrl'].isNotEmpty)
             GestureDetector(
-              onTap: () => _showFullScreenImage(context, item['resultImageUrl'], item['docId'], false),
+              onTap: () => _showFullScreenImage(
+                  context, item['resultImageUrl'], item['docId'], false),
               child: Container(
                 decoration: BoxDecoration(
                   border: Border(
@@ -619,7 +631,8 @@ class _QuestionFeedState extends State<QuestionFeed> {
   }
 
   /// 전체 화면 이미지 보기
-  void _showFullScreenImage(BuildContext context, String imageUrl, String docId, bool isMainImage) {
+  void _showFullScreenImage(
+      BuildContext context, String imageUrl, String docId, bool isMainImage) {
     final heroTag = isMainImage ? 'image_$docId' : 'result_$docId';
 
     Navigator.of(context).push(
@@ -1143,10 +1156,8 @@ class _QuestionFeedState extends State<QuestionFeed> {
 
     final controller = TextEditingController(text: content);
     String currentImageUrl = data?['imageUrl'] ?? '';
-    String currentResultImageUrl = data?['resultImageUrl'] ?? '';
 
     File? newImageFile;
-    File? newResultImageFile;
 
     final ImagePicker picker = ImagePicker();
 
@@ -1195,7 +1206,8 @@ class _QuestionFeedState extends State<QuestionFeed> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFCAD83B), width: 2),
+                          borderSide: const BorderSide(
+                              color: Color(0xFFCAD83B), width: 2),
                         ),
                       ),
                     ),
@@ -1229,7 +1241,8 @@ class _QuestionFeedState extends State<QuestionFeed> {
                                 shape: BoxShape.circle,
                               ),
                               child: IconButton(
-                                icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                                icon: const Icon(Icons.close,
+                                    color: Colors.white, size: 20),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
                                 onPressed: () {
@@ -1256,7 +1269,8 @@ class _QuestionFeedState extends State<QuestionFeed> {
                                   color: Colors.grey[300],
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Icon(Icons.broken_image, size: 40),
+                                child:
+                                const Icon(Icons.broken_image, size: 40),
                               ),
                             ),
                           ),
@@ -1269,7 +1283,8 @@ class _QuestionFeedState extends State<QuestionFeed> {
                                 shape: BoxShape.circle,
                               ),
                               child: IconButton(
-                                icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                                icon: const Icon(Icons.close,
+                                    color: Colors.white, size: 20),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
                                 onPressed: () {
@@ -1286,7 +1301,8 @@ class _QuestionFeedState extends State<QuestionFeed> {
                         decoration: BoxDecoration(
                           color: Colors.grey[100],
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey[300]!, width: 1.5),
+                          border: Border.all(
+                              color: Colors.grey[300]!, width: 1.5),
                         ),
                         child: Center(
                           child: Text(
@@ -1368,29 +1384,22 @@ class _QuestionFeedState extends State<QuestionFeed> {
                         }
 
                         try {
-                          String? uploadedImageUrl = currentImageUrl.isNotEmpty ? currentImageUrl : null;
-                          String? uploadedResultImageUrl = currentResultImageUrl.isNotEmpty ? currentResultImageUrl : null;
+                          String? uploadedImageUrl = currentImageUrl.isNotEmpty
+                              ? currentImageUrl
+                              : null;
 
                           if (newImageFile != null) {
                             final ref = FirebaseStorage.instance
                                 .ref()
-                                .child('questions/${postId}_${DateTime.now().millisecondsSinceEpoch}.jpg');
+                                .child(
+                                'questions/${postId}_${DateTime.now().millisecondsSinceEpoch}.jpg');
                             await ref.putFile(newImageFile!);
                             uploadedImageUrl = await ref.getDownloadURL();
-                          }
-
-                          if (newResultImageFile != null) {
-                            final ref = FirebaseStorage.instance
-                                .ref()
-                                .child('questions/${postId}_result_${DateTime.now().millisecondsSinceEpoch}.jpg');
-                            await ref.putFile(newResultImageFile!);
-                            uploadedResultImageUrl = await ref.getDownloadURL();
                           }
 
                           await fs.collection('questions').doc(postId).update({
                             'text': newText,
                             'imageUrl': uploadedImageUrl ?? '',
-                            'resultImageUrl': uploadedResultImageUrl ?? '',
                           });
 
                           if (mounted) {
@@ -1402,7 +1411,8 @@ class _QuestionFeedState extends State<QuestionFeed> {
                         } catch (e) {
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('수정 중 오류가 발생했습니다')),
+                              const SnackBar(
+                                  content: Text('수정 중 오류가 발생했습니다')),
                             );
                           }
                         }
@@ -1514,42 +1524,14 @@ class _QuestionFeedState extends State<QuestionFeed> {
 
   Future<void> _shareToFacebook(String imageUrl) async {
     try {
-      final uri =
-      Uri.parse('https://www.facebook.com/sharer/sharer.php?u=$imageUrl');
+      final uri = Uri.parse(
+          'https://www.facebook.com/sharer/sharer.php?u=$imageUrl');
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri);
       }
     } catch (e) {
       debugPrint('Facebook share error: $e');
     }
-  }
-
-  Widget _topButton({
-    required String text,
-    required bool active,
-    required VoidCallback onTap,
-  }) {
-    return Expanded(
-      child: SizedBox(
-        height: 50,
-        child: ElevatedButton(
-          onPressed: onTap,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: active ? const Color(0xFFCAD83B) : Colors.white,
-            foregroundColor: Colors.black,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30),
-              side: const BorderSide(color: Colors.black),
-            ),
-          ),
-          child: Text(
-            text,
-            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
-          ),
-        ),
-      ),
-    );
   }
 }
 
@@ -1605,7 +1587,7 @@ class _SleekTopTabs extends StatelessWidget {
                   padding: const EdgeInsets.all(4),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: const Color(0xFFCAD83B), // 기존 감성 유지
+                      color: const Color(0xFFCAD83B),
                       borderRadius: BorderRadius.circular(22),
                       border: Border.all(color: Colors.black, width: 1.2),
                       boxShadow: const [
