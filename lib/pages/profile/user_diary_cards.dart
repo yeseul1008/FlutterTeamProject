@@ -1,14 +1,17 @@
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_places_flutter/google_places_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
+import 'dart:async';
 
 class UserDiaryCards extends StatefulWidget {
   final int initialPage; // 0 for diary, 1 for map
@@ -58,6 +61,10 @@ class _UserDiaryCardsState extends State<UserDiaryCards> with SingleTickerProvid
   Map<String, List<Map<String, dynamic>>> _diaryData = {};
   static const LatLng _defaultLocation = LatLng(37.4563, 126.7052);
   final TextEditingController _searchController = TextEditingController();
+
+  // Cards highlight effect
+  String? _highlightedDiaryId; //
+  Timer? _highlightTimer;
 
   String formatKoreanDate(Timestamp? timestamp) {
     if (timestamp == null) return '날짜 없음';
@@ -514,6 +521,7 @@ class _UserDiaryCardsState extends State<UserDiaryCards> with SingleTickerProvid
     _pageController.dispose();
     _tabController?.dispose();
     _searchController.dispose();
+    _highlightTimer?.cancel();
     super.dispose();
   }
 
@@ -1192,6 +1200,10 @@ class _UserDiaryCardsState extends State<UserDiaryCards> with SingleTickerProvid
                               );
 
                               if (diaryIndex != -1) {
+                                // Highlight
+                                setState(() {
+                                  _highlightedDiaryId = diary['id'];
+                                });
                                 // Switch to diary tab
                                 _pageController.animateToPage(
                                   0,
@@ -1203,6 +1215,16 @@ class _UserDiaryCardsState extends State<UserDiaryCards> with SingleTickerProvid
                                 // Open the diary dialog after a short delay
                                 Future.delayed(Duration(milliseconds: 400), () {
                                   _diaryDialog(context, diaryIndex);
+                                });
+
+                                // Remove highlight effect
+                                _highlightTimer?.cancel();
+                                _highlightTimer = Timer(Duration(seconds: 1), () {
+                                  if (mounted) {
+                                    setState(() {
+                                      _highlightedDiaryId = null;
+                                    });
+                                  }
                                 });
                               }
                             },
@@ -1360,6 +1382,7 @@ class _UserDiaryCardsState extends State<UserDiaryCards> with SingleTickerProvid
               label: 'diary',
               isActive: _currentPage == 0,
               onTap: () {
+                _searchController.clear();
                 _pageController.animateToPage(
                   0,
                   duration: Duration(milliseconds: 300),
@@ -1463,32 +1486,60 @@ class _UserDiaryCardsState extends State<UserDiaryCards> with SingleTickerProvid
       itemCount: userDiaries.length,
       itemBuilder: (context, index) {
         final diary = userDiaries[index];
+        final isHighlighted = _highlightedDiaryId == diary['diaryId']; // ✅ CHECK IF HIGHLIGHTED
+
         return GestureDetector(
           onTap: () => _diaryDialog(context, index),
-          child: Container(
+          child: AnimatedContainer( // ✅ CHANGED FROM Container TO AnimatedContainer
+            duration: Duration(milliseconds: 300),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[100]!, width: 1),
+              border: Border.all(
+                // ✅ HIGHLIGHT EFFECT
+                color: isHighlighted ? Color(0xFFCAD83B) : Colors.grey[100]!,
+                width: isHighlighted ? 4 : 1,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
-                  spreadRadius: 1,
-                  blurRadius: 3,
+                  color: isHighlighted
+                      ? Color(0xFFCAD83B).withOpacity(0.5) // ✅ GLOW EFFECT
+                      : Colors.grey.withOpacity(0.2),
+                  spreadRadius: isHighlighted ? 3 : 1,
+                  blurRadius: isHighlighted ? 8 : 3,
                   offset: Offset(0, 2),
                 ),
               ],
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                diary['imageUrl'],
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.grey[300],
-                    child: Icon(Icons.image_not_supported, size: 50),
-                  );
-                },
+              child: Stack( // ✅ ADD STACK FOR OVERLAY
+                children: [
+                  Image.network(
+                    diary['imageUrl'],
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[300],
+                        child: Icon(Icons.image_not_supported, size: 50),
+                      );
+                    },
+                  ),
+                  // ✅ OPTIONAL: ADD SUBTLE OVERLAY WHEN HIGHLIGHTED
+                  if (isHighlighted)
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Color(0xFFCAD83B),
+                            width: 1,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -1499,7 +1550,6 @@ class _UserDiaryCardsState extends State<UserDiaryCards> with SingleTickerProvid
 
   Widget _buildMapView() {
     if (!hasMapBeenLoaded && _currentPage == 1) {
-      // Delay to ensure smooth transition
       Future.delayed(Duration(milliseconds: 100), () {
         if (mounted) {
           setState(() {
@@ -1524,9 +1574,9 @@ class _UserDiaryCardsState extends State<UserDiaryCards> with SingleTickerProvid
     }
 
     if (!hasMapBeenLoaded) {
-      // Return empty container if map tab not visited yet
       return Container();
     }
+
     return Column(
       children: [
         Padding(
@@ -1535,13 +1585,21 @@ class _UserDiaryCardsState extends State<UserDiaryCards> with SingleTickerProvid
             key: _searchBarKey,
             children: [
               Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  onSubmitted: (_) => _searchLocation(_searchController.text),
-                  decoration: InputDecoration(
+                child: GooglePlaceAutoCompleteTextField(
+                  textEditingController: _searchController,
+                  googleAPIKey: dotenv.env['GOOGLEMAP_API_KEY'] ?? '',
+                  inputDecoration: InputDecoration(
                     hintText: '예) 강남역, 성수동, 홍대입구',
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                    // ✅ Clean borders - no filled background
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.black),
+                    ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: Colors.black),
@@ -1550,7 +1608,54 @@ class _UserDiaryCardsState extends State<UserDiaryCards> with SingleTickerProvid
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: Colors.black, width: 1.2),
                     ),
+                    // ❌ Removed filled and fillColor
                   ),
+                  debounceTime: 400,
+                  countries: ["kr"],
+                  isLatLngRequired: true,
+                  getPlaceDetailWithLatLng: (prediction) {
+                    print("Selected place: ${prediction.description}");
+
+                    if (prediction.lat != null && prediction.lng != null) {
+                      final newPosition = LatLng(
+                          double.parse(prediction.lat!),
+                          double.parse(prediction.lng!)
+                      );
+
+                      _mapController?.animateCamera(
+                        CameraUpdate.newLatLngZoom(newPosition, 14),
+                      );
+
+                      _showSnack('위치를 찾았습니다!');
+                    }
+                  },
+                  itemClick: (prediction) {
+                    _searchController.text = prediction.description ?? "";
+                    _searchController.selection = TextSelection.fromPosition(
+                      TextPosition(offset: prediction.description?.length ?? 0),
+                    );
+                  },
+                  seperatedBuilder: Divider(height: 1, color: Colors.grey[300]),
+                  itemBuilder: (context, index, prediction) {
+                    print('Building suggestion $index: ${prediction.description}');
+                    return Container(
+                      color: Colors.white,
+                      padding: EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          Icon(Icons.location_on, size: 20, color: Colors.grey[600]),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              prediction.description ?? "",
+                              style: TextStyle(fontSize: 14, color: Colors.black),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  isCrossBtnShown: true,
                 ),
               ),
               const SizedBox(width: 8),
@@ -1561,7 +1666,9 @@ class _UserDiaryCardsState extends State<UserDiaryCards> with SingleTickerProvid
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.black,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: const Text('검색'),
                 ),
@@ -1569,6 +1676,7 @@ class _UserDiaryCardsState extends State<UserDiaryCards> with SingleTickerProvid
             ],
           ),
         ),
+
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
