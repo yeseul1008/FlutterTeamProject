@@ -1,8 +1,11 @@
 # Environment variables
+
 .env
 **/firebase_options.dart
 **/google-services.json
 **/AndroidManifest.xml
+pubspec.yaml
+
 # Miscellaneous
 *.class
 *.log
@@ -49,4 +52,8 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-
+# Environment variables
+.env
+**/firebase_options.dart
+**/google-services.json
+**/AndroidManifest.xml
