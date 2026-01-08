@@ -47,8 +47,8 @@
 ## 🖥️ **기술 스택**
 |구분|기술|
 |------|----------------|
-|**Backend**|![Flutter](https://img.shields.io/badge/Flutter-%2302569B.svg?style=for-the-badge&logo=Flutter&logoColor=white)|
-|**Frontend**|![Android Studio](https://img.shields.io/badge/android%20studio-346ac1?style=for-the-badge&logo=android%20studio&logoColor=white) |
+|**Backend**|![Dart](https://img.shields.io/badge/dart-%230175C2.svg?style=for-the-badge&logo=dart&logoColor=white)|
+|**Frontend**|![Android Studio](https://img.shields.io/badge/android%20studio-346ac1?style=for-the-badge&logo=android%20studio&logoColor=white) ![Flutter](https://img.shields.io/badge/Flutter-%2302569B.svg?style=for-the-badge&logo=Flutter&logoColor=white)|
 |**Database**|![Firebase](https://img.shields.io/badge/firebase-a08021?style=for-the-badge&logo=firebase&logoColor=ffcd34)|
 |**Tools**|![Figma](https://img.shields.io/badge/figma-%23F24E1E.svg?style=for-the-badge&logo=figma&logoColor=white) ![GitHub](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white) ![Google Drive](https://img.shields.io/badge/Google%20Drive-4285F4?style=for-the-badge&logo=googledrive&logoColor=white) ![KakaoTalk](https://img.shields.io/badge/kakaotalk-ffcd00.svg?style=for-the-badge&logo=kakaotalk&logoColor=000000) ![Instagram](https://img.shields.io/badge/Instagram-%23E4405F.svg?style=for-the-badge&logo=Instagram&logoColor=white) ![Facebook](https://img.shields.io/badge/Facebook-%231877F2.svg?style=for-the-badge&logo=Facebook&logoColor=white) ![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)|
 |**Collaboration**|![Google Gemini](https://img.shields.io/badge/google%20gemini-8E75B2?style=for-the-badge&logo=google%20gemini&logoColor=white) ![ChatGPT](https://img.shields.io/badge/chatGPT-74aa9c?style=for-the-badge&logo=openai&logoColor=white) |
@@ -153,7 +153,7 @@
 
 | 옵션 | 정보수정 |
 |------|------|
-|![캘린더](readmeIMG/점점점.jpg)||![캘린더](readmeIMG/프로필수정.jpg)|
+|![캘린더](readmeIMG/점점점.jpg)|![캘린더](readmeIMG/프로필수정.jpg)|
 
 ## 4. Community
 ### 4-1. Feed/Follow
@@ -164,7 +164,7 @@
 
 | Cummunity | 다른 유저 프로필 | 공유하기 | Follow |
 |------|------|------|------|
-|![캘린더](readmeIMG/커뮤니티.jpg)||![캘린더](readmeIMG/다른유저프로필.jpg)||![캘린더](readmeIMG/공유하기.jpg)|![회원가입](readmeIMG/Follow.jpg)|
+|![캘린더](readmeIMG/커뮤니티.jpg)|![캘린더](readmeIMG/다른유저프로필.jpg)|![캘린더](readmeIMG/공유하기.jpg)|![회원가입](readmeIMG/Follow.jpg)|
 
 ### 4-2. QnA
 - 사진 여러 장 + 텍스트 업로드
@@ -173,7 +173,7 @@
 
 | QnA | Qna 추가 | 댓글 | 다른 사용자 옷장 코디 |
 |------|------|------|------|
-|![캘린더](readmeIMG/QnA.jpg)||![캘린더](readmeIMG/질문등록.jpg)|![회원가입](readmeIMG/댓글.jpg)|![회원가입](readmeIMG/질문옷장.jpg)|
+|![캘린더](readmeIMG/QnA.jpg)|![캘린더](readmeIMG/질문등록.jpg)|![회원가입](readmeIMG/댓글.jpg)|![회원가입](readmeIMG/질문옷장.jpg)|
 
 <br>
 
