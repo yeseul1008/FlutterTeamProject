@@ -1,6 +1,9 @@
 # Environment variables
 .env
-AndroidManifest.xml
+**/firebase_options.dart
+**/google-services.json
+**/GoogleService-Info.plist
+**/AndroidManifest.xml
 # Miscellaneous
 *.class
 *.log
