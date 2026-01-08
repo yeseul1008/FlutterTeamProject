@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class QuestionComment extends StatefulWidget {
   const QuestionComment({super.key});
@@ -24,6 +26,14 @@ class _QuestionCommentState extends State<QuestionComment> {
   String currentUserId = '';
   int commentCount = 0;
 
+  // Tutorial keys
+  final GlobalKey _tabsKey = GlobalKey();
+  final GlobalKey _likeKey = GlobalKey();
+  final GlobalKey _closetKey = GlobalKey();
+  final GlobalKey _moreKey = GlobalKey();
+
+  TutorialCoachMark? tutorialCoachMark;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -33,13 +43,16 @@ class _QuestionCommentState extends State<QuestionComment> {
     if (extra != null) {
       postId = extra['postId'];
       _loadPostAuthor();
-      _getComments();
+      _getComments().then((_) {
+        _checkAndShowTutorial();
+      });
     }
   }
 
   @override
   void dispose() {
     _commentController.dispose();
+    tutorialCoachMark = null;
     super.dispose();
   }
 
@@ -120,6 +133,220 @@ class _QuestionCommentState extends State<QuestionComment> {
         isLoading = false;
       });
     }
+  }
+
+  // Check if this is the user's first time
+  Future<void> _checkAndShowTutorial() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool hasSeenTutorial = prefs.getBool('hasSeenQuestionCommentTutorial') ?? false;
+
+    if (!hasSeenTutorial && comments.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future.delayed(Duration(milliseconds: 500), () {
+          if (mounted) {
+            _showTutorial();
+            prefs.setBool('hasSeenQuestionCommentTutorial', true);
+          }
+        });
+      });
+    }
+  }
+
+  void _createTutorial() {
+    List<TargetFocus> targets = [];
+
+    // Target 1: Tab Buttons
+    if (_tabsKey.currentContext != null) {
+      targets.add(
+        TargetFocus(
+          identify: "tabs",
+          keyTarget: _tabsKey,
+          alignSkip: Alignment.topRight,
+          shape: ShapeLightFocus.RRect,
+          radius: 10,
+          contents: [
+            TargetContent(
+              align: ContentAlign.bottom,
+              padding: EdgeInsets.all(20),
+              builder: (context, controller) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "탭 메뉴",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 20.0,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      "Feed, QnA, Follow 탭을 전환할 수 있습니다",
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Target 2: Like Button (if comments exist)
+    if (comments.isNotEmpty && _likeKey.currentContext != null) {
+      targets.add(
+        TargetFocus(
+          identify: "like",
+          keyTarget: _likeKey,
+          alignSkip: Alignment.topRight,
+          shape: ShapeLightFocus.Circle,
+          radius: 5,
+          contents: [
+            TargetContent(
+              align: ContentAlign.top,
+              padding: EdgeInsets.all(20),
+              builder: (context, controller) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.thumb_up, color: Color(0xFFCAD83B), size: 40),
+                    SizedBox(height: 10),
+                    Text(
+                      "좋아요",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 20.0,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      "댓글에 공감하면 좋아요를 눌러보세요",
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Target 3: Closet Button
+    if (_closetKey.currentContext != null) {
+      targets.add(
+        TargetFocus(
+          identify: "closet",
+          keyTarget: _closetKey,
+          alignSkip: Alignment.topRight,
+          shape: ShapeLightFocus.Circle,
+          radius: 5,
+          contents: [
+            TargetContent(
+              align: ContentAlign.top,
+              padding: EdgeInsets.all(20),
+              builder: (context, controller) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.checkroom, color: Colors.grey, size: 40),
+                    SizedBox(height: 10),
+                    Text(
+                      "옷장 보기",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 20.0,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      "게시글 작성자의 옷장을 확인할 수 있습니다",
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Target 4: More Options
+    if (comments.isNotEmpty && _moreKey.currentContext != null) {
+      targets.add(
+        TargetFocus(
+          identify: "more",
+          keyTarget: _moreKey,
+          alignSkip: Alignment.topRight,
+          shape: ShapeLightFocus.Circle,
+          radius: 5,
+          contents: [
+            TargetContent(
+              align: ContentAlign.bottom,
+              padding: EdgeInsets.all(20),
+              builder: (context, controller) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.more_horiz, color: Colors.white, size: 40),
+                    SizedBox(height: 10),
+                    Text(
+                      "더보기",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 20.0,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      "내 댓글은 수정/삭제할 수 있고,\n다른 사람의 댓글은 신고할 수 있습니다",
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    tutorialCoachMark = TutorialCoachMark(
+      targets: targets,
+      colorShadow: Colors.black,
+      textSkip: "Skip",
+      paddingFocus: 10,
+      opacityShadow: 0.8,
+      onFinish: () {
+        print("Tutorial finished");
+      },
+      onClickTarget: (target) {
+        print('Clicked on ${target.identify}');
+      },
+      onSkip: () {
+        print("Tutorial skipped");
+        return true;
+      },
+    );
+  }
+
+  void _showTutorial() {
+    _createTutorial();
+    Future.delayed(Duration(milliseconds: 100), () {
+      if (mounted && tutorialCoachMark != null) {
+        tutorialCoachMark?.show(context: context);
+      }
+    });
   }
 
   /// 댓글 추가
@@ -410,42 +637,6 @@ class _QuestionCommentState extends State<QuestionComment> {
     }
   }
 
-  /// 신고 바텀시트
-  void _showReportBottomSheet(String commentId, String commentAuthorId) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (bottomSheetContext) {
-        return Container(
-          margin: const EdgeInsets.all(16),
-          child: SafeArea(
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(bottomSheetContext);
-                _showReportDialog(commentId, commentAuthorId);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-              child: const Text(
-                'Report',
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   /// 신고 다이얼로그
   void _showReportDialog(String commentId, String commentAuthorId) {
     String? selectedReason;
@@ -603,7 +794,6 @@ class _QuestionCommentState extends State<QuestionComment> {
       String reportedUserId,
       String reason,
       String detail,) async {
-    // 현재 사용자 확인
     if (currentUserId.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -616,7 +806,6 @@ class _QuestionCommentState extends State<QuestionComment> {
       return;
     }
 
-    // 자기 자신을 신고하는 경우 방지
     if (currentUserId == reportedUserId) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -630,7 +819,6 @@ class _QuestionCommentState extends State<QuestionComment> {
     }
 
     try {
-      // 이미 신고한 댓글인지 확인
       final existingReport = await fs
           .collection('reports')
           .where('type', isEqualTo: 'comment')
@@ -650,7 +838,6 @@ class _QuestionCommentState extends State<QuestionComment> {
         return;
       }
 
-      // 신고 데이터 저장
       final reportData = {
         'type': 'comment',
         'postId': postId,
@@ -661,14 +848,10 @@ class _QuestionCommentState extends State<QuestionComment> {
         'detail': detail.isNotEmpty ? detail : '',
         'status': 'pending',
         'createdAt': FieldValue.serverTimestamp(),
-        'platform': 'qna', // QnA 댓글임을 명시
+        'platform': 'qna',
       };
 
-      debugPrint('신고 데이터: $reportData');
-
       await fs.collection('reports').add(reportData);
-
-      debugPrint('신고가 성공적으로 저장되었습니다');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -681,7 +864,6 @@ class _QuestionCommentState extends State<QuestionComment> {
       }
     } catch (e) {
       debugPrint('신고 제출 실패: $e');
-      debugPrint('에러 상세: ${e.toString()}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -696,40 +878,22 @@ class _QuestionCommentState extends State<QuestionComment> {
 
   @override
   Widget build(BuildContext context) {
-    final String currentPath = GoRouterState
-        .of(context)
-        .uri
-        .path;
+    const int selectedIndex = 1; // QnA 탭이므로 1
 
     return Container(
       color: Colors.white,
       child: SafeArea(
         child: Column(
           children: [
-
             /// 상단 탭 UI
             Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  _topButton(
-                    text: 'Feed',
-                    active: currentPath == '/communityMainFeed',
-                    onTap: () => context.go('/communityMainFeed'),
-                  ),
-                  const SizedBox(width: 8),
-                  _topButton(
-                    text: 'QnA',
-                    active: currentPath == '/questionFeed',
-                    onTap: () => context.go('/questionFeed'),
-                  ),
-                  const SizedBox(width: 8),
-                  _topButton(
-                    text: 'Follow',
-                    active: currentPath == '/followList',
-                    onTap: () => context.go('/followList'),
-                  ),
-                ],
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: _SleekTopTabs(
+                key: _tabsKey,
+                selectedIndex: selectedIndex,
+                onTapCloset: () => context.go('/communityMainFeed'),
+                onTapLookbooks: () => context.go('/questionFeed'),
+                onTapScrap: () => context.go('/followList'),
               ),
             ),
 
@@ -797,6 +961,7 @@ class _QuestionCommentState extends State<QuestionComment> {
                     isLiked: comment['isLiked'],
                     isAuthor: isAuthor,
                     commentImgUrl: comment['commentImgUrl'],
+                    index: index,
                   );
                 },
               ),
@@ -844,6 +1009,7 @@ class _QuestionCommentState extends State<QuestionComment> {
                   ),
                   const SizedBox(width: 12),
                   GestureDetector(
+                    key: _closetKey,
                     onTap: () {
                       if (postAuthorId.isEmpty) return;
 
@@ -893,37 +1059,7 @@ class _QuestionCommentState extends State<QuestionComment> {
     );
   }
 
-  /// 공통 탭 버튼
-  Widget _topButton({
-    required String text,
-    required bool active,
-    required VoidCallback onTap,
-  }) {
-    return Expanded(
-      child: SizedBox(
-        height: 50,
-        child: ElevatedButton(
-          onPressed: onTap,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: active ? const Color(0xFFCAD83B) : Colors.white,
-            foregroundColor: Colors.black,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30),
-              side: const BorderSide(color: Colors.black),
-            ),
-          ),
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 18,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  /// 공통 탭 버튼 - 삭제 (더 이상 사용하지 않음)
 
   /// 댓글 카드 UI
   Widget _commentItem({
@@ -937,6 +1073,7 @@ class _QuestionCommentState extends State<QuestionComment> {
     required bool isLiked,
     required bool isAuthor,
     String? commentImgUrl,
+    required int index,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -995,6 +1132,7 @@ class _QuestionCommentState extends State<QuestionComment> {
               ),
               // 작성자일 경우 수정/삭제, 아닐 경우 신고 메뉴
               IconButton(
+                key: index == 0 ? _moreKey : null,
                 icon: const Icon(Icons.more_horiz),
                 onPressed: () =>
                     _showCommentOptionsMenu(
@@ -1003,6 +1141,7 @@ class _QuestionCommentState extends State<QuestionComment> {
               Column(
                 children: [
                   IconButton(
+                    key: index == 0 ? _likeKey : null,
                     onPressed: () => _toggleLike(commentId, isLiked),
                     icon: Icon(
                       isLiked ? Icons.thumb_up : Icons.thumb_up_alt_outlined,
@@ -1145,10 +1284,7 @@ class _QuestionCommentState extends State<QuestionComment> {
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.pop(bottomSheetContext);
-                        // 튜토리얼 기능이 있다면 여기에 추가
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('튜토리얼 기능은 준비 중입니다')),
-                        );
+                        _showTutorial();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
@@ -1174,5 +1310,159 @@ class _QuestionCommentState extends State<QuestionComment> {
         },
       );
     }
+  }
+}
+
+// _SleekTopTabs와 _TabButton 위젯 추가
+class _SleekTopTabs extends StatelessWidget {
+  const _SleekTopTabs({
+    Key? key,
+    required this.selectedIndex,
+    required this.onTapCloset,
+    required this.onTapLookbooks,
+    required this.onTapScrap,
+  }) : super(key: key);
+
+  final int selectedIndex;
+  final VoidCallback onTapCloset;
+  final VoidCallback onTapLookbooks;
+  final VoidCallback onTapScrap;
+
+  Alignment _indicatorAlign() {
+    if (selectedIndex == 0) return Alignment.centerLeft;
+    if (selectedIndex == 1) return Alignment.center;
+    return Alignment.centerRight;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const double height = 50;
+
+    return SizedBox(
+      height: height,
+      child: LayoutBuilder(
+        builder: (context, c) {
+          final double w = c.maxWidth;
+          final double segmentW = w / 3;
+
+          return Stack(
+            children: [
+              // 바탕(테두리만)
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.black, width: 1.2),
+                  borderRadius: BorderRadius.circular(26),
+                ),
+              ),
+
+              // 선택 인디케이터(슬라이드)
+              AnimatedAlign(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                alignment: _indicatorAlign(),
+                child: Container(
+                  width: segmentW,
+                  height: height,
+                  padding: const EdgeInsets.all(4),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCAD83B),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: Colors.black, width: 1.2),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // 탭 버튼들
+              Row(
+                children: [
+                  Expanded(
+                    child: _TabButton(
+                      selected: selectedIndex == 0,
+                      icon: Icons.feed_outlined,
+                      label: 'Feed',
+                      onTap: onTapCloset,
+                    ),
+                  ),
+                  Expanded(
+                    child: _TabButton(
+                      selected: selectedIndex == 1,
+                      icon: Icons.question_answer,
+                      label: 'QnA',
+                      onTap: onTapLookbooks,
+                    ),
+                  ),
+                  Expanded(
+                    child: _TabButton(
+                      selected: selectedIndex == 2,
+                      icon: Icons.face,
+                      label: 'Follow',
+                      onTap: onTapScrap,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _TabButton extends StatelessWidget {
+  const _TabButton({
+    required this.selected,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final bool selected;
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle textStyle = TextStyle(
+      fontWeight: FontWeight.w900,
+      fontSize: 17,
+      color: Colors.black,
+      letterSpacing: 0.2,
+    );
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(26),
+        onTap: onTap,
+        splashColor: Colors.black.withOpacity(0.05),
+        highlightColor: Colors.black.withOpacity(0.03),
+        child: Center(
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 160),
+            opacity: selected ? 1.0 : 0.85,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 18, color: Colors.black),
+                const SizedBox(width: 6),
+                Text(label, style: textStyle),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -116,51 +116,36 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
     bool hasSeenTutorial = prefs.getBool('hasSeenCommunityFeedTutorial') ?? false;
 
     if (!hasSeenTutorial && lookbooks.isNotEmpty) {
-      Future.delayed(Duration(milliseconds: 800), () {
-        _showTutorial();
-        prefs.setBool('hasSeenCommunityFeedTutorial', true);
+      // Wait for the frame to be rendered
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future.delayed(Duration(milliseconds: 500), () {
+          if (mounted) {
+            _showTutorial();
+            prefs.setBool('hasSeenCommunityFeedTutorial', true);
+          }
+        });
       });
     }
   }
 
   void _createTutorial() {
-    tutorialCoachMark = TutorialCoachMark(
-      targets: _createTargets(),
-      colorShadow: Colors.black,
-      textSkip: "Skip",
-      paddingFocus: 10,
-      opacityShadow: 0.8,
-      onFinish: () {
-        print("Tutorial finished");
-      },
-      onClickTarget: (target) {
-        print('Clicked on ${target.identify}');
-      },
-      onSkip: () {
-        print("Tutorial skipped");
-        return true;
-      },
-    );
-  }
-
-  List<TargetFocus> _createTargets() {
     List<TargetFocus> targets = [];
 
     // Target 1: Tab Buttons
-    targets.add(
-      TargetFocus(
-        identify: "tabs",
-        keyTarget: _tabsKey,
-        alignSkip: Alignment.topRight,
-        shape: ShapeLightFocus.RRect,
-        radius: 30,
-        contents: [
-          TargetContent(
-            align: ContentAlign.bottom,
-            builder: (context, controller) {
-              return Container(
-                padding: EdgeInsets.all(20),
-                child: Column(
+    if (_tabsKey.currentContext != null) {
+      targets.add(
+        TargetFocus(
+          identify: "tabs",
+          keyTarget: _tabsKey,
+          alignSkip: Alignment.topRight,
+          shape: ShapeLightFocus.RRect,
+          radius: 10,
+          contents: [
+            TargetContent(
+              align: ContentAlign.bottom,
+              padding: EdgeInsets.all(20),
+              builder: (context, controller) {
+                return Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -178,90 +163,6 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
                       style: TextStyle(color: Colors.white, fontSize: 16),
                     ),
                   ],
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-
-    // Target 2: Like Button (if lookbooks exist)
-    if (lookbooks.isNotEmpty) {
-      targets.add(
-        TargetFocus(
-          identify: "like",
-          keyTarget: _likeKey,
-          alignSkip: Alignment.topRight,
-          shape: ShapeLightFocus.Circle,
-          contents: [
-            TargetContent(
-              align: ContentAlign.top,
-              builder: (context, controller) {
-                return Container(
-                  padding: EdgeInsets.all(20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.favorite, color: Colors.red, size: 40),
-                      SizedBox(height: 10),
-                      Text(
-                        "좋아요",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontSize: 20.0,
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                      Text(
-                        "마음에 드는 룩북에 좋아요를 눌러보세요",
-                        style: TextStyle(color: Colors.white, fontSize: 16),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      );
-
-      // Target 3: Share Button
-      targets.add(
-        TargetFocus(
-          identify: "share",
-          keyTarget: _shareKey,
-          alignSkip: Alignment.topRight,
-          shape: ShapeLightFocus.Circle,
-          contents: [
-            TargetContent(
-              align: ContentAlign.top,
-              builder: (context, controller) {
-                return Container(
-                  padding: EdgeInsets.all(20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.share_outlined, color: Color(0xFFCAD83B), size: 40),
-                      SizedBox(height: 10),
-                      Text(
-                        "공유하기",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontSize: 20.0,
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                      Text(
-                        "룩북을 SNS에 공유할 수 있습니다",
-                        style: TextStyle(color: Colors.white, fontSize: 16),
-                      ),
-                    ],
-                  ),
                 );
               },
             ),
@@ -270,12 +171,116 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
       );
     }
 
-    return targets;
+    // Target 2: Like Button (if lookbooks exist)
+    if (lookbooks.isNotEmpty && _likeKey.currentContext != null) {
+      targets.add(
+        TargetFocus(
+          identify: "like",
+          keyTarget: _likeKey,
+          alignSkip: Alignment.topRight,
+          shape: ShapeLightFocus.Circle,
+          radius: 5,
+          contents: [
+            TargetContent(
+              align: ContentAlign.top,
+              padding: EdgeInsets.all(20),
+              builder: (context, controller) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.favorite, color: Colors.red, size: 40),
+                    SizedBox(height: 10),
+                    Text(
+                      "좋아요",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 20.0,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      "마음에 드는 룩북에 좋아요를 눌러보세요",
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Target 3: Share Button
+    if (lookbooks.isNotEmpty && _shareKey.currentContext != null) {
+      targets.add(
+        TargetFocus(
+          identify: "share",
+          keyTarget: _shareKey,
+          alignSkip: Alignment.topRight,
+          shape: ShapeLightFocus.Circle,
+          radius: 5,
+          contents: [
+            TargetContent(
+              align: ContentAlign.top,
+              padding: EdgeInsets.all(20),
+              builder: (context, controller) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.share_outlined, color: Color(0xFFCAD83B), size: 40),
+                    SizedBox(height: 10),
+                    Text(
+                      "공유하기",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 20.0,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      "룩북을 SNS에 공유할 수 있습니다",
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    tutorialCoachMark = TutorialCoachMark(
+      targets: targets,
+      colorShadow: Colors.black,
+      textSkip: "Skip",
+      paddingFocus: 10,
+      opacityShadow: 0.8,
+      onFinish: () {
+        print("Tutorial finished");
+      },
+      onClickTarget: (target) {
+        print('Clicked on ${target.identify}');
+      },
+      onSkip: () {
+        print("Tutorial skipped");
+        return true;
+      },
+    );
   }
 
   void _showTutorial() {
     _createTutorial();
-    tutorialCoachMark?.show(context: context);
+    Future.delayed(Duration(milliseconds: 100), () {
+      if (mounted && tutorialCoachMark != null) {
+        tutorialCoachMark?.show(context: context);
+      }
+    });
   }
 
   @override
@@ -287,12 +292,14 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
   }
 
   @override
+  void dispose() {
+    tutorialCoachMark = null;
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     const int selectedIndex = 0;
-    final String currentPath = GoRouterState
-        .of(context)
-        .uri
-        .path;
 
     return Container(
       color: Colors.white,
@@ -302,6 +309,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               child: _SleekTopTabs(
+                key: _tabsKey,
                 selectedIndex: selectedIndex,
                 onTapCloset: () => context.go('/communityMainFeed'),
                 onTapLookbooks: () => context.go('/questionFeed'),
@@ -430,7 +438,7 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
                     ],
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 16),
                 InkWell(
                   key: index == 0 ? _shareKey : null,
                   onTap: () => _showShareOptions(
@@ -783,16 +791,12 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
                             ),
                           ),
                           child: const Text(
-                            'report',
+                            'Report',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),
-                      child: const Text(
-                        'Report',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
+                    ],
                   ),
                 ],
               );
@@ -920,13 +924,15 @@ class _CommunityMainFeedState extends State<CommunityMainFeed> {
     }
   }
 }
+
 class _SleekTopTabs extends StatelessWidget {
   const _SleekTopTabs({
+    Key? key,
     required this.selectedIndex,
     required this.onTapCloset,
     required this.onTapLookbooks,
     required this.onTapScrap,
-  });
+  }) : super(key: key);
 
   final int selectedIndex;
   final VoidCallback onTapCloset;
@@ -972,7 +978,7 @@ class _SleekTopTabs extends StatelessWidget {
                   padding: const EdgeInsets.all(4),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: const Color(0xFFCAD83B), // 기존 감성 유지
+                      color: const Color(0xFFCAD83B),
                       borderRadius: BorderRadius.circular(22),
                       border: Border.all(color: Colors.black, width: 1.2),
                       boxShadow: const [
