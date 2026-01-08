@@ -23,7 +23,7 @@
 | 이름 | GitHub |
 |------|--------|
 | 김예슬 | https://github.com/yeseul1008 |
-| 김동준 | https://github.com/jun-000224 |
+| 이동준 | https://github.com/jun-000224 |
 | 김반석 | https://github.com/KIMBANSEOK92 |
 | 아린 | https://github.com/aline-rousselinsiv |
 
