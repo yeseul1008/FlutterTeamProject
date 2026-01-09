@@ -39,12 +39,12 @@
 
 <br>
 
-## 📕 발표 PPT
+## 📇 발표 PPT
 <a href="https://www.miricanvas.com/v2/design2/6eeb4ec6-3e8c-4e80-b1bf-b198afead01e?location=design&type=copy_link&access=link&permission=viewer" target="_blank"><b>PPT발표</b></a>
 
 <br>
 
-## 🎞 시연 영상
+## 🎥 시연 영상
 <a href="https://www.youtube.com/watch?v=bl0sKT2c7AM" target="_blank"><b>영상링크</b></a>
 
 
