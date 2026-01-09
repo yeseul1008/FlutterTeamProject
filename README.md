@@ -22,10 +22,10 @@
 ### 😀 팀원 구성
 | 이름 | 역할 | GitHub |
 |------|--------|--------|
-| 김예슬 | 조장/closet 화면 | https://github.com/yeseul1008 |
-| 이동준 | 팀원/calendar 화면 | https://github.com/jun-000224 |
-| 김반석 | 팀원/diary 화면 | https://github.com/KIMBANSEOK92 |
-| 아린 | 팀원/community 화면 | https://github.com/aline-rousselinsiv |
+| **김예슬** | **조장/closet 화면** | https://github.com/yeseul1008 |
+| **이동준** | **팀원/calendar 화면** | https://github.com/jun-000224 |
+| **김반석** | **팀원/community 화면**  | https://github.com/KIMBANSEOK92 |
+| **아린** | **팀원/diary 화면** | https://github.com/aline-rousselinsiv |
 
 <br>
 
