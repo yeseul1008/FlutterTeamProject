@@ -20,12 +20,12 @@
 <br>
 
 ### 😀 팀원 구성
-| 이름 | GitHub |
-|------|--------|
-| 김예슬 | https://github.com/yeseul1008 |
-| 이동준 | https://github.com/jun-000224 |
-| 김반석 | https://github.com/KIMBANSEOK92 |
-| 아린 | https://github.com/aline-rousselinsiv |
+| 이름 | 역할 | GitHub |
+|------|--------|--------|
+| 김예슬 | 조장/closet 화면 | https://github.com/yeseul1008 |
+| 이동준 | 팀원/calendar 화면 | https://github.com/jun-000224 |
+| 김반석 | 팀원/diary 화면 | https://github.com/KIMBANSEOK92 |
+| 아린 | 팀원/community 화면 | https://github.com/aline-rousselinsiv |
 
 <br>
 
@@ -58,10 +58,11 @@
 ## 📂 프로젝트 자료 모음
 | 분류 | 링크 |
 |------|------|
-| 📝 회의록 | 📅 [1회차 회의록](https://docs.google.com/document/d/1xQXNfiVdnWR8__4PAtTqPMBrZyrpG0Kw6K73RPqs-4k/edit?tab=t.7y908es3yuq) <br> 📅 [2회차 회의록](https://docs.google.com/document/d/1ba9YWrBuRw63KOHbEYD_QMjfeJkOcVIqZQJ92tcYr6s/edit?tab=t.0) <br> 📅 [3회차 회의록](https://docs.google.com/document/d/1vq4wwx3afmFLc00ERxrCCkcfRcPvciKWhzbkY7umeyQ/edit?tab=t.0) <br> 📅 [4회차 회의록](https://docs.google.com/document/d/1xJ1OdjF5AHMCv0iy4lhsbJz4yekFyEjKbr3CK_puW6Y/edit?tab=t.0) |
-| 🏗 설계 자료 | 🎨 [Figma 설계 보기](https://www.figma.com/design/xIKwyhMPDhbnGMi1fLVoVU/%ED%94%8C%EB%9F%AC%ED%84%B0-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-%ED%99%94%EB%A9%B4%EA%B5%AC%EC%84%B1?node-id=0-1&p=f&t=7U7g0LV7wZ1mGv9K-0) |
-| 📚 공통 문서 | 📁 [공통 문서 폴더 보기](https://drive.google.com/drive/u/0/folders/16c1vWnDJNyonibTgSbnFPx56UtfGC8ld) |
-
+| 기획안 | 📑 [프로젝트 기획안](https://docs.google.com/document/d/1EPYHyK0Rat8yY1mTOGgXv07lB3cCjOn6XfNKftYqaBk/edit?usp=sharing)|
+| 설계 자료 | 🎨 [Figma 설계 보기](https://www.figma.com/design/xIKwyhMPDhbnGMi1fLVoVU/%ED%94%8C%EB%9F%AC%ED%84%B0-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-%ED%99%94%EB%A9%B4%EA%B5%AC%EC%84%B1?node-id=0-1&p=f&t=7U7g0LV7wZ1mGv9K-0) |
+| 페이지 구조 | 📁 [페이지 설계](https://docs.google.com/spreadsheets/d/1G-h7aIJkpxr0NAUlIZAvs5uS3YNMRuNoKuAD5TcLJoo/edit?usp=sharing) |
+| 드라이브 | 📁 [공유드라이브](https://drive.google.com/drive/folders/16c1vWnDJNyonibTgSbnFPx56UtfGC8ld?usp=sharing) |
+| 발표자료 | 🖥 [발표 PPT](https://www.miricanvas.com/login?redirect=%2Fv2%2Fdesign2%2F6eeb4ec6-3e8c-4e80-b1bf-b198afead01e%3Flocation%3Ddesign%26type%3Dcopy_link%26access%3Dlink%26permission%3Dviewer) |
 <br>
 
 ## 🖍 차별점
