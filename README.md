@@ -17,6 +17,10 @@
 옷장 관리 → 코디 구성 → 외출 기록 → 커뮤니티 공유까지 이어지는
 하나의 완성된 패션 라이프 사이클을 제공합니다.
 
+## ✨ 결과물
+| 발표자료 | 시연영상 |
+|------|------|
+| 🖥 [발표 PPT](https://www.miricanvas.com/login?redirect=%2Fv2%2Fdesign2%2F6eeb4ec6-3e8c-4e80-b1bf-b198afead01e%3Flocation%3Ddesign%26type%3Dcopy_link%26access%3Dlink%26permission%3Dviewer) | 🎬 [시연영상](https://youtu.be/bl0sKT2c7AM)|
 <br>
 
 ### 😀 팀원 구성
@@ -57,8 +61,7 @@
 | 설계 자료 | 🎨 [Figma 설계 보기](https://www.figma.com/design/xIKwyhMPDhbnGMi1fLVoVU/%ED%94%8C%EB%9F%AC%ED%84%B0-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-%ED%99%94%EB%A9%B4%EA%B5%AC%EC%84%B1?node-id=0-1&p=f&t=7U7g0LV7wZ1mGv9K-0) |
 | 페이지 구조 | 📁 [페이지 설계](https://docs.google.com/spreadsheets/d/1G-h7aIJkpxr0NAUlIZAvs5uS3YNMRuNoKuAD5TcLJoo/edit?usp=sharing) |
 | 드라이브 | 📁 [공유드라이브](https://drive.google.com/drive/folders/16c1vWnDJNyonibTgSbnFPx56UtfGC8ld?usp=sharing) |
-| 발표자료 | 🖥 [발표 PPT](https://www.miricanvas.com/login?redirect=%2Fv2%2Fdesign2%2F6eeb4ec6-3e8c-4e80-b1bf-b198afead01e%3Flocation%3Ddesign%26type%3Dcopy_link%26access%3Dlink%26permission%3Dviewer) |
-| 시연영상 | 🎬 [시연영상](https://youtu.be/bl0sKT2c7AM) |
+
 <br>
 
 ## 🖍 차별점
