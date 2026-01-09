@@ -63,6 +63,7 @@
 | 페이지 구조 | 📁 [페이지 설계](https://docs.google.com/spreadsheets/d/1G-h7aIJkpxr0NAUlIZAvs5uS3YNMRuNoKuAD5TcLJoo/edit?usp=sharing) |
 | 드라이브 | 📁 [공유드라이브](https://drive.google.com/drive/folders/16c1vWnDJNyonibTgSbnFPx56UtfGC8ld?usp=sharing) |
 | 발표자료 | 🖥 [발표 PPT](https://www.miricanvas.com/login?redirect=%2Fv2%2Fdesign2%2F6eeb4ec6-3e8c-4e80-b1bf-b198afead01e%3Flocation%3Ddesign%26type%3Dcopy_link%26access%3Dlink%26permission%3Dviewer) |
+| 시연영상 | 🎬 [시연영상](https://youtu.be/bl0sKT2c7AM) |
 <br>
 
 ## 🖍 차별점
