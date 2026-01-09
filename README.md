@@ -39,7 +39,13 @@
 
 <br>
 
+## 📕 발표 PPT
+<a href="https://www.canva.com/design/DAG4WPzsIwg/mjJqcK0MVKL6ylQOnMct5Q/edit?utm_content=DAG4WPzsIwg&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton" target="_blank"><b>PPT발표</b></a>
 
+<br>
+
+## 🎞 시연 영상
+<a href="https://drive.google.com/file/d/1q-EyMWRM72OPfmJDrCfWjjb1Xvj5rcVK/view?usp=sharing" target="_blank"><b>영상링크</b></a>
 
 
 <br>
