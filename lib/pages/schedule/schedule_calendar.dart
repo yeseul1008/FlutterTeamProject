@@ -3,8 +3,8 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../../widgets/common/weatherWidget.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class UserScheduleCalendar extends StatefulWidget {
   const UserScheduleCalendar({super.key});
@@ -530,7 +530,7 @@ class UserScheduleCalendarState extends State<UserScheduleCalendar> {
                         date: _selectedDay,
                         lat: 37.5665,
                         lon: 126.9780,
-                        apiKey: '5ebe456d15b6fd5e52fbf09d1ab110ae',
+                        apiKey: dotenv.env['WEATHER_API_KEY']!,
                       ),
                     ),
                   ),

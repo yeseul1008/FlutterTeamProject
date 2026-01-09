@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../widgets/common/weatherWidget.dart';
 import '../../service/kakao/kakao_models.dart';
 import '../../firebase/firestore_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class UserScheduleAdd extends StatefulWidget {
   const UserScheduleAdd({super.key});
@@ -17,7 +18,7 @@ class UserScheduleAdd extends StatefulWidget {
 }
 
 class _UserScheduleAddState extends State<UserScheduleAdd> {
-  static const String _openWeatherApiKey = '5ebe456d15b6fd5e52fbf09d1ab110ae';
+  // static final String openWeatherApiKey = dotenv.env['APIKEY'] ?? '';
 
   final FirestoreService _firestoreService = FirestoreService();
 
@@ -700,7 +701,7 @@ class _UserScheduleAddState extends State<UserScheduleAdd> {
                       date: _selectedDate,
                       lat: _lat,
                       lon: _lon,
-                      apiKey: _openWeatherApiKey,
+                      apiKey: dotenv.env['WEATHER_API_KEY']!,
                     ),
                     const SizedBox(height: 14),
                     _labelValueRow(
