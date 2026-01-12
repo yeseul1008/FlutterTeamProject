@@ -20,7 +20,7 @@
 ## ✨ 결과물
 | 발표자료 | 시연영상 |
 |------|------|
-| 🖥 [발표 PPT](https://www.miricanvas.com/login?redirect=%2Fv2%2Fdesign2%2F6eeb4ec6-3e8c-4e80-b1bf-b198afead01e%3Flocation%3Ddesign%26type%3Dcopy_link%26access%3Dlink%26permission%3Dviewer) | 🎬 [시연영상](https://youtu.be/bl0sKT2c7AM)|
+| 🖥 [발표 PPT](https://www.miricanvas.com/v2/design2/v/6eeb4ec6-3e8c-4e80-b1bf-b198afead01e) | 🎬 [시연영상](https://youtu.be/bl0sKT2c7AM)|
 <br>
 
 ### 😀 팀원 구성
