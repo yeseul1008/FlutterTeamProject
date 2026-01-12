@@ -1,5 +1,5 @@
 # Flutter team project
-----
+
 ## 🥼 MODE
 > My Outfits Daily Everyday
 <p align="center">
