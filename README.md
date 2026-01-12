@@ -1,4 +1,6 @@
-# 🥼 MODE
+# Flutter team project
+----
+## 🥼 MODE
 > My Outfits Daily Everyday
 <p align="center">
   <img src="readmeIMG/applogo.png" alt="App Logo" width="300"/>
