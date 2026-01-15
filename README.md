@@ -87,95 +87,256 @@
 <br>
 
 # 📽 주요 기능
-## 1. 로그인/회원가입
+
+---
+
+## 1. 로그인 / 회원가입
 - 소셜 로그인 (Google)
-- 아이디찾기/비밀번호찾기
+- 아이디 찾기 / 비밀번호 찾기
 - 프로필 이미지 및 성별 선택
 
-| Splash | 회원가입 | 로그인 |
-|--------|----------|--------|
-| ![Splash](readmeIMG/스플래시.jpg) | ![회원가입](readmeIMG/회원가입.jpg) | ![로그인](readmeIMG/로그인.jpg) |
+<table>
+  <tr>
+    <td align="center">
+      <img src="readmeIMG/스플래시.jpg" width="180"/><br/>
+      Splash
+    </td>
+    <td align="center">
+      <img src="readmeIMG/회원가입.jpg" width="180"/><br/>
+      회원가입
+    </td>
+    <td align="center">
+      <img src="readmeIMG/로그인.jpg" width="180"/><br/>
+      로그인
+    </td>
+  </tr>
+</table>
 
-<br>
+<br/>
 
-## 2. Closet (옷장/룩북/스크랩)
+---
+
+## 2. Closet (옷장 / 룩북 / 스크랩)
+
 ### 2-1. 옷장
 - 사용자 전용 커스텀 카테고리 추가
-- 옷 등록시 누끼 api (remove.bg 사용)
-- 옷 선택후 ai 착용사진 생성 (Gemini api)
+- 옷 등록 시 누끼 API (remove.bg)
+- 옷 선택 후 AI 착용 사진 생성 (Gemini API)
 
-| 옷장 | 카테고리 | 옷 등록 | ai 옷 선택 | ai 생성결과 |
-|------|------|------|------|------|
-|![옷장](readmeIMG/closet.jpg)|![회원가입](readmeIMG/카테고리.jpg)|![회원가입](readmeIMG/옷추가.jpg)|![ai](readmeIMG/ai옷선택.jpg)|![ai](readmeIMG/ai결과.jpg)|
+<table>
+  <tr>
+    <td align="center">
+      <img src="readmeIMG/closet.jpg" width="180"/><br/>
+      옷장
+    </td>
+    <td align="center">
+      <img src="readmeIMG/카테고리.jpg" width="180"/><br/>
+      카테고리
+    </td>
+    <td align="center">
+      <img src="readmeIMG/옷추가.jpg" width="180"/><br/>
+      옷 등록
+    </td>
+    <td align="center">
+      <img src="readmeIMG/ai옷선택.jpg" width="180"/><br/>
+      AI 옷 선택
+    </td>
+    <td align="center">
+      <img src="readmeIMG/ai결과.jpg" width="180"/><br/>
+      AI 생성 결과
+    </td>
+  </tr>
+</table>
+
+---
 
 ### 2-2. 룩북
 - 옷장 조합으로 룩북 생성
-- ai 룩북/ 일반 룩북 필터링
-- 사진 조절 조작키로 자유자재 룩북 생성
+- AI 룩북 / 일반 룩북 필터링
+- 사진 조절 조작키로 자유로운 배치
 
-| 룩북 | 룩북 상세 화면 | 룩북 등록 |
-|------|------|------|
-|![옷장](readmeIMG/lookbooks.jpg)|![회원가입](readmeIMG/룩북상세.jpg)|![회원가입](readmeIMG/룩북조합하기.jpg)|
+<table>
+  <tr>
+    <td align="center">
+      <img src="readmeIMG/lookbooks.jpg" width="180"/><br/>
+      룩북
+    </td>
+    <td align="center">
+      <img src="readmeIMG/룩북상세.jpg" width="180"/><br/>
+      룩북 상세
+    </td>
+    <td align="center">
+      <img src="readmeIMG/룩북조합하기.jpg" width="180"/><br/>
+      룩북 등록
+    </td>
+  </tr>
+</table>
+
+---
 
 ### 2-3. 스크랩
-- 커뮤니티 Feed 에서 다른 유저의 코디 스크랩가능
-- 스크랩 후 해당 옷 정보 확인가능
+- 커뮤니티 Feed에서 다른 유저 코디 스크랩
+- 스크랩 후 해당 옷 정보 확인 가능
 
-| 스크랩 | 스크랩 상세화면 | 
-|------|------|
-|![옷장](readmeIMG/scrap.jpg)|![옷장](readmeIMG/스크랩상세.jpg)|
+<table>
+  <tr>
+    <td align="center">
+      <img src="readmeIMG/scrap.jpg" width="180"/><br/>
+      스크랩
+    </td>
+    <td align="center">
+      <img src="readmeIMG/스크랩상세.jpg" width="180"/><br/>
+      스크랩 상세
+    </td>
+  </tr>
+</table>
 
-<br>
+<br/>
 
-## 2. Calendar (옷장/룩북/스크랩)
-- 날짜 선택 (날씨, 목적지, 일정 등록)
-- 룩북에서 옷 가져와서 등록 or 바로 룩북 생성
+---
 
-| Calendar | 날짜 코디 등록 | 일정 옷 추가 | 옷 조합 |
-|------|------|------|------|
-|![캘린더](readmeIMG/calendar.jpg)|![회원가입](readmeIMG/일정추가.jpg)|![회원가입](readmeIMG/일정추가_옷추가.jpg)|![회원가입](readmeIMG/옷조합_가이드.jpg)|
+## 3. Calendar
+- 날짜 선택 (날씨 / 목적지 / 일정 등록)
+- 룩북에서 옷 불러오기 또는 즉석 룩북 생성
 
-<br>
+<table>
+  <tr>
+    <td align="center">
+      <img src="readmeIMG/calendar.jpg" width="180"/><br/>
+      Calendar
+    </td>
+    <td align="center">
+      <img src="readmeIMG/일정추가.jpg" width="180"/><br/>
+      날짜 코디 등록
+    </td>
+    <td align="center">
+      <img src="readmeIMG/일정추가_옷추가.jpg" width="180"/><br/>
+      일정 옷 추가
+    </td>
+    <td align="center">
+      <img src="readmeIMG/옷조합_가이드.jpg" width="180"/><br/>
+      옷 조합 가이드
+    </td>
+  </tr>
+</table>
 
-## 3. Diary
-- 등록한 옷 개수, 룩북 수, 팔로워 확인
-- 지도 API 연동으로 위치 기록
+<br/>
+
+---
+
+## 4. Diary
+- 등록한 옷 / 룩북 / 팔로워 수 확인
+- 지도 API 연동 위치 기록
 - 날씨 API 연동
-- 앞 calendar에서 날짜에 등록한 옷 기반 일기 등록
-- 룩북 이외의 다른 여러장의 사진 등록
-- Map 에서 내가 일기 기록한 장소 한눈에 확인
+- Calendar에 등록한 코디 기반 일기 작성
+- 여러 장의 사진 등록
+- Map에서 일기 위치 한눈에 확인
 
-| Diary | Map | 일기 상세 화면 | 일기 추가 | 일기 작성 |
-|------|------|------|------|------|
-|![다이어리](readmeIMG/다이어리.jpg)|![맵](readmeIMG/다이어리_맵.jpg)|![맵](readmeIMG/다이어리상세.jpg)|![회원가입](readmeIMG/다이어리추가.jpg)|![회원가입](readmeIMG/다이어리작성중.jpg)|
+<table>
+  <tr>
+    <td align="center">
+      <img src="readmeIMG/다이어리.jpg" width="180"/><br/>
+      Diary
+    </td>
+    <td align="center">
+      <img src="readmeIMG/다이어리_맵.jpg" width="180"/><br/>
+      Map
+    </td>
+    <td align="center">
+      <img src="readmeIMG/다이어리상세.jpg" width="180"/><br/>
+      일기 상세
+    </td>
+    <td align="center">
+      <img src="readmeIMG/다이어리추가.jpg" width="180"/><br/>
+      일기 추가
+    </td>
+    <td align="center">
+      <img src="readmeIMG/다이어리작성중.jpg" width="180"/><br/>
+      일기 작성
+    </td>
+  </tr>
+</table>
 
-- 사용방법 튜토리얼
+---
+
+### 설정
+- 사용 방법 튜토리얼
 - 정보 수정
-- 탈퇴하기
+- 회원 탈퇴
 
-| 옵션 | 정보수정 |
-|------|------|
-|![캘린더](readmeIMG/점점점.jpg)|![캘린더](readmeIMG/프로필수정.jpg)|
+<table>
+  <tr>
+    <td align="center">
+      <img src="readmeIMG/점점점.jpg" width="180"/><br/>
+      옵션
+    </td>
+    <td align="center">
+      <img src="readmeIMG/프로필수정.jpg" width="180"/><br/>
+      정보 수정
+    </td>
+  </tr>
+</table>
 
-## 4. Community
-### 4-1. Feed/Follow
-- 다른 유저의 룩북 확인
-- 스크랩 및 외부 sns 공유
-- 다른유저 프로필 확인
-- 내가 팔로우 한 사람, 내가 팔로잉 중인 사람 목록 확인
+<br/>
 
-| Cummunity | 다른 유저 프로필 | 공유하기 | Follow |
-|------|------|------|------|
-|![캘린더](readmeIMG/커뮤니티.jpg)|![캘린더](readmeIMG/다른유저프로필.jpg)|![캘린더](readmeIMG/공유하기.jpg)|![회원가입](readmeIMG/Follow.jpg)|
+---
 
-### 4-2. QnA
-- 사진 여러 장 + 텍스트 업로드
-- 댓글로 코디 조언 받기
-- 다른 사용자의 옷장 열람 후 맞춤 추천
+## 5. Community
 
-| QnA | Qna 추가 | 댓글 | 다른 사용자 옷장 코디 |
-|------|------|------|------|
-|![캘린더](readmeIMG/QnA.jpg)|![캘린더](readmeIMG/질문등록.jpg)|![회원가입](readmeIMG/댓글.jpg)|![회원가입](readmeIMG/질문옷장.jpg)|
+### 5-1. Feed / Follow
+- 다른 유저 룩북 확인
+- 스크랩 및 외부 SNS 공유
+- 다른 유저 프로필 확인
+- 팔로우 / 팔로잉 목록 확인
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="readmeIMG/커뮤니티.jpg" width="180"/><br/>
+      Community
+    </td>
+    <td align="center">
+      <img src="readmeIMG/다른유저프로필.jpg" width="180"/><br/>
+      유저 프로필
+    </td>
+    <td align="center">
+      <img src="readmeIMG/공유하기.jpg" width="180"/><br/>
+      공유하기
+    </td>
+    <td align="center">
+      <img src="readmeIMG/Follow.jpg" width="180"/><br/>
+      Follow
+    </td>
+  </tr>
+</table>
+
+---
+
+### 5-2. QnA
+- 사진 여러 장 + 텍스트 질문 등록
+- 댓글 기반 코디 피드백
+- 다른 사용자 옷장 열람 후 맞춤 추천
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="readmeIMG/QnA.jpg" width="180"/><br/>
+      QnA
+    </td>
+    <td align="center">
+      <img src="readmeIMG/질문등록.jpg" width="180"/><br/>
+      질문 등록
+    </td>
+    <td align="center">
+      <img src="readmeIMG/댓글.jpg" width="180"/><br/>
+      댓글
+    </td>
+    <td align="center">
+      <img src="readmeIMG/질문옷장.jpg" width="180"/><br/>
+      옷장 추천
+    </td>
+  </tr>
+</table>
 
 <br>
 
